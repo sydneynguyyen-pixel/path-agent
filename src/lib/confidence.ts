@@ -12,3 +12,14 @@ export function confidenceLevel(score: number): ConfidenceLevel {
 export function needsCounselor(score: number, hasConflict = false): boolean {
   return hasConflict || score < CONFIDENCE_THRESHOLD;
 }
+
+/**
+ * "now": clearly counts — student adds it themselves, no email.
+ * "hold": conflict, grade condition, or low confidence — hold the seat now, confirm with counselor in parallel.
+ */
+export type RecoveryPath = "now" | "hold";
+
+export function recoveryPath(o: { verdict: string; confidence: number; conflict?: unknown }): RecoveryPath {
+  if (o.verdict === "conditional" || needsCounselor(o.confidence, !!o.conflict)) return "hold";
+  return "now";
+}

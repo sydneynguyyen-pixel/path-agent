@@ -1,13 +1,17 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { options, student } from "@/data/scenario";
+import { options, student, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist } from "@/data/scenario";
+import { recoveryPath } from "@/lib/confidence";
 
-export type Stage = "idle" | "failed" | "options" | "drafting" | "approved";
+export type Stage = "idle" | "failed" | "chosen";
 
 export type Decision = { id: string; who: string; what: string; when: Date; evidence: string[] };
 
 type State = {
   stage: Stage;
   chosenId: string | null;
+  seatHeld: boolean;
+  emailSent: boolean;
+  waitlisted: boolean;
   draft: string;
   decisions: Decision[];
   panelOpen: boolean;
@@ -19,6 +23,9 @@ type State = {
 const initial: State = {
   stage: "idle",
   chosenId: null,
+  seatHeld: false,
+  emailSent: false,
+  waitlisted: false,
   draft: "",
   decisions: [],
   panelOpen: false,
@@ -30,6 +37,9 @@ const initial: State = {
 type Ctx = State & {
   failAdd: () => void;
   choose: (id: string) => void;
+  backToOptions: () => void;
+  markAdded: () => void;
+  joinWaitlist: () => void;
   setDraft: (s: string) => void;
   approve: () => void;
   setPanelOpen: (b: boolean) => void;
@@ -41,22 +51,26 @@ type Ctx = State & {
 
 const JourneyCtx = createContext<Ctx | null>(null);
 
-function buildDraft(id: string) {
+export function buildDraft(id: string) {
   const o = options.find((x) => x.id === id)!;
-  const conflictLine = o.conflict
-    ? `\nThe catalog (p. 88) lists BUS 21 for QR-1, but the articulation file (row 077) says elective only. Could you confirm which applies?\n`
-    : "";
+  const why = o.conflict
+    ? "The Northgate catalog (p. 88) lists it for QR-1, but the articulation file (row 077) says elective only."
+    : o.verdict === "conditional"
+      ? "The articulation file (row 203) says it counts only with a grade of C or better."
+      : o.rule;
   return `Hi ${student.counselor},
 
-STAT 2 (Summer 2027) is full, so my QR-1 Statistics requirement is at risk. I'd like to take ${o.course} instead.
-${conflictLine}
-Reason: ${o.rule}
+STAT 2 is full, so I'm adding ${o.course} (section ${o.section}) to hold a seat. Please confirm it counts toward ${REQUIREMENT_LABEL}. If not, I'll drop it by ${DROP_DEADLINE}.
 
-Could you confirm this will count toward QR-1 at Northgate before I register? I've attached the source passages.
+Why I'm asking: ${why}
+
+Source passages are attached.
 
 Thank you,
 ${student.name}`;
 }
+
+const log = (what: string, evidence: string[]): Decision => ({ id: crypto.randomUUID(), who: student.name, what, when: new Date(), evidence });
 
 export function JourneyProvider({ children }: { children: ReactNode }) {
   const [s, set] = useState<State>(initial);
@@ -67,64 +81,56 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       ...p,
       stage: "failed",
       panelOpen: true,
-      agentTimes: {
-        reader: new Date(t0),
-        planner: new Date(t0 + 1400),
-        backup: new Date(t0 + 2800),
-      },
+      agentTimes: { reader: new Date(t0), planner: new Date(t0 + 1400), backup: new Date(t0 + 2800) },
     }));
   }, []);
 
   const choose = useCallback((id: string) => {
     const o = options.find((x) => x.id === id)!;
+    const hold = recoveryPath(o) === "hold";
     set((p) => ({
       ...p,
-      stage: "drafting",
+      stage: "chosen",
       chosenId: id,
-      draft: buildDraft(id),
-      agentTimes: { ...p.agentTimes, drafter: new Date() },
-      decisions: [
-        ...p.decisions,
-        { id: crypto.randomUUID(), who: student.name, what: `Chose ${o.course} as replacement for STAT 2`, when: new Date(), evidence: o.sourceIds },
-      ],
+      draft: hold ? buildDraft(id) : "",
+      agentTimes: hold ? { ...p.agentTimes, drafter: new Date() } : p.agentTimes,
+      decisions: [...p.decisions, log(`Chose ${o.course} §${o.section} as replacement for STAT 2`, o.sourceIds)],
     }));
   }, []);
 
-  const approve = useCallback(() => {
-    set((p) => {
-      const o = options.find((x) => x.id === p.chosenId)!;
-      return {
-        ...p,
-        stage: "approved",
-        decisions: [
-          ...p.decisions,
-          {
-            id: crypto.randomUUID(),
-            who: student.name,
-            what: `Approved and sent (simulated) email to ${student.counselor} about ${o.course}`,
-            when: new Date(),
-            evidence: o.sourceIds,
-          },
-        ],
-      };
-    });
-  }, []);
-
-  const value = useMemo<Ctx>(
-    () => ({
+  const value = useMemo<Ctx>(() => {
+    const chosen = options.find((o) => o.id === s.chosenId);
+    return {
       ...s,
-      atRisk: s.stage === "failed" || s.stage === "options" || s.stage === "drafting",
+      atRisk: s.stage !== "idle" && !s.seatHeld,
       failAdd,
       choose,
-      approve,
+      backToOptions: () => set((p) => ({ ...p, stage: "failed", chosenId: null, draft: "" })),
+      markAdded: () =>
+        set((p) => ({
+          ...p,
+          seatHeld: true,
+          decisions: [...p.decisions, log(`Added ${chosen!.course} §${chosen!.section} herself in the portal (agent did not register)`, chosen!.sourceIds)],
+        })),
+      joinWaitlist: () =>
+        set((p) => ({
+          ...p,
+          waitlisted: true,
+          decisions: [...p.decisions, log(`Joined waitlist for ${waitlist.course} herself (simulated)`, [waitlist.sourceId])],
+        })),
+      approve: () =>
+        set((p) => ({
+          ...p,
+          emailSent: true,
+          decisions: [...p.decisions, log(`Approved and sent (simulated) email to ${student.counselor} about ${chosen!.course}`, [...chosen!.sourceIds, "bcc-drop"])],
+        })),
       setDraft: (d) => set((p) => ({ ...p, draft: d })),
       setPanelOpen: (b) => set((p) => ({ ...p, panelOpen: b })),
       setPaused: (b) => set((p) => ({ ...p, paused: b, panelOpen: b ? false : p.panelOpen })),
       openEvidence: (id) => set((p) => ({ ...p, evidenceId: id })),
       reset: () => set(initial),
-    }),
-    [s, failAdd, choose, approve],
-  );
+    };
+  }, [s, failAdd, choose]);
 
   return <JourneyCtx.Provider value={value}>{children}</JourneyCtx.Provider>;
 }

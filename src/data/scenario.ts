@@ -73,7 +73,23 @@ export const sources = {
     doc: "Simulated Registration Portal response",
     school: "Bayview Community College",
     section: "STAT 2 · Sec 01",
-    passage: "Add failed: Section full (40/40). Waitlist full (10/10).",
+    passage: "Add failed: Section full (40/40). Waitlist 6/10.",
+  },
+  "bcc-drop": {
+    id: "bcc-drop",
+    doc: "Bayview CC Academic Policy Manual 2026",
+    school: "Bayview Community College",
+    section: "§6.1 Dropping a Course",
+    passage:
+      "Summer students may drop a course without a W notation through the end of the second week of the term (July 2, 2027 for Summer 2027). Drops are made by the student in the registration portal.",
+  },
+  "bcc-waitlist": {
+    id: "bcc-waitlist",
+    doc: "Bayview CC Academic Policy Manual 2026",
+    school: "Bayview Community College",
+    section: "§5.4 Waitlists",
+    passage:
+      "A student may hold one waitlist position on a full section while enrolled in an alternate section or course. If a seat opens, the student has 48 hours to accept and drop the alternate.",
   },
   "artic-math13": {
     id: "artic-math13",
@@ -160,9 +176,13 @@ export const requirements: Requirement[] = [
 
 export type Option = {
   id: string;
-  rank: number;
   course: string;
   title: string;
+  section: string;
+  sectionTime: string;
+  seatsOpen: number;
+  /** Lower is a better fit for QR-1 and Maya's plan. */
+  fit: number;
   verdict: "counts" | "conditional" | "conflict" | "does_not_count";
   reason: string;
   rule: string;
@@ -175,10 +195,29 @@ export type Option = {
 
 export const options: Option[] = [
   {
+    id: "stat2-02",
+    course: "BCC STAT 2",
+    title: "Introduction to Statistics · Evening",
+    section: "02",
+    sectionTime: "Mon/Wed 6:00–7:50 pm · In person",
+    seatsOpen: 0,
+    fit: 0,
+    verdict: "counts",
+    reason: "Same course as your plan, but this section is also full.",
+    rule: "Degree audit QR-1: planned course.",
+    sourceIds: ["audit-stats"],
+    confidence: 0.95,
+    deadlines: [],
+    deadlineNote: "No seats — not actionable right now.",
+  },
+  {
     id: "math13",
-    rank: 1,
     course: "BCC MATH 13",
-    title: "Elementary Statistics · Online · 12 seats open",
+    title: "Elementary Statistics · Online live",
+    section: "02",
+    sectionTime: "Mon/Wed 10:00–11:50 am",
+    seatsOpen: 3,
+    fit: 1,
     verdict: "counts",
     reason: "Directly articulated to Northgate STAT 101. Same requirement, same units.",
     rule: "Articulation row 118: MATH 13 → STAT 101, satisfies QR-1.",
@@ -193,9 +232,12 @@ export const options: Option[] = [
   },
   {
     id: "psyc5",
-    rank: 2,
     course: "BCC PSYC 5",
-    title: "Statistics for Behavioral Sciences · In person · 4 seats",
+    title: "Statistics for Behavioral Sciences · In person",
+    section: "01",
+    sectionTime: "Tue/Thu 9:00–10:50 am",
+    seatsOpen: 4,
+    fit: 2,
     verdict: "conditional",
     reason: "Counts toward QR-1 only if you earn a C or better. Also useful for your psychology major.",
     rule: "Articulation row 203: QR-1 with grade ≥ C; otherwise elective.",
@@ -209,9 +251,12 @@ export const options: Option[] = [
   },
   {
     id: "bus21",
-    rank: 3,
     course: "BCC BUS 21",
-    title: "Business Statistics · Hybrid · 20 seats",
+    title: "Business Statistics · Hybrid",
+    section: "03",
+    sectionTime: "Mon/Wed 1:00–2:50 pm",
+    seatsOpen: 20,
+    fit: 3,
     verdict: "conflict",
     reason: "The two sources disagree. I won't guess — your counselor needs to confirm.",
     rule: "Catalog lists it for QR-1; articulation file says elective only.",
@@ -229,9 +274,12 @@ export const options: Option[] = [
   },
   {
     id: "math10",
-    rank: 4,
     course: "BCC MATH 10",
-    title: "Math for Liberal Arts · Online · 30 seats",
+    title: "Math for Liberal Arts · Online",
+    section: "01",
+    sectionTime: "Asynchronous",
+    seatsOpen: 30,
+    fit: 99,
     verdict: "does_not_count",
     reason: "Shown so you don't lose time: it does not satisfy Statistics.",
     rule: "Articulation row 115: GE-B4 elective, not QR-1.",
@@ -241,6 +289,21 @@ export const options: Option[] = [
     deadlineNote: "Not recommended — does not count toward QR-1.",
   },
 ];
+
+/** Rank by availability first (open seats), then by fit. */
+export function rankOptions(list: Option[]): Option[] {
+  return [...list].sort((a, b) => {
+    const av = (o: Option) => (o.seatsOpen > 0 ? 0 : 1);
+    return av(a) - av(b) || a.fit - b.fit;
+  });
+}
+
+/** Synthetic Bayview policy (cited in sources): drop without a W through end of week 2. */
+export const DROP_DEADLINE = "July 2, 2027";
+export const REQUIREMENT_LABEL = "QR-1 Statistics";
+
+/** Synthetic Bayview policy allows one waitlist spot on a full section while enrolled in an alternate. */
+export const waitlist = { allowed: true, course: "STAT 2-01", spots: "4 of 10 spots left", sourceId: "bcc-waitlist" };
 
 export const syllabi = [
   { course: "ENGL 1B", sourceId: "syl-engl", items: [{ week: 2, label: "Essay draft" }, { week: 4, label: "Research paper" }, { week: 7, label: "Portfolio" }] },
@@ -263,21 +326,21 @@ export const agents = [
     name: "Planner",
     role: "Checks what still counts",
     inputs: ["QR-1 requirement", "Articulation rules", "Confidence threshold 0.75"],
-    outputs: ["Ranked 4 options", "Flagged BUS 21 conflict → counselor", "Flagged PSYC 5 grade condition"],
+    outputs: ["Ranked 5 options by open seats, then fit", "MATH 13 → Do this now (no email)", "PSYC 5, BUS 21 → Hold seat, confirm in parallel"],
   },
   {
     id: "backup",
     name: "Backup finder",
     role: "Finds open sections and checks workload",
     inputs: ["Summer schedule (simulated)", "Merged syllabi deadlines"],
-    outputs: ["Seat counts for 4 sections", "Deadline pile-up check per option"],
+    outputs: ["Seat counts and section times for 5 sections", "Waitlist allowed per §5.4", "Deadline pile-up check per option"],
   },
   {
     id: "drafter",
     name: "Drafter",
     role: "Drafts the counselor email",
-    inputs: ["Chosen option", "Evidence passages"],
-    outputs: ["Draft email to counselor (awaiting Maya's approval)"],
+    inputs: ["Chosen option", "Evidence passages", "Drop deadline §6.1"],
+    outputs: ["Hold-seat email to counselor (only for hold path; awaiting Maya's approval)"],
   },
 ] as const;
 

@@ -67,7 +67,7 @@ function Portal() {
           </table>
           {error && (
             <div className="m-5 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning">
-              Error: Section full. STAT 2-01 has no seats or waitlist spots remaining.
+              Error: Section full. STAT 2-01 has no seats (waitlist 6/10).
               {j.paused && <span className="block text-muted-foreground">Agent is paused, so it didn't respond.</span>}
               {!j.paused && !j.panelOpen && (
                 <button className="ml-2 underline" onClick={() => j.setPanelOpen(true)}>Open agent panel</button>

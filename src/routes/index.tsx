@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Info, CheckCircle2 } from "lucide-react";
-import { requirements, options, student, type ReqStatus } from "@/data/scenario";
+import { requirements, options, student, DROP_DEADLINE, type ReqStatus } from "@/data/scenario";
+import { recoveryPath } from "@/lib/confidence";
 import { useJourney } from "@/lib/journey";
 import { ConfidenceBadge, PageHeader, SimLabel, SourceChip, StatusBadge } from "@/components/app/bits";
 
@@ -28,11 +29,15 @@ function DegreeView() {
         right={<SimLabel>Synthetic data</SimLabel>}
       />
 
-      {j.stage === "approved" && chosen && (
+      {j.seatHeld && chosen && (
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-success/30 bg-success-soft p-4 text-sm">
           <CheckCircle2 className="mt-0.5 size-5 text-success" />
           <div>
-            <b>You approved {chosen.course} as your Statistics plan.</b> Nothing was registered. Your counselor confirms next, then you register yourself.
+            {recoveryPath(chosen) === "hold" ? (
+              <><b>You hold a seat in {chosen.course}.</b> Counselor confirmation is pending. Drop by {DROP_DEADLINE} if not confirmed.</>
+            ) : (
+              <><b>You added {chosen.course} yourself.</b> It clearly counts toward Statistics. The agent didn't register anything.</>
+            )}
           </div>
         </div>
       )}
@@ -49,9 +54,12 @@ function DegreeView() {
             detail = "STAT 2 is full — replacement options found";
             src = "portal-full";
           }
-          if (r.id === "qr1" && j.stage === "approved" && chosen) {
-            status = "pending";
-            detail = `Planned: ${chosen.course} · awaiting ${student.counselor}`;
+          if (r.id === "qr1" && j.seatHeld && chosen) {
+            const hold = recoveryPath(chosen) === "hold";
+            status = hold ? "pending" : "in_progress";
+            detail = hold
+              ? `Seat held: ${chosen.course} §${chosen.section} · awaiting ${student.counselor} · drop by ${DROP_DEADLINE} if not confirmed`
+              : `Enrolled (by you): ${chosen.course} §${chosen.section} · Summer 2027`;
             src = chosen.sourceIds[0]!;
             conf = chosen.confidence;
             conflict = !!chosen.conflict;

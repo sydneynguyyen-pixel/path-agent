@@ -19,7 +19,7 @@ export const Route = createFileRoute("/semester")({
 
 function Semester() {
   const j = useJourney();
-  const chosen = j.stage === "approved" ? options.find((o) => o.id === j.chosenId) : undefined;
+  const chosen = j.seatHeld ? options.find((o) => o.id === j.chosenId) : undefined;
   const rows = [
     ...syllabi.map((s) => ({ course: s.course, items: s.items, sourceId: s.sourceId, isNew: false })),
     ...(chosen ? [{ course: chosen.course.replace("BCC ", ""), items: chosen.deadlines.map((d) => ({ week: d.week, label: d.label.split(" ").slice(2).join(" ") })), sourceId: chosen.sourceIds[0]!, isNew: true }] : []),
@@ -42,7 +42,7 @@ function Semester() {
           {rows.map((r) => (
             <div key={r.course} className="contents">
               <div className={cn("border-b p-3 text-sm font-medium", r.isNew && "bg-accent")}>
-                {r.course} {r.isNew && <span className="block text-xs font-normal text-muted-foreground">Planned · not registered</span>}
+                {r.course} {r.isNew && <span className="block text-xs font-normal text-muted-foreground">Seat held by you</span>}
                 <div className="mt-1"><SourceChip id={r.sourceId} /></div>
               </div>
               {weeks.map((w) => (
@@ -56,7 +56,7 @@ function Semester() {
           ))}
         </div>
       </div>
-      {chosen && <p className="mt-4 text-sm text-muted-foreground">{chosen.course} added as a plan only. Nothing was registered; your counselor confirms next.</p>}
+      {chosen && <p className="mt-4 text-sm text-muted-foreground">{chosen.course} added because you hold a seat. The agent registered nothing.</p>}
     </div>
   );
 }

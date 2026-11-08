@@ -31,4 +31,4 @@ use the editor.
 
 - Journey state lives in one React context (src/lib/journey.tsx) so every page reflects the same scripted demo and "Reset demo" can restore it in one call.
 - All mock data lives in src/data/scenario.ts and is fully synthetic; scripted agent output will later be replaced by real AI calls.
-- The confidence threshold rule lives in src/lib/confidence.ts (tested); any claim below it or with conflicting sources is shown as unconfirmed and routed to the counselor.
+- Confidence threshold and recovery-path rules live in src/lib/confidence.ts (tested): clearly-counts options go to self-register now with no email; conflict, grade-condition or low-confidence options use hold-seat-now with a non-blocking counselor email. Option ranking (seats first, then fit) lives in rankOptions in scenario.ts.

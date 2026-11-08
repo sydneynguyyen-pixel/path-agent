@@ -11,6 +11,7 @@ import { useJourney, fmtStamp } from "@/lib/journey";
 import { ConfidenceBadge, SourceChip } from "./bits";
 import { AgentAvatar, SubjectIcon } from "./Brand";
 import { cn } from "@/lib/utils";
+import { AddsSkills } from "./SkillsBits";
 
 const verdictLabel = {
   counts: "Counts toward QR-1",
@@ -159,6 +160,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
                       <ConfidenceBadge score={o.confidence} conflict={!!o.conflict} />
                     </div>
                     <Availability o={o} />
+                    <AddsSkills course={o.course} />
                     <p className="mt-2 text-sm">{o.reason}</p>
 
                     {o.conflict && (

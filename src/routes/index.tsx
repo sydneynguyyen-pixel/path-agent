@@ -12,6 +12,7 @@ import { TermIcon, SubjectIcon, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
 import { seasonFor } from "@/components/app/Brand";
 import { defaultSelectedTermId, selectTerm } from "@/lib/term-selection";
+import { SkillsHomeCard } from "@/components/app/SkillsBits";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -255,7 +256,7 @@ function Home() {
           <TabsTrigger value="reqs" className="rounded-full">Requirements</TabsTrigger>
           <TabsTrigger value="units" className="rounded-full">How units convert</TabsTrigger>
         </TabsList>
-        <TabsContent value="path" className="mt-6"><PathTimeline /></TabsContent>
+        <TabsContent value="path" className="mt-6"><PathTimeline /><SkillsHomeCard /></TabsContent>
         <TabsContent value="reqs" className="mt-6"><Requirements /></TabsContent>
         <TabsContent value="units" className="mt-6"><Conversion /></TabsContent>
       </Tabs>

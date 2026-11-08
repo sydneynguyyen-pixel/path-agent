@@ -9,6 +9,8 @@ import { PageHeader, SimLabel, SourceChip } from "@/components/app/bits";
 import { TermIcon, SubjectIcon } from "@/components/app/Brand";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { CourseLearningLink } from "@/components/app/SkillsBits";
+import { skillCourses } from "@/data/scenario";
 
 export const Route = createFileRoute("/semester")({
   validateSearch: (search: Record<string, unknown>): { term?: string } => {
@@ -71,7 +73,7 @@ function Semester() {
           </div>
           <ul className="mt-5 divide-y">
             {term.courses.map((c) => (
-               <li key={c.code + c.title} className="flex items-center gap-3 py-2.5 text-sm"><SubjectIcon course={`${c.code} ${c.title}`} /><span className="flex-1"><b className="font-medium">{c.code}</b> <span className="text-muted-foreground">{c.title}</span></span><span className="text-muted-foreground">{c.grade ?? c.units}</span></li>
+               <li key={c.code + c.title} className="flex items-center gap-3 py-2.5 text-sm"><SubjectIcon course={`${c.code} ${c.title}`} /><span className="min-w-0 flex-1"><b className="font-medium">{c.code}</b> <span className="text-muted-foreground">{c.title}</span><span className="block"><CourseLearningLink course={c.code} /></span></span><span className="text-muted-foreground">{c.grade ?? c.units}</span></li>
             ))}
           </ul>
           {term.status === "planned" && <p className="mt-4 text-xs text-muted-foreground">Planned from your degree audit. When registration opens, the agent will check seats and deadlines the same way it does for summer.</p>}
@@ -95,6 +97,7 @@ function Semester() {
             <div key={r.course} className="contents">
               <div className={cn("min-w-0 border-b px-5 py-4 text-sm font-medium", r.isNew && "bg-accent")}>
                 <div className="flex items-center gap-3"><SubjectIcon course={r.course} /><span className="min-w-0">{r.course}</span></div>
+                <CourseLearningLink course={r.course} />
                 {r.isNew && <span className="mt-2 block text-xs font-normal text-muted-foreground">Seat held by you</span>}
                 <div className="mt-3 [&_button]:whitespace-nowrap [&_button]:text-left"><SourceChip id={r.sourceId} /></div>
               </div>
@@ -112,6 +115,7 @@ function Semester() {
       {chosen && <p className="mt-4 text-sm text-muted-foreground">{chosen.course} added because you hold a seat. The agent registered nothing.</p>}
       </>
       )}
+      {j.draftCourses.some(code => skillCourses.find(c => c.code === code)?.termId === term.id) && <section className="mt-6"><h2 className="font-semibold">Draft courses from your role plan</h2><p className="mt-1 text-xs text-muted-foreground">Saved to your plan only. You still register in your school's portal.</p><ul className="mt-3 divide-y rounded-2xl border bg-card px-5">{j.draftCourses.map(code => skillCourses.find(c => c.code === code)).filter(c => c?.termId === term.id).map(c => c && <li key={c.code} className="flex items-center gap-3 py-4"><SubjectIcon course={c.code} /><div className="min-w-0 flex-1"><span className="text-sm font-medium">{c.code} · {c.title}</span><div><CourseLearningLink course={c.code} /></div></div><span className="rounded-full bg-secondary px-3 py-1 text-xs">Draft · {c.units}</span></li>)}</ul></section>}
     </div>
   );
 }

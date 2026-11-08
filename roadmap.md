@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Focus the home path on current/upcoming terms and collapse completed quarters into history.
 
 - [x] Add clear icons to Current term and Registering now status chips.
 - [ ] Add Skills ledger and course syllabus details with evidence, confirmation, editing and attached work.

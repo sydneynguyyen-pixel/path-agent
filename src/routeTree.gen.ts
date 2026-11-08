@@ -12,12 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as CounselorRouteImport } from './routes/counselor'
+import { Route as CourseSkillsRouteImport } from './routes/course-skills'
 import { Route as DecisionsRouteImport } from './routes/decisions'
 import { Route as PermissionsRouteImport } from './routes/permissions'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SemesterRouteImport } from './routes/semester'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SkillsRouteImport } from './routes/skills'
+import { Route as SkillsExportRouteImport } from './routes/skills-export'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 
@@ -34,6 +37,11 @@ const ActivityRoute = ActivityRouteImport.update({
 const CounselorRoute = CounselorRouteImport.update({
   id: '/counselor',
   path: '/counselor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CourseSkillsRoute = CourseSkillsRouteImport.update({
+  id: '/course-skills',
+  path: '/course-skills',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DecisionsRoute = DecisionsRouteImport.update({
@@ -66,6 +74,16 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SkillsRoute = SkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SkillsExportRoute = SkillsExportRouteImport.update({
+  id: '/skills-export',
+  path: '/skills-export',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SourcesRoute = SourcesRouteImport.update({
   id: '/sources',
   path: '/sources',
@@ -81,12 +99,15 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
   '/counselor': typeof CounselorRoute
+  '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
   '/profile': typeof ProfileRoute
   '/semester': typeof SemesterRoute
   '/settings': typeof SettingsRoute
+  '/skills': typeof SkillsRoute
+  '/skills-export': typeof SkillsExportRoute
   '/sources': typeof SourcesRoute
   '/welcome': typeof WelcomeRoute
 }
@@ -94,12 +115,15 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
   '/counselor': typeof CounselorRoute
+  '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
   '/profile': typeof ProfileRoute
   '/semester': typeof SemesterRoute
   '/settings': typeof SettingsRoute
+  '/skills': typeof SkillsRoute
+  '/skills-export': typeof SkillsExportRoute
   '/sources': typeof SourcesRoute
   '/welcome': typeof WelcomeRoute
 }
@@ -108,12 +132,15 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
   '/counselor': typeof CounselorRoute
+  '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
   '/profile': typeof ProfileRoute
   '/semester': typeof SemesterRoute
   '/settings': typeof SettingsRoute
+  '/skills': typeof SkillsRoute
+  '/skills-export': typeof SkillsExportRoute
   '/sources': typeof SourcesRoute
   '/welcome': typeof WelcomeRoute
 }
@@ -123,12 +150,15 @@ export interface FileRouteTypes {
     | '/'
     | '/activity'
     | '/counselor'
+    | '/course-skills'
     | '/decisions'
     | '/permissions'
     | '/portal'
     | '/profile'
     | '/semester'
     | '/settings'
+    | '/skills'
+    | '/skills-export'
     | '/sources'
     | '/welcome'
   fileRoutesByTo: FileRoutesByTo
@@ -136,12 +166,15 @@ export interface FileRouteTypes {
     | '/'
     | '/activity'
     | '/counselor'
+    | '/course-skills'
     | '/decisions'
     | '/permissions'
     | '/portal'
     | '/profile'
     | '/semester'
     | '/settings'
+    | '/skills'
+    | '/skills-export'
     | '/sources'
     | '/welcome'
   id:
@@ -149,12 +182,15 @@ export interface FileRouteTypes {
     | '/'
     | '/activity'
     | '/counselor'
+    | '/course-skills'
     | '/decisions'
     | '/permissions'
     | '/portal'
     | '/profile'
     | '/semester'
     | '/settings'
+    | '/skills'
+    | '/skills-export'
     | '/sources'
     | '/welcome'
   fileRoutesById: FileRoutesById
@@ -163,12 +199,15 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActivityRoute: typeof ActivityRoute
   CounselorRoute: typeof CounselorRoute
+  CourseSkillsRoute: typeof CourseSkillsRoute
   DecisionsRoute: typeof DecisionsRoute
   PermissionsRoute: typeof PermissionsRoute
   PortalRoute: typeof PortalRoute
   ProfileRoute: typeof ProfileRoute
   SemesterRoute: typeof SemesterRoute
   SettingsRoute: typeof SettingsRoute
+  SkillsRoute: typeof SkillsRoute
+  SkillsExportRoute: typeof SkillsExportRoute
   SourcesRoute: typeof SourcesRoute
   WelcomeRoute: typeof WelcomeRoute
 }
@@ -194,6 +233,13 @@ declare module '@tanstack/react-router' {
       path: '/counselor'
       fullPath: '/counselor'
       preLoaderRoute: typeof CounselorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/course-skills': {
+      id: '/course-skills'
+      path: '/course-skills'
+      fullPath: '/course-skills'
+      preLoaderRoute: typeof CourseSkillsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/decisions': {
@@ -238,6 +284,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/skills': {
+      id: '/skills'
+      path: '/skills'
+      fullPath: '/skills'
+      preLoaderRoute: typeof SkillsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/skills-export': {
+      id: '/skills-export'
+      path: '/skills-export'
+      fullPath: '/skills-export'
+      preLoaderRoute: typeof SkillsExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sources': {
       id: '/sources'
       path: '/sources'
@@ -259,12 +319,15 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivityRoute: ActivityRoute,
   CounselorRoute: CounselorRoute,
+  CourseSkillsRoute: CourseSkillsRoute,
   DecisionsRoute: DecisionsRoute,
   PermissionsRoute: PermissionsRoute,
   PortalRoute: PortalRoute,
   ProfileRoute: ProfileRoute,
   SemesterRoute: SemesterRoute,
   SettingsRoute: SettingsRoute,
+  SkillsRoute: SkillsRoute,
+  SkillsExportRoute: SkillsExportRoute,
   SourcesRoute: SourcesRoute,
   WelcomeRoute: WelcomeRoute,
 }

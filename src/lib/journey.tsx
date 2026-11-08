@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { options, student, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
+import type { SkillReview } from "@/lib/skills";
 
 export type Stage = "idle" | "failed" | "chosen";
 
@@ -27,6 +28,11 @@ export type AgentId = "reader" | "planner" | "backup" | "drafter";
 export type AccessKey = "registration" | "canvas" | "sis" | "audit" | "articulation" | "email";
 
 type State = {
+  skillReviews: Record<string, SkillReview>;
+  draftCourses: string[];
+  interestedRoles: string[];
+  dismissedRoles: string[];
+  careerInterests: string[];
   agentOn: Record<AgentId, boolean>;
   access: Record<AccessKey, boolean>;
   notify: { email: boolean; push: boolean; digest: boolean };
@@ -47,6 +53,11 @@ type State = {
 };
 
 const initial: State = {
+  skillReviews: { observation: { confirmed: true } },
+  draftCourses: [],
+  interestedRoles: [],
+  dismissedRoles: [],
+  careerInterests: [],
   agentOn: { reader: true, planner: true, backup: true, drafter: true },
   access: { registration: true, canvas: true, sis: true, audit: true, articulation: true, email: true },
   notify: { email: true, push: false, digest: true },
@@ -67,6 +78,11 @@ const initial: State = {
 };
 
 type Ctx = State & {
+  reviewSkill: (id: string, review: SkillReview) => void;
+  addDraftCourse: (code: string) => void;
+  toggleCareerInterest: (interest: string) => void;
+  setRoleInterest: (id: string, interested: boolean) => void;
+  dismissRole: (id: string, dismissed: boolean) => void;
   failAdd: (openSheet?: boolean) => void;
   choose: (id: string) => void;
   backToOptions: () => void;
@@ -161,6 +177,11 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     const chosen = options.find((o) => o.id === s.chosenId);
     return {
       ...s,
+      reviewSkill: (id, review) => set(p => ({ ...p, skillReviews: { ...p.skillReviews, [id]: { ...p.skillReviews[id], ...review } } })),
+      addDraftCourse: (code) => set(p => ({ ...p, draftCourses: p.draftCourses.includes(code) ? p.draftCourses : [...p.draftCourses, code] })),
+      toggleCareerInterest: (interest) => set(p => ({ ...p, careerInterests: p.careerInterests.includes(interest) ? p.careerInterests.filter(i => i !== interest) : [...p.careerInterests, interest] })),
+      setRoleInterest: (id, interested) => set(p => ({ ...p, interestedRoles: interested ? [...new Set([...p.interestedRoles, id])] : p.interestedRoles.filter(i => i !== id), dismissedRoles: p.dismissedRoles.filter(i => i !== id) })),
+      dismissRole: (id, dismissed) => set(p => ({ ...p, dismissedRoles: dismissed ? [...new Set([...p.dismissedRoles, id])] : p.dismissedRoles.filter(i => i !== id) })),
       atRisk: (s.stage !== "idle" && !s.seatHeld) || s.counselor === "declined",
       failAdd,
       choose,

@@ -8,6 +8,7 @@ import { options } from "@/data/scenario";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { BrandLogo, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
+import { AddsSkills } from "@/components/app/SkillsBits";
 
 export const Route = createFileRoute("/portal")({
   head: () => ({
@@ -238,7 +239,7 @@ function Portal() {
                     return (
                       <Fragment key={r.crn}>
                         <tr className={cn("border-b", isTarget && "bg-primary/5 outline outline-2 -outline-offset-2 outline-primary")}>
-                          <td className="px-2 py-1.5 text-portal-link underline">{r.title}</td>
+                          <td className="px-2 py-1.5"><span className="text-portal-link underline">{r.title}</span><AddsSkills course={`${r.subj} ${r.num}`} /></td>
                           <td className="px-2 py-1.5">{r.subj}</td>
                           <td className="px-2 py-1.5">{r.num}</td>
                           <td className="px-2 py-1.5">{r.sec}</td>

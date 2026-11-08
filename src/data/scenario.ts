@@ -438,3 +438,56 @@ export const schools = {
   bayview: { name: "Bayview Community College", short: "Bayview CC", system: "Quarter system", role: "Current school" },
   northgate: { name: "Northgate State University", short: "Northgate State", system: "Semester system", role: "Transfer school · admitted Fall 2027" },
 } as const;
+
+// Skills ledger: fictional syllabus passages and role examples, not credentials.
+export type EvidenceLevel = "Taught" | "Practiced" | "Demonstrated";
+export type SkillConfidence = "High" | "Medium" | "Low";
+export type Skill = { id: string; name: string; method: string; theme: string; course: string; level: EvidenceLevel; confidence: SkillConfidence; quote: string; source: string; work?: string };
+export type SkillCourse = { code: string; title: string; term: string; termId: string; units: string; school: string; description: string; tools: string[]; assignments: string[]; thin?: boolean };
+export const skillCourses: SkillCourse[] = [
+  { code: "STAT 2", title: "Statistics", term: "Summer 2027", termId: "su27", units: "5 qu", school: "Bayview CC", description: "An introduction to statistical reasoning, data summaries and inference.", tools: ["Excel", "R"], assignments: ["Planned: data summary worksheet", "Planned: visualization exercise"] },
+  { code: "PSYC 33", title: "Personal Growth", term: "Spring 2027", termId: "sp27", units: "3 qu", school: "Bayview CC", description: "Explore personal development through reflection and communication.", tools: [], assignments: ["Reflection journal", "Interview practice"] },
+  { code: "HIST 17", title: "U.S. History", term: "Spring 2027", termId: "sp27", units: "5 qu", school: "Bayview CC", description: "Study U.S. history through primary sources and research writing.", tools: [], assignments: ["Primary-source analysis", "10-page research paper"] },
+  { code: "ANTH 2", title: "Cultural Anthropology", term: "Fall 2026", termId: "f26", units: "5 qu · grade A", school: "Bayview CC", description: "Explore culture through observation, interviewing and ethnographic methods.", tools: [], assignments: ["Ethnography fieldnotes (synthetic attachment)", "Cultural analysis essay"] },
+  { code: "ART 1", title: "Art History", term: "Fall 2026", termId: "f26", units: "4 qu · grade B+", school: "Bayview CC", description: "Interpret works of art through visual analysis and historical context.", tools: [], assignments: ["Visual analysis essay", "Written critique", "Class discussion (thin description)"] },
+  { code: "ENGL 1B", title: "Critical Thinking", term: "Summer 2027", termId: "su27", units: "5 qu", school: "Bayview CC", description: "Study arguments and develop evidence-based persuasive writing.", tools: [], assignments: ["Planned: argument analysis", "Planned: persuasive essay"] },
+  { code: "PSYC 41", title: "Research Methods", term: "Fall 2027", termId: "fa27", units: "3 su", school: "Northgate State", description: "Design surveys and experiments to investigate research questions.", tools: [], assignments: ["Planned: survey proposal", "Planned: experiment design"] },
+  { code: "DSGN 20", title: "Intro to Human-Centered Design", term: "Fall 2027", termId: "fa27", units: "3 su", school: "Northgate State", description: "Explore human-centered design through prototypes and usability studies.", tools: [], assignments: ["Planned: paper prototype", "Planned: usability study plan"] },
+];
+const skill = (id: string, name: string, course: string, level: EvidenceLevel, confidence: SkillConfidence, theme: string, quote: string, method: string, source = "Learning outcomes, line 3", work?: string): Skill => ({ id, name, course, level, confidence, theme, quote, method, source, ...(work ? { work } : {}) });
+export const ledgerSkills: Skill[] = [
+  skill("descriptive", "Descriptive statistics", "STAT 2", "Taught", "High", "Research and data", "Calculate and interpret measures of center and spread", "Measures of center and spread"),
+  skill("hypothesis", "Hypothesis testing", "STAT 2", "Taught", "High", "Research and data", "Explain hypothesis tests and interpret their results", "Statistical inference", "Learning outcomes, line 4"),
+  skill("visualization", "Data visualization", "STAT 2", "Taught", "Medium", "Tools", "Create and interpret charts using Excel and R", "Excel and R", "Learning outcomes, line 5"),
+  skill("reflection", "Self-reflection methods", "PSYC 33", "Practiced", "Medium", "Analysis and critical thinking", "Use a reflection journal to examine personal growth", "Reflection journal", "Assignments, line 2"),
+  skill("interview-basics", "Interviewing basics", "PSYC 33", "Taught", "Medium", "Writing and communication", "Describe listening techniques and introductory interview questions", "Listening and open questions"),
+  skill("sources", "Source analysis", "HIST 17", "Practiced", "High", "Analysis and critical thinking", "Evaluate primary sources for bias and context", "Primary-source analysis"),
+  skill("research-writing", "Research writing", "HIST 17", "Practiced", "High", "Writing and communication", "Write a 10-page research paper using primary sources", "Cited research paper", "Assignments, line 4"),
+  skill("observation", "Qualitative observation", "ANTH 2", "Demonstrated", "High", "Research and data", "Record ethnographic observations in fieldnotes", "Ethnography fieldnotes", "Assignments, line 2", "Ethnography fieldnotes · synthetic work attached"),
+  skill("culture", "Cultural analysis", "ANTH 2", "Practiced", "High", "Analysis and critical thinking", "Compare cultural practices using ethnographic evidence", "Comparative analysis"),
+  skill("interviewing", "Interviewing", "ANTH 2", "Practiced", "Medium", "Writing and communication", "Practice open-ended interviews and document responses", "Open-ended interviews", "Assignments, line 5"),
+  skill("visual-analysis", "Visual analysis", "ART 1", "Practiced", "High", "Analysis and critical thinking", "Interpret composition, form and context in a visual analysis essay", "Visual analysis essay", "Assignments, line 2"),
+  skill("critique", "Critique and writing", "ART 1", "Practiced", "Medium", "Writing and communication", "Write a critique supported by observations of an artwork", "Written critique", "Assignments, line 4"),
+  skill("argument", "Argument analysis", "ENGL 1B", "Taught", "High", "Analysis and critical thinking", "Identify assumptions and evaluate evidence in arguments", "Argument structure"),
+  skill("persuasive", "Persuasive writing", "ENGL 1B", "Taught", "High", "Writing and communication", "Develop a persuasive argument supported by evidence", "Evidence-based essays", "Learning outcomes, line 4"),
+  skill("speaking", "Public speaking", "ART 1", "Taught", "Low", "Writing and communication", "Class discussion", "Discussion · unclear syllabus wording", "Course schedule, line 6"),
+];
+export const gapSkills: Skill[] = [
+  skill("survey", "Survey design", "PSYC 41", "Taught", "High", "Research and data", "Design survey questions appropriate to a research question", "Survey proposal"),
+  skill("experimental", "Experimental design", "PSYC 41", "Taught", "High", "Research and data", "Describe controls and variables in an experimental design", "Experiment proposal", "Learning outcomes, line 4"),
+  skill("usability", "Usability testing", "DSGN 20", "Taught", "High", "Research and data", "Plan a usability study and identify tasks to observe", "Usability study plan"),
+  skill("prototyping", "Prototyping", "DSGN 20", "Taught", "High", "Tools", "Create a paper prototype to explore a design idea", "Paper prototype", "Learning outcomes, line 4"),
+];
+export const careerInterests = ["Working with people", "Working with data", "Creative work", "Helping communities", "Stable hours", "High pay", "Remote-friendly"];
+export type CareerRole = { id: string; title: string; description: string; match: "Strong match" | "Possible match" | "A stretch"; why: string[]; missing: string[]; interests: string[]; suggestions: string[]; beyond: string[] };
+export const careerRoles: CareerRole[] = [
+  { id: "ux", title: "UX researcher", description: "Learn how people experience products and services.", match: "Strong match", why: ["Qualitative observation", "Interviewing", "Research writing"], missing: ["Usability testing", "Survey design"], interests: ["Working with people", "Creative work", "Remote-friendly"], suggestions: ["PSYC 41", "DSGN 20", "STAT 2"], beyond: ["Explore a community research internship.", "Make a portfolio project observing how people use a campus service."] },
+  { id: "policy", title: "Policy analyst", description: "Read evidence to understand policies and their effects.", match: "Possible match", why: ["Source analysis", "Research writing", "Descriptive statistics"], missing: ["Policy evaluation", "Data analysis in R"], interests: ["Helping communities", "Working with data", "Stable hours"], suggestions: ["PSYC 41", "STAT 2"], beyond: ["Explore a public-policy research internship.", "Write a short evidence-based policy brief."] },
+  { id: "market", title: "Market research analyst", description: "Explore what people need through data and research.", match: "Possible match", why: ["Descriptive statistics", "Survey interpretation", "Data visualization"], missing: ["Survey design", "SQL"], interests: ["Working with data", "High pay", "Remote-friendly"], suggestions: ["PSYC 41", "STAT 2"], beyond: ["Explore a research assistant internship.", "Create a small survey and describe its limitations."] },
+  { id: "museum", title: "Museum or archive coordinator", description: "Help preserve collections and tell their stories.", match: "Possible match", why: ["Visual analysis", "Source analysis", "Critique and writing"], missing: ["Collections management"], interests: ["Creative work", "Helping communities", "Stable hours"], suggestions: ["DSGN 20", "PSYC 41"], beyond: ["Explore a museum or community archive internship.", "Create a small annotated digital collection."] },
+  { id: "nonprofit", title: "Program evaluator at a nonprofit", description: "Help communities understand whether programs are working.", match: "A stretch", why: ["Interviewing", "Qualitative observation"], missing: ["Evaluation design", "Data analysis"], interests: ["Helping communities", "Working with people", "Working with data"], suggestions: ["PSYC 41", "STAT 2"], beyond: ["Explore a nonprofit evaluation internship.", "Draft an evaluation plan for a community program."] },
+];
+export const registrationSkills: Record<string, string[]> = {
+  "STAT 2": ["Descriptive statistics", "Hypothesis testing"], "MATH 13": ["Descriptive statistics", "Hypothesis testing"],
+  "PSYC 5": ["Hypothesis testing", "Data visualization"], "BUS 21": ["Descriptive statistics", "Data visualization"], "MATH 10": ["Statistical reasoning", "Chart interpretation"],
+};

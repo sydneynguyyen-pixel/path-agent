@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, SlidersHorizontal, ChevronRight, UserCheck, UserRound, Settings, GraduationCap } from "lucide-react";
+import { RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, SlidersHorizontal, ChevronRight, UserCheck, UserRound, Settings, GraduationCap, BookOpenCheck } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { sources, student } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
@@ -17,6 +17,7 @@ const groups = [
       { to: "/", label: "Home", icon: Home },
       { to: "/semester", label: "Terms", icon: CalendarDays },
       { to: "/portal", label: "Registration", icon: MousePointerClick },
+      { to: "/skills", label: "Skills", icon: BookOpenCheck },
     ],
   },
   {

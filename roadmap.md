@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Expand Activity and Agent controls to use the available page width.
+- [x] Align Terms selectors and give course names and source links comfortable spacing.
+
 - [x] Apply supplied brand system across all app pages without changing behavior; verify portal and mobile exceptions.
 - [x] Refine the Path Agent logo blob to match the supplied mascots and add a small graduation cap.
 - [x] Color the agent characters themselves, preserving their outlines and leaving their surrounding circles neutral.

@@ -42,12 +42,15 @@ function Semester() {
       <PageHeader title="Your terms" sub="Where you are now, what you're registering for, and what comes next." right={<SimLabel>Synthetic data</SimLabel>} />
       <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
         {terms.filter((t) => t.status !== "done").map((t) => (
-          <button key={t.id} onClick={() => setSel(t.id)} className={cn("shrink-0 rounded-2xl border px-4 py-2.5 text-left text-sm", sel === t.id ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>
-            <div className="flex items-center gap-2 font-medium"><TermIcon term={t.name} />{t.name}</div>
-            <div className={cn("text-xs", sel === t.id ? "opacity-80" : "text-muted-foreground")}>
-              {t.status === "in_progress" ? "Current term" : t.status === "registering" ? "Registering now" : "Planned"}
-            </div>
-          </button>
+          <Button variant="outline" key={t.id} onClick={() => setSel(t.id)} className={cn("h-auto min-h-16 shrink-0 justify-start gap-3 px-5 py-3 text-left text-sm", sel === t.id ? "border-primary bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground" : "bg-card")}>
+            <TermIcon term={t.name} />
+            <span className="min-w-0">
+              <span className="block font-medium">{t.name}</span>
+              <span className={cn("mt-0.5 block text-xs font-normal", sel === t.id ? "opacity-80" : "text-muted-foreground")}>
+                {t.status === "in_progress" ? "Current term" : t.status === "registering" ? "Registering now" : "Planned"}
+              </span>
+            </span>
+          </Button>
         ))}
       </div>
       {term.id !== "su27" ? (
@@ -73,8 +76,8 @@ function Semester() {
         <Link to="/portal" className="text-xs underline">Registration open · closes Jun 18</Link>
       </div>
       <div className="overflow-x-auto rounded-2xl border bg-card">
-        <div className="grid min-w-[760px] grid-cols-[140px_repeat(8,1fr)]">
-          <div className="border-b p-3 text-xs text-muted-foreground">Course</div>
+        <div className="grid min-w-[1080px] grid-cols-[240px_repeat(8,minmax(105px,1fr))]">
+          <div className="border-b px-5 py-4 text-xs text-muted-foreground">Course</div>
           {weeks.map((w) => (
             <div key={w} className={cn("border-b border-l p-3 text-center text-xs font-medium", load(w) >= PILEUP_THRESHOLD && "bg-primary text-primary-foreground")}>
               Wk {w}
@@ -83,9 +86,10 @@ function Semester() {
           ))}
           {rows.map((r, ri) => (
             <div key={r.course} className="contents">
-              <div className={cn("border-b p-3 text-sm font-medium", r.isNew && "bg-accent")}>
-                <SubjectIcon course={r.course} className="mb-2" />{r.course} {r.isNew && <span className="block text-xs font-normal text-muted-foreground">Seat held by you</span>}
-                <div className="mt-1"><SourceChip id={r.sourceId} /></div>
+              <div className={cn("min-w-0 border-b px-5 py-4 text-sm font-medium", r.isNew && "bg-accent")}>
+                <div className="flex items-center gap-3"><SubjectIcon course={r.course} /><span className="min-w-0">{r.course}</span></div>
+                {r.isNew && <span className="mt-2 block text-xs font-normal text-muted-foreground">Seat held by you</span>}
+                <div className="mt-3 [&_button]:whitespace-nowrap [&_button]:text-left"><SourceChip id={r.sourceId} /></div>
               </div>
               {weeks.map((w) => (
                 <div key={w} className={cn("border-b border-l p-2", r.isNew && "bg-accent/50")}>

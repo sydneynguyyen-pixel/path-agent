@@ -63,7 +63,7 @@ function Controls() {
   const j = useJourney();
   const events = useEvents();
   return (
-    <div className="max-w-4xl">
+    <div className="w-full min-w-0">
       <PageHeader
         title="Agent controls"
         sub="Your assistant is a team of four helpers. Turn any off, or limit what it can read."
@@ -80,7 +80,7 @@ function Controls() {
         <h2 className="mb-3 text-lg font-medium">Where it watches</h2>
         <div className="flex items-center gap-4 rounded-2xl border p-4">
           {j.access.registration && !j.paused ? <Eye className="size-5 text-success" /> : <EyeOff className="size-5 text-muted-foreground" />}
-          <div className="flex-1"><div className="font-medium">Registration page</div><div className="text-sm text-muted-foreground">Watch only while you're on it, to catch errors like “Section full”.</div></div>
+          <div className="min-w-0 flex-1"><div className="font-medium">Registration page</div><div className="text-sm text-muted-foreground">Watch only while you're on it, to catch errors like “Section full”.</div></div>
           <Switch checked={j.access.registration} onCheckedChange={(v) => j.setAccess("registration", v)} aria-label="Registration page" />
         </div>
         <p className="mt-2 text-xs text-muted-foreground">Nothing else in your browser is visible to the assistant.</p>
@@ -128,8 +128,8 @@ function Controls() {
             const skippedEvent = events.find((e) => e.steps.some((s) => s.helper === id && s.skipped));
             return (
               <article key={id} className={cn("rounded-2xl border p-5", !on && "bg-secondary/50")}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className={cn(!on && "opacity-60")}>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:justify-between">
+                  <div className={cn("min-w-0", !on && "opacity-60")}>
                     <div className="flex items-center gap-2 font-semibold"><AgentAvatar agent={id} />{helperInfo[id].name}</div>
                     <div className="text-xs text-muted-foreground">{on ? "On" : j.paused ? "Paused" : "Off"} · {t ? `Last active ${fmtStamp(t)}` : "Not active yet"}</div>
                   </div>

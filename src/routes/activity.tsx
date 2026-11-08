@@ -41,7 +41,7 @@ export const helperInfo: Record<AgentId, { name: string; plain: string }> = {
 function Activity() {
   const { tab, helper } = Route.useSearch();
   return (
-    <div className="max-w-4xl">
+    <div className="w-full min-w-0">
       <PageHeader title="Activity" sub="Here's what your assistant did for you, and what it left for you to decide." />
       <div role="tablist" className="mb-6 inline-flex rounded-full border bg-card p-1 text-sm">
         {([["timeline", "Timeline"], ["decisions", "Your decisions"]] as const).map(([k, l]) => {
@@ -67,7 +67,7 @@ function Intro() {
   return (
     <section className="relative mb-6 rounded-2xl border bg-lilac p-5">
       <button aria-label="Dismiss" onClick={() => set(false)} className="absolute right-3 top-3 text-muted-foreground"><X className="size-4" /></button>
-      <p className="max-w-2xl pr-6">
+      <p className="pr-6">
         Path Agent is your teammate for your degree plan. It reads your documents and watches your plan. It can suggest and draft. It can never register you for a class or send anything without your OK.
       </p>
       <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
@@ -141,8 +141,8 @@ function EventCard({ e, now, helper }: { e: ActivityEvent; now: number | null; h
   const steps = helper ? e.steps.filter((s) => s.helper === helper) : e.steps;
   return (
     <li id={`event-${e.id}`} className={cn("rounded-2xl border bg-card p-5 shadow-soft", e.handoff && "border-2 border-warning/50")}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:justify-between">
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold">{e.headline}</h2>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             <When d={e.at} now={now} />
@@ -158,7 +158,7 @@ function EventCard({ e, now, helper }: { e: ActivityEvent; now: number | null; h
           <li key={i} className={cn("flex flex-wrap items-center gap-x-3 gap-y-1 text-sm", s.skipped && "text-muted-foreground line-through")}>
             <AgentAvatar agent={s.helper} />
             <time className="w-16 shrink-0 font-mono text-xs text-muted-foreground" title={fmtStampSec(s.at)}>{fmtClock(s.at)}</time>
-            <span className="flex-1">{s.text}{s.skipped && <span className="ml-1 no-underline">(skipped — {helperInfo[s.helper].name} is off)</span>}</span>
+            <span className="min-w-0 flex-1">{s.text}{s.skipped && <span className="ml-1 no-underline">(skipped — {helperInfo[s.helper].name} is off)</span>}</span>
             <PermChip p={s.perm} />
           </li>
         ))}

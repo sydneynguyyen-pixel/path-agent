@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { CheckCircle2, ArrowRight, AlertTriangle, CalendarClock, Sparkles } from "lucide-react";
+import { CheckCircle2, ArrowRight, AlertTriangle, CalendarClock, CalendarDays, CalendarPlus, Sparkles } from "lucide-react";
 import { requirements, options, student, terms, progress, schools, DROP_DEADLINE, type ReqStatus, type Term } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
 import { useJourney } from "@/lib/journey";
@@ -103,9 +103,9 @@ function PathTimeline() {
                   <div className="flex min-w-0 items-center gap-2"><TermIcon term={t.name} /><div className="min-w-0">{t.status === "in_progress" && <div className="term-here">You are here</div>}<span className="term-edge-name">{t.name}</span></div></div>
                   <span className={cn("term-status-chip", termTone[t.status])}>
                     {t.status === "done" && <CheckCircle2 className="size-3" />}
-                    {t.status === "in_progress" && <span className="term-current-dot animate-pulse-dot" />}
+                    {t.status === "in_progress" && <><CalendarDays className="size-3 shrink-0" aria-hidden="true" /><span className="term-current-dot animate-pulse-dot" /></>}
+                    {t.status === "registering" && <CalendarPlus className="size-3 shrink-0" aria-hidden="true" />}
                     {termLabel[t.status]}
-                    {t.status === "registering" && <ArrowRight className="size-3" />}
                   </span>
                 </div>
                 {t.registration && <div className="mt-3 flex items-center gap-1.5 px-4 text-xs text-muted-foreground">{t.status === "registering" && <CalendarClock className="size-3 shrink-0" />}{t.status === "registering" ? "Open now, closes Jun 18." : t.registration}</div>}

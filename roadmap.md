@@ -1,5 +1,12 @@
 # Roadmap
 
+- [x] Add clear icons to Current term and Registering now status chips.
+- [ ] Add Skills ledger and course syllabus details with evidence, confirmation, editing and attached work.
+- [ ] Add review-gated resume and LinkedIn text export.
+- [ ] Add career discovery and role gap planning with draft courses in the existing planner.
+- [ ] Add Skills navigation, home/course entry points and registration skill chips without changing existing flows.
+- [ ] Test trust rules and verify the Skills flow on desktop and phone.
+
 - [x] Apply edge-stripe term cards with accessible single selection and matching term detail actions.
 
 - [x] Make Agent controls visual and student-friendly while preserving all switches and source access controls.

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Make Agent controls visual and student-friendly while preserving all switches and source access controls.
+
 - [x] Reshape Activity as a searchable, filterable chronological log with expandable records.
 - [x] Remove the redundant standalone Goal pill from Activity.
 

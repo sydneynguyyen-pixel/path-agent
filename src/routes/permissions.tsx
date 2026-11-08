@@ -71,7 +71,7 @@ function Controls() {
             const visual = helperVisuals[id];
             const skippedEvent = events.find(e => e.steps.some(step => step.helper === id && step.skipped));
             return (
-              <article key={id} className={cn("relative flex min-w-0 flex-col rounded-2xl border bg-card p-5", !on && "bg-secondary/50")}>
+              <article key={id} className={cn("relative flex min-w-0 flex-col rounded-2xl border bg-card p-5 shadow-widget hover:shadow-widget-hover", !on && "bg-secondary/50")}>
                 <div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-muted-foreground">{on ? "On" : j.paused ? "Paused" : "Off"}</span><Switch checked={j.agentOn[id]} onCheckedChange={value => j.setAgentOn(id, value)} aria-label={`${helperInfo[id].name} on`} /></div>
                 <div className={cn("flex flex-col items-center py-5 text-center", !on && "opacity-50")}>
                   <AgentAvatar agent={id} bare />

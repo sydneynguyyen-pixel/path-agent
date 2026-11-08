@@ -115,6 +115,8 @@
   --gradient-sidebar: linear-gradient(var(--card), var(--card));
   --shadow-soft: 0 10px 36px rgb(0 0 0 / 7%);
   --shadow-frame: 0 10px 36px rgb(0 0 0 / 7%);
+  --shadow-widget: 0 2px 5px oklch(0.18 0 0 / 5%), 0 12px 24px -8px oklch(0.18 0 0 / 14%);
+  --shadow-widget-hover: 0 3px 7px oklch(0.18 0 0 / 6%), 0 16px 30px -8px oklch(0.18 0 0 / 18%);
   --aqua-gradient: linear-gradient(100deg, #BDE8E1 0%, #BFE3F4 100%);
   --aqua-ring-start: #A8E0D8;
   --aqua-ring-end: #9CCBEF;
@@ -203,6 +205,13 @@
   box-shadow: var(--shadow-soft);
 }
 
+@utility shadow-widget {
+  box-shadow: var(--shadow-widget);
+}
+@utility shadow-widget-hover {
+  box-shadow: var(--shadow-widget-hover);
+}
+
 @keyframes pulse-dot {
   0%,
   100% {
@@ -244,7 +253,7 @@
 .brand-app h2 { font-size: 20px; }
 .brand-app h3 { font-size: 18px; }
 .brand-app .home-greeting { font-size: 42px; line-height: 1.15; letter-spacing: -0.03em; }
-.brand-app :is(button, a, article) { transition: background-color 180ms ease, color 180ms ease, transform 180ms ease; }
+.brand-app :is(button, a, article) { transition: background-color 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
 .brand-app :is(button,[role=tab]) { border-radius: 9999px; }
 .brand-app article:hover { transform: translateY(-2px); }
 .brand-app :is(.rounded-xl,.rounded-2xl):not(.mesh-tile):not(.agent-avatar) { border-radius: 28px; }

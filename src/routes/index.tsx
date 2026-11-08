@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { CheckCircle2, ArrowRight, AlertTriangle, CalendarClock, Sparkles } from "lucide-react";
 import { requirements, options, student, terms, progress, schools, DROP_DEADLINE, type ReqStatus, type Term } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
@@ -9,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { TermIcon, SubjectIcon, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
+import { seasonFor } from "@/components/app/Brand";
+import { defaultSelectedTermId, selectTerm } from "@/lib/term-selection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -66,15 +69,17 @@ function Attention() {
 }
 
 const termTone: Record<Term["status"], string> = {
-  done: "term-band-chip opacity-75",
+  done: "term-status-completed",
   in_progress: "aqua-chip",
-  registering: "aqua-chip",
-  planned: "term-band-chip opacity-75",
+  registering: "term-status-registering",
+  planned: "term-status-planned",
 };
 const termLabel: Record<Term["status"], string> = { done: "Completed", in_progress: "Current term", registering: "Registering now", planned: "Planned" };
+const termAction: Record<Term["status"], string> = { done: "See grades", in_progress: "See this term", registering: "Go to registration", planned: "Edit plan" };
 
 function PathTimeline() {
   const j = useJourney();
+  const [selectedId, setSelectedId] = useState(defaultSelectedTermId);
   const chosen = options.find((o) => o.id === j.chosenId);
   return (
     <div className="space-y-8">
@@ -87,14 +92,23 @@ function PathTimeline() {
               <div className="text-xs text-muted-foreground">{schools[sch].role} · {schools[sch].system}</div>
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {terms.filter((t) => t.school === sch).map((t) => (
-              <article key={t.id} className={cn("term-card rounded-2xl border", t.status === "registering" && "border-2 border-primary")}>
-                <div className="term-band term-band-solid">
-                  <div className="flex min-w-0 items-center gap-2 text-lg font-semibold"><TermIcon term={t.name} /><span className={cn("term-band-name", (t.status === "done" || t.status === "planned") && "opacity-75")}>{t.name}</span></div>
-                  <span className={cn("rounded-full px-2 py-0.5 text-[11px]", termTone[t.status])}>{termLabel[t.status]}</span>
+              <article key={t.id} role="button" tabIndex={0} aria-label={t.name} aria-pressed={selectedId === t.id}
+                onClick={() => setSelectedId((current) => selectTerm(current, t.id))}
+                onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setSelectedId((current) => selectTerm(current, t.id)); } }}
+                className={cn("term-card edge-term-card", `term-state-${t.status}`, selectedId === t.id && "term-selected")}>
+                <div className={cn("term-edge-stripe", `mesh-${seasonFor(t.name)}`)} />
+                <div className="term-edge-header">
+                  <div className="flex min-w-0 items-center gap-2"><TermIcon term={t.name} /><div className="min-w-0">{t.status === "in_progress" && <div className="term-here">You are here</div>}<span className="term-edge-name">{t.name}</span></div></div>
+                  <span className={cn("term-status-chip", termTone[t.status])}>
+                    {t.status === "done" && <CheckCircle2 className="size-3" />}
+                    {t.status === "in_progress" && <span className="term-current-dot animate-pulse-dot" />}
+                    {termLabel[t.status]}
+                    {t.status === "registering" && <ArrowRight className="size-3" />}
+                  </span>
                 </div>
-                {t.registration && <div className="mt-3 px-4 text-xs text-muted-foreground">{t.registration}</div>}
+                {t.registration && <div className="mt-3 flex items-center gap-1.5 px-4 text-xs text-muted-foreground">{t.status === "registering" && <CalendarClock className="size-3 shrink-0" />}{t.status === "registering" ? "Open now, closes Jun 18." : t.registration}</div>}
                 <ul className="mt-3 space-y-1.5 text-sm">
                   {t.courses.map((c) => {
                     const isQr = c.flag === "qr1";
@@ -112,6 +126,7 @@ function PathTimeline() {
                     );
                   })}
                 </ul>
+                {selectedId === t.id && <div className="term-selected-footer"><span>Selected</span><Button size="sm" className="h-8 font-semibold" asChild onClick={(event) => event.stopPropagation()}><Link to={t.status === "registering" ? "/portal" : "/semester"} search={t.status === "registering" ? {} : { term: t.id }}>{termAction[t.status]}</Link></Button></div>}
               </article>
             ))}
           </div>

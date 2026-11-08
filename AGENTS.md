@@ -38,3 +38,4 @@ use the editor.
 - Activity timeline events are derived from journey state in src/lib/activity.ts (tested) and timestamps come from the scripted clock (SCRIPT_START in journey.tsx), so every page agrees and Reset demo restores them; /decisions redirects to /activity?tab=decisions.
 - Activity log search, combined helper/status filtering, and timestamp sorting use a browser-safe pure function in src/lib/activity-filters.ts so controls stay testable without altering journey events.
 - Brand icons and agent portraits are shared through src/components/app/Brand.tsx, with palettes in src/styles.css; institutional portal styling stays scoped separately so visual updates cannot alter the school experience.
+- Term-card selection uses a tested single-ID helper and passes the term through the Terms page search parameter so footer actions open the matching existing detail view.

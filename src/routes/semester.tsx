@@ -11,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/semester")({
+  validateSearch: (search: Record<string, unknown>): { term?: string } => {
+    const term = search['term'];
+    return typeof term === "string" && terms.some((t) => t.id === term) ? { term } : {};
+  },
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },
@@ -26,8 +30,11 @@ export const Route = createFileRoute("/semester")({
 
 function Semester() {
   const j = useJourney();
-  const [sel, setSel] = useState("su27");
-  const term = terms.find((t) => t.id === sel)!;
+  const search = Route.useSearch();
+  const [localSel, setSel] = useState<string>();
+  const sel = localSel ?? search.term ?? "su27";
+  const term = terms.find((t) => t.id === sel);
+  if (!term) return null;
   const chosen = j.seatHeld ? options.find((o) => o.id === j.chosenId) : undefined;
   const rows = [
     ...syllabi.map((s) => ({ course: s.course, items: s.items, sourceId: s.sourceId, isNew: false })),
@@ -41,13 +48,13 @@ function Semester() {
     <div>
       <PageHeader title="Your terms" sub="Where you are now, what you're registering for, and what comes next." right={<SimLabel>Synthetic data</SimLabel>} />
       <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
-        {terms.filter((t) => t.status !== "done").map((t) => (
+        {terms.filter((t) => t.status !== "done" || t.id === sel).map((t) => (
           <Button variant="outline" key={t.id} onClick={() => setSel(t.id)} className={cn("h-auto min-h-16 shrink-0 justify-start gap-3 px-5 py-3 text-left text-sm", sel === t.id ? "border-primary bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground" : "bg-card")}>
             <TermIcon term={t.name} />
             <span className="min-w-0">
               <span className="block font-medium">{t.name}</span>
               <span className={cn("mt-0.5 block text-xs font-normal", sel === t.id ? "opacity-80" : "text-muted-foreground")}>
-                {t.status === "in_progress" ? "Current term" : t.status === "registering" ? "Registering now" : "Planned"}
+                {t.status === "done" ? "Completed" : t.status === "in_progress" ? "Current term" : t.status === "registering" ? "Registering now" : "Planned"}
               </span>
             </span>
           </Button>
@@ -64,7 +71,7 @@ function Semester() {
           </div>
           <ul className="mt-5 divide-y">
             {term.courses.map((c) => (
-              <li key={c.code + c.title} className="flex items-center gap-3 py-2.5 text-sm"><SubjectIcon course={`${c.code} ${c.title}`} /><span className="flex-1"><b className="font-medium">{c.code}</b> <span className="text-muted-foreground">{c.title}</span></span><span className="text-muted-foreground">{c.units}</span></li>
+               <li key={c.code + c.title} className="flex items-center gap-3 py-2.5 text-sm"><SubjectIcon course={`${c.code} ${c.title}`} /><span className="flex-1"><b className="font-medium">{c.code}</b> <span className="text-muted-foreground">{c.title}</span></span><span className="text-muted-foreground">{c.grade ?? c.units}</span></li>
             ))}
           </ul>
           {term.status === "planned" && <p className="mt-4 text-xs text-muted-foreground">Planned from your degree audit. When registration opens, the agent will check seats and deadlines the same way it does for summer.</p>}

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Apply edge-stripe term cards with accessible single selection and matching term detail actions.
+
 - [x] Make Agent controls visual and student-friendly while preserving all switches and source access controls.
 
 - [x] Reshape Activity as a searchable, filterable chronological log with expandable records.

@@ -121,6 +121,12 @@
   --term-band-foreground: #FFFFFF;
   --term-band-icon-outline: oklch(1 0 0 / 85%);
   --term-band-chip-background: oklch(1 0 0 / 14%);
+  --term-border: #EAEAEA;
+  --term-current-border: #D0D0D0;
+  --term-planned-border: #D5D5D5;
+  --term-completed-text: #555555;
+  --term-footer-border: #F0F0F0;
+  --shadow-term-selected: 0 14px 32px rgb(0 0 0 / 12%);
   --aqua-gradient: linear-gradient(100deg, #BDE8E1 0%, #BFE3F4 100%);
   --aqua-ring-start: #A8E0D8;
   --aqua-ring-end: #9CCBEF;
@@ -273,6 +279,28 @@
 .brand-app .term-card { padding: 0; overflow: hidden; background: var(--card); }
 .brand-app .term-card ul { padding: 0 14px 16px; }
 .brand-app .term-course { align-items: center; padding: 6px 0; }
+.brand-app .edge-term-card { border: 1px solid var(--term-border); border-radius: 24px; cursor: pointer; transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease; }
+.term-edge-stripe { height: 8px; background: radial-gradient(120% 90% at 50% 112%, var(--mesh-bottom) 0%, transparent 62%), radial-gradient(90% 80% at 85% 55%, var(--mesh-mid) 0%, transparent 70%), linear-gradient(180deg, var(--mesh-top) 0%, var(--mesh-mid) 135%); }
+.term-edge-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px 0; }
+.term-edge-name { font-size: 18px; font-weight: 600; line-height: 24px; }
+.term-here { color: var(--muted-foreground); font-size: 11px; font-weight: 500; }
+.term-status-chip { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; border-radius: 9999px; padding: 3px 8px; font-size: 11px; }
+.term-status-completed { background: var(--muted); color: var(--term-completed-text); }
+.term-status-planned { background: var(--muted); color: var(--muted-foreground); }
+.term-status-registering { background: var(--primary); color: var(--primary-foreground); }
+.term-current-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--aqua-ring-start); }
+.brand-app .term-state-done .term-edge-stripe { height: 6px; opacity: .55; }
+.brand-app .term-state-done .term-course, .brand-app .term-state-done .term-course .text-muted-foreground { color: var(--term-completed-text); }
+.brand-app .term-state-done .subject-tile { opacity: .8; }
+.brand-app .term-state-in_progress { border-color: var(--term-current-border); }
+.brand-app .term-state-registering .term-edge-stripe { height: 12px; }
+.brand-app .term-state-planned { border: 1px dashed var(--term-planned-border); }
+.brand-app .term-state-planned .term-edge-stripe { opacity: .35; }
+.brand-app .edge-term-card:hover { transform: none; }
+.brand-app .edge-term-card.term-selected { border: 2px solid var(--primary); transform: translateY(-4px); box-shadow: var(--shadow-term-selected); }
+.brand-app .edge-term-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.term-selected-footer { border-top: 1px solid var(--term-footer-border); padding: 10px 14px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted-foreground); font-size: 12px; font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { .brand-app .edge-term-card.term-selected { transform: none; } }
 .brand-app .nav-link { padding: 8px 12px; min-height: 46px; }
 .brand-app .nav-link[aria-current=page] { color: var(--primary-foreground); }
 .brand-app .nav-link svg { width: 20px; height: 20px; }

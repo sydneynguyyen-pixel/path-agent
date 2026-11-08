@@ -4,6 +4,8 @@ import { RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Data
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { sources, student } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
+import { BrandLogo, AgentAvatar } from "./Brand";
+import { Button } from "@/components/ui/button";
 import { AgentPanel } from "./AgentPanel";
 import { useEvents } from "./activityBits";
 import { waitingCount } from "@/lib/activity";
@@ -51,18 +53,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   if (path === "/welcome") return <>{children}</>;
 
-  const current = [...allLinks, ...extra].find((l) => l.to === path) ?? allLinks[0]!;
+  const current = [...allLinks, ...extra].find((l) => l.to === path) ?? allLinks[0];
   const ev = j.evidenceId ? (sources as Record<string, (typeof sources)[keyof typeof sources] | undefined>)[j.evidenceId] : null;
   const anyOff = Object.values(j.agentOn).some((v) => !v);
 
   return (
-    <div className="min-h-screen p-3 md:p-5">
-      <div className="flex min-h-[calc(100vh-2.5rem)] overflow-hidden rounded-[1.75rem] border bg-sidebar-gradient shadow-frame">
+    <div className="brand-app min-h-screen p-3 md:p-5">
+      <div className="flex min-h-[calc(100vh-2.5rem)] overflow-hidden rounded-[2rem] border bg-card shadow-frame">
         <aside className="hidden w-64 shrink-0 flex-col px-4 py-6 md:flex">
           <div className="flex items-center gap-2.5 px-2">
-            <div className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
-              <GraduationCap className="size-5" />
-            </div>
+            <BrandLogo />
             <span className="font-semibold tracking-tight">Path Agent</span>
           </div>
 
@@ -75,8 +75,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={l.to}
                       to={l.to}
-                      className="flex items-center gap-3 rounded-full px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60"
-                      activeProps={{ className: "bg-sidebar-accent font-medium shadow-soft" }}
+                      className="nav-link flex items-center gap-3 rounded-full px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60"
+                      activeProps={{ className: "bg-primary text-primary-foreground font-medium shadow-soft" }}
                       activeOptions={{ exact: true }}
                     >
                       <l.icon className="size-4" />
@@ -94,7 +94,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <Link
                 to="/counselor"
                 className="mt-2 flex items-center gap-3 rounded-full px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent/60"
-                activeProps={{ className: "bg-sidebar-accent font-medium text-foreground shadow-soft" }}
+                activeProps={{ className: "bg-primary text-primary-foreground font-medium shadow-soft" }}
               >
                 <UserCheck className="size-4" /> Counselor's side
                 {j.emailSent && !j.counselor && <span className="ml-auto grid size-5 place-items-center rounded-full bg-warning text-[10px] text-primary-foreground">1</span>}
@@ -103,7 +103,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="space-y-4">
-            <Link to="/permissions" className="flex items-center gap-2 rounded-2xl border bg-card/70 px-3 py-2.5 text-xs">
+            <Link to="/permissions" className="aqua-chip flex items-center gap-2 rounded-full px-3 py-2.5 text-xs">
               {j.paused ? (
                 <><Pause className="size-3.5" /> All agents paused</>
               ) : (
@@ -111,7 +111,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               )}
             </Link>
             <Link to="/profile" className="flex items-center gap-3 rounded-2xl px-2 py-1.5 hover:bg-sidebar-accent/60">
-              <div className="grid size-9 place-items-center rounded-full bg-lilac text-sm font-semibold text-accent-foreground">MT</div>
+              <div className="grid size-9 place-items-center rounded-full bg-secondary text-sm font-semibold text-foreground">MT</div>
               <div className="text-sm leading-tight">
                 <div className="font-medium">{student.name}</div>
                 <div className="text-xs text-muted-foreground">Transfer student</div>
@@ -120,12 +120,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <div className="m-2 flex min-w-0 flex-1 flex-col rounded-[1.4rem] border bg-card md:ml-0">
+        <div className="m-2 flex min-w-0 flex-1 flex-col rounded-[2rem] border bg-card md:ml-0">
           <header className="flex items-center gap-3 border-b px-6 py-4 text-sm">
             <span className="text-muted-foreground">Maya</span>
             <ChevronRight className="size-3.5 text-muted-foreground" />
             <span className="inline-flex items-center gap-1.5 font-medium">
-              <current.icon className="size-4" /> {current.label}
+              {current && <><current.icon className="size-4" /> {current.label}</>}
             </span>
             <nav className="ml-4 flex gap-1 overflow-x-auto md:hidden">
               {allLinks.map((l) => (
@@ -134,9 +134,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </Link>
               ))}
             </nav>
-            <button onClick={j.reset} className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground opacity-60 hover:opacity-100" title="Reset demo">
+            <Button variant="ghost" size="sm" onClick={j.reset} className="ml-auto gap-1 text-xs text-muted-foreground opacity-60 hover:opacity-100" title="Reset demo">
               <RotateCcw className="size-3" /> Reset demo
-            </button>
+            </Button>
           </header>
           <main className="flex-1 px-6 py-8 md:px-10">{children}</main>
           <footer className="px-6 pb-6 text-xs text-muted-foreground md:px-10">

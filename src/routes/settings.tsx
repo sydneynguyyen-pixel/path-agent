@@ -9,6 +9,8 @@ import { CONFIDENCE_THRESHOLD } from "@/lib/confidence";
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Settings — Academic Path Agent" },
       { name: "description", content: "Notifications, school rules, your data, and onboarding." },
       { property: "og:title", content: "Settings — Academic Path Agent" },

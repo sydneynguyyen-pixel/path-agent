@@ -6,11 +6,15 @@ import { syllabi, options, terms, PILEUP_THRESHOLD } from "@/data/scenario";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { useJourney } from "@/lib/journey";
 import { PageHeader, SimLabel, SourceChip } from "@/components/app/bits";
+import { TermIcon, SubjectIcon } from "@/components/app/Brand";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/semester")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Summer term deadlines — Academic Path Agent" },
       { name: "description", content: "Week-by-week deadlines merged from three syllabi, with pile-ups highlighted." },
       { property: "og:title", content: "Summer term deadlines — Academic Path Agent" },
@@ -39,7 +43,7 @@ function Semester() {
       <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
         {terms.filter((t) => t.status !== "done").map((t) => (
           <button key={t.id} onClick={() => setSel(t.id)} className={cn("shrink-0 rounded-2xl border px-4 py-2.5 text-left text-sm", sel === t.id ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>
-            <div className="font-medium">{t.name}</div>
+            <div className="flex items-center gap-2 font-medium"><TermIcon term={t.name} />{t.name}</div>
             <div className={cn("text-xs", sel === t.id ? "opacity-80" : "text-muted-foreground")}>
               {t.status === "in_progress" ? "Current term" : t.status === "registering" ? "Registering now" : "Planned"}
             </div>
@@ -57,7 +61,7 @@ function Semester() {
           </div>
           <ul className="mt-5 divide-y">
             {term.courses.map((c) => (
-              <li key={c.code + c.title} className="flex justify-between py-2.5 text-sm"><span><b className="font-medium">{c.code}</b> <span className="text-muted-foreground">{c.title}</span></span><span className="text-muted-foreground">{c.units}</span></li>
+              <li key={c.code + c.title} className="flex items-center gap-3 py-2.5 text-sm"><SubjectIcon course={`${c.code} ${c.title}`} /><span className="flex-1"><b className="font-medium">{c.code}</b> <span className="text-muted-foreground">{c.title}</span></span><span className="text-muted-foreground">{c.units}</span></li>
             ))}
           </ul>
           {term.status === "planned" && <p className="mt-4 text-xs text-muted-foreground">Planned from your degree audit. When registration opens, the agent will check seats and deadlines the same way it does for summer.</p>}
@@ -80,7 +84,7 @@ function Semester() {
           {rows.map((r, ri) => (
             <div key={r.course} className="contents">
               <div className={cn("border-b p-3 text-sm font-medium", r.isNew && "bg-accent")}>
-                {r.course} {r.isNew && <span className="block text-xs font-normal text-muted-foreground">Seat held by you</span>}
+                <SubjectIcon course={r.course} className="mb-2" />{r.course} {r.isNew && <span className="block text-xs font-normal text-muted-foreground">Seat held by you</span>}
                 <div className="mt-1"><SourceChip id={r.sourceId} /></div>
               </div>
               {weeks.map((w) => (

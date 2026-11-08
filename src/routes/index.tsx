@@ -7,11 +7,14 @@ import { ConfidenceBadge, SourceChip, StatusBadge } from "@/components/app/bits"
 import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { TermIcon, SubjectIcon, AgentAvatar, seasonFor } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Home — Academic Path Agent" },
       { name: "description", content: "Maya's full transfer path from Bayview to Northgate, with what needs attention now." },
       { property: "og:title", content: "Home — Academic Path Agent" },
@@ -24,36 +27,36 @@ export const Route = createFileRoute("/")({
 function Attention() {
   const j = useJourney();
   const chosen = options.find((o) => o.id === j.chosenId);
-  let icon = <CalendarClock className="size-5" />;
+  let icon = <AgentAvatar agent="backup" bare />;
   let title = "Summer 2027 registration is open";
   let body = "Register as usual in your school portal. I'll watch for problems like full sections and help you recover.";
   let action = <Button asChild><Link to="/portal">Go to registration <ArrowRight className="size-4" /></Link></Button>;
-  let tone = "bg-sky";
+  let tone = "bg-secondary";
   if (j.atRisk) {
-    icon = <AlertTriangle className="size-5" />;
+    icon = <AgentAvatar agent="backup" bare />;
     title = j.counselor === "declined" ? "Your counselor declined that course" : "Statistics needs a new plan";
     body = j.counselor === "declined" ? `Drop ${chosen?.course} by ${DROP_DEADLINE}. MATH 13 still has open seats.` : "STAT 2 is full. I found options that still count, ranked by open seats.";
     action = <Button onClick={() => j.setPanelOpen(true)}>See options</Button>;
-    tone = "bg-warning-soft";
+    tone = "bg-secondary";
   } else if (j.seatHeld && chosen && !j.counselor) {
-    icon = <CheckCircle2 className="size-5" />;
+    icon = <AgentAvatar agent="planner" bare />;
     const hold = recoveryPath(chosen) === "hold";
     title = hold ? `You hold a seat in ${chosen.course}` : `You're set with ${chosen.course}`;
     body = hold ? `Counselor confirmation is pending. Drop by ${DROP_DEADLINE} if not confirmed.` : "It clearly counts toward Statistics. The agent didn't register anything — you did.";
     action = <Button variant="outline" asChild><Link to="/activity" search={{ tab: "decisions" }}>View your decisions</Link></Button>;
-    tone = "bg-success-soft";
+    tone = "bg-secondary";
   } else if (j.counselor === "confirmed" && chosen) {
-    icon = <Sparkles className="size-5" />;
+    icon = <AgentAvatar agent="planner" bare />;
     title = "All set for summer";
     body = `${student.counselor} confirmed ${chosen.course} counts toward Statistics.`;
     action = <Button variant="outline" asChild><Link to="/semester">See your terms</Link></Button>;
-    tone = "bg-success-soft";
+    tone = "bg-secondary";
   }
   return (
     <div className={cn("flex flex-wrap items-center gap-4 rounded-2xl p-5", tone)}>
-      <div className="grid size-10 place-items-center rounded-full bg-card">{icon}</div>
+      <div className="grid place-items-center">{icon}</div>
       <div className="min-w-0 flex-1">
-        <div className="text-xs text-muted-foreground">Needs your attention</div>
+        <div className="aqua-chip inline-flex rounded-full px-3 py-1 text-xs font-semibold">Needs your attention</div>
         <div className="font-medium">{title}</div>
         <div className="text-sm text-muted-foreground">{body}</div>
       </div>
@@ -63,8 +66,8 @@ function Attention() {
 }
 
 const termTone: Record<Term["status"], string> = {
-  done: "bg-secondary text-muted-foreground",
-  in_progress: "bg-lilac text-accent-foreground",
+  done: "bg-card border text-foreground",
+  in_progress: "aqua-chip",
   registering: "bg-primary text-primary-foreground",
   planned: "bg-card text-muted-foreground border",
 };
@@ -86,19 +89,20 @@ function PathTimeline() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {terms.filter((t) => t.school === sch).map((t) => (
-              <article key={t.id} className={cn("rounded-2xl border p-4", t.status === "registering" && "ring-2 ring-primary", t.status === "done" && "bg-secondary/40")}>
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-medium">{t.name}</div>
+              <article key={t.id} className={cn("term-card rounded-2xl border", t.status === "registering" && "border-2 border-primary")}>
+                <div className={cn("term-band", `mesh-${seasonFor(t.name)}`)}>
+                  <div className="flex items-center gap-2 text-lg font-semibold"><TermIcon term={t.name} />{t.name}</div>
                   <span className={cn("rounded-full px-2 py-0.5 text-[11px]", termTone[t.status])}>{termLabel[t.status]}</span>
                 </div>
-                {t.registration && <div className="mt-1 text-xs text-muted-foreground">{t.registration}</div>}
+                {t.registration && <div className="mt-3 px-4 text-xs text-muted-foreground">{t.registration}</div>}
                 <ul className="mt-3 space-y-1.5 text-sm">
                   {t.courses.map((c) => {
                     const isQr = c.flag === "qr1";
                     const replaced = isQr && j.seatHeld && chosen;
                     return (
-                      <li key={c.code + c.title} className={cn("flex items-baseline justify-between gap-2 rounded-lg px-2 py-1", isQr && j.atRisk && "bg-warning-soft")}>
-                        <span className="truncate">
+                      <li key={c.code + c.title} className={cn("term-course flex items-center justify-between gap-2", isQr && j.atRisk && "bg-warning-soft")}>
+                        <SubjectIcon course={replaced ? chosen.course : `${c.code} ${c.title}`} />
+                        <span className="min-w-0 flex-1">
                           <span className="font-medium">{replaced ? chosen.course.replace("BCC ", "") : c.code}</span>{" "}
                           <span className="text-muted-foreground">{replaced ? "Statistics (QR-1)" : c.title}</span>
                           {isQr && j.atRisk && <span className="ml-1 text-xs text-warning">· full</span>}
@@ -206,7 +210,7 @@ function Home() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-medium md:text-[2rem]">Hi {student.name.split(" ")[0]}, you're on track.</h1>
+          <h1 className="home-greeting font-semibold">Hi {student.name.split(" ")[0]}, you're on track.</h1>
           <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
             <SchoolLogo school="bayview" className="size-6" /> Bayview CC
             <ArrowRight className="size-4" />
@@ -220,8 +224,8 @@ function Home() {
           </div>
           <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-secondary">
             <div className="relative h-full">
-              <div className="absolute inset-y-0 left-0 rounded-full bg-lilac" style={{ width: `${pctIp}%` }} />
-              <div className="absolute inset-y-0 left-0 rounded-full bg-primary" style={{ width: `${pct}%` }} />
+              <div className="absolute inset-y-0 left-0 rounded-full bg-secondary" style={{ width: `${pctIp}%` }} />
+              <div className="absolute inset-y-0 left-0 rounded-full aqua-chip" style={{ width: `${pct}%` }} />
             </div>
           </div>
           <div className="mt-1.5 text-xs text-muted-foreground">{pct}% complete · {progress.inProgress} su in progress</div>

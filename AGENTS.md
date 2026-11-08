@@ -36,3 +36,4 @@ use the editor.
 - The simulated school portal uses its own portal-* tokens so it looks like the school's system, with the agent shown only as an overlay.
 - Design rationale lives outside the app (delivered as a document), not as a route.
 - Activity timeline events are derived from journey state in src/lib/activity.ts (tested) and timestamps come from the scripted clock (SCRIPT_START in journey.tsx), so every page agrees and Reset demo restores them; /decisions redirects to /activity?tab=decisions.
+- Brand icons and agent portraits are shared through src/components/app/Brand.tsx, with palettes in src/styles.css; institutional portal styling stays scoped separately so visual updates cannot alter the school experience.

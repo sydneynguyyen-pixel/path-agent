@@ -6,6 +6,8 @@ import { progress, schools, student } from "@/data/scenario";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Profile — Academic Path Agent" },
       { name: "description", content: "Maya's student profile: schools, program, counselor and goals." },
       { property: "og:title", content: "Profile — Academic Path Agent" },

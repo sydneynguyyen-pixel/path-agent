@@ -9,6 +9,7 @@ import { useEvents } from "@/components/app/activityBits";
 import { lastActive } from "@/lib/activity";
 import { connectedSources } from "@/components/app/sourcesData";
 import { helperInfo } from "@/routes/activity";
+import { AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/permissions")({
@@ -47,8 +48,8 @@ type Decider = "auto" | "auto_draft" | "ok" | "blocked";
 const deciderMap: Record<Decider, { label: string; icon: typeof Zap; cls: string }> = {
   auto: { label: "Automatic", icon: Zap, cls: "bg-secondary text-foreground" },
   auto_draft: { label: "Automatic, never sent", icon: Zap, cls: "bg-secondary text-foreground" },
-  ok: { label: "Needs your OK every time", icon: UserRoundCheck, cls: "bg-warning-soft text-warning" },
-  blocked: { label: "Blocked. Only you can do this", icon: Ban, cls: "bg-muted text-muted-foreground" },
+  ok: { label: "Needs your OK every time", icon: UserRoundCheck, cls: "aqua-chip" },
+  blocked: { label: "Blocked. Only you can do this", icon: Ban, cls: "confidence-low text-foreground" },
 };
 const actions: [string, Decider][] = [
   ["Read your documents and registration page", "auto"],
@@ -129,7 +130,7 @@ function Controls() {
               <article key={id} className={cn("rounded-2xl border p-5", !on && "bg-secondary/50")}>
                 <div className="flex items-start justify-between gap-3">
                   <div className={cn(!on && "opacity-60")}>
-                    <div className="font-medium">{helperInfo[id].name}</div>
+                    <div className="flex items-center gap-2 font-semibold"><AgentAvatar agent={id} />{helperInfo[id].name}</div>
                     <div className="text-xs text-muted-foreground">{on ? "On" : j.paused ? "Paused" : "Off"} · {t ? `Last active ${fmtStamp(t)}` : "Not active yet"}</div>
                   </div>
                   <Switch checked={j.agentOn[id]} onCheckedChange={(v) => j.setAgentOn(id, v)} aria-label={`${helperInfo[id].name} on`} />

@@ -7,11 +7,14 @@ import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { SourceLogo } from "@/components/app/SourceLogo";
 import { connectedSources } from "@/components/app/sourcesData";
 import { useJourney } from "@/lib/journey";
+import { BrandLogo, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/welcome")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Welcome — Academic Path Agent" },
       { name: "description", content: "Set up your path agent: confirm your schools, connect sources, and choose what it may do." },
       { property: "og:title", content: "Welcome — Academic Path Agent" },
@@ -35,11 +38,11 @@ function Welcome() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="brand-app flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-xl rounded-[1.75rem] border bg-card p-8 shadow-frame md:p-10">
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground"><GraduationCap className="size-4" /></div>
+            <BrandLogo />
             <span className="font-semibold">Path Agent</span>
           </div>
           <div className="flex gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
@@ -60,7 +63,7 @@ function Welcome() {
                 const I = Icon as typeof FileSearch;
                 return (
                   <li key={t as string} className="flex gap-3">
-                    <div className="grid size-9 shrink-0 place-items-center rounded-full bg-lilac"><I className="size-4" /></div>
+                    <AgentAvatar agent={I === FileSearch ? "reader" : I === Hand ? "backup" : "planner"} />
                     <div><div className="font-medium">{t as string}</div><div className="text-muted-foreground">{d as string}</div></div>
                   </li>
                 );
@@ -121,7 +124,7 @@ function Welcome() {
 
         {step === 4 && (
           <div>
-            <div className="grid size-12 place-items-center rounded-full bg-success-soft"><Eye className="size-5 text-success" /></div>
+            <AgentAvatar agent="planner" bare />
             <h1 className="mt-4 text-2xl font-medium">You're set.</h1>
             <p className="mt-2 text-muted-foreground">Your home page shows your whole path and the one thing that needs attention. Summer registration is open now — register as usual and I'll watch for problems.</p>
           </div>

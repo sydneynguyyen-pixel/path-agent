@@ -6,6 +6,7 @@ import { AgentPanel } from "@/components/app/AgentPanel";
 import { useJourney } from "@/lib/journey";
 import { options } from "@/data/scenario";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
+import { BrandLogo, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/portal")({
@@ -141,7 +142,7 @@ function Portal() {
   if (phase === "idle") {
     return (
       <div className="mx-auto max-w-lg rounded-2xl border bg-card p-8 text-center shadow-soft">
-        <span className="mx-auto grid size-12 place-items-center rounded-full bg-primary text-primary-foreground"><GraduationCap className="size-6" /></span>
+        <BrandLogo className="mx-auto" />
         <h1 className="mt-4 font-serif text-2xl">Register with Path Agent alongside</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Open Bayview's class search. Path Agent watches quietly while you shop and check out, and only steps in if something goes wrong.
@@ -186,12 +187,12 @@ function Portal() {
             <div className="flex min-w-0 flex-1 items-center gap-1.5 truncate rounded-md bg-card px-2 py-1 text-xs text-muted-foreground">
               <Lock className="size-3 shrink-0" /> ssb.bayview.example.edu/StudentRegistrationSsb/ssb/classRegistration
             </div>
-            <span className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]", watching ? "bg-success-soft text-success" : "bg-card text-muted-foreground")}>
+            <span className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]", watching ? "aqua-chip" : "bg-card text-muted-foreground")}>
               <Eye className="size-3" /> {watching ? "Path Agent watching" : "Agent not watching"}
             </span>
           </div>
 
-          <div className="bg-portal-bg font-[Arial,Helvetica,sans-serif] text-[12px] text-foreground">
+          <div className="school-portal bg-portal-bg font-[Arial,Helvetica,sans-serif] text-[12px] text-foreground">
             <div className="flex items-center gap-3 bg-portal-navy px-4 py-2.5 text-portal-navy-foreground">
               <SchoolLogo school="bayview" className="size-7 rounded bg-card p-0.5" />
               <div className="leading-tight">
@@ -325,13 +326,13 @@ function Portal() {
       {showDock && (
         <aside className="h-fit overflow-hidden rounded-xl border bg-card shadow-soft 2xl:sticky 2xl:top-4 2xl:max-h-[calc(100vh-2rem)] 2xl:overflow-y-auto">
           <div className="flex items-center gap-2 border-b px-4 py-2.5 text-sm">
-            <span className="grid size-7 place-items-center rounded-full bg-primary text-primary-foreground"><GraduationCap className="size-3.5" /></span>
+            <BrandLogo className="size-7" />
             <b>Path Agent</b>
             {!detecting && <button aria-label="Hide Path Agent" className="ml-auto text-muted-foreground" onClick={() => setDockOpen(false)}><X className="size-4" /></button>}
           </div>
           {detecting ? (
             <div className="flex flex-col items-center px-6 py-12 text-center">
-              <Loader2 className="size-7 animate-spin text-primary" />
+              <AgentAvatar agent="reader" /> <Loader2 className="size-5 animate-spin text-primary" />
               <p className="mt-3 font-medium">I noticed a registration error</p>
               <p className="mt-1 text-sm text-muted-foreground">Reading "Closed Section" for STAT 2 and checking what else counts…</p>
             </div>

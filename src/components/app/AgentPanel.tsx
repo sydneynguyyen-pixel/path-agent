@@ -9,6 +9,7 @@ import { options, rankOptions, student, syllabi, PILEUP_THRESHOLD, DROP_DEADLINE
 import { recoveryPath } from "@/lib/confidence";
 import { useJourney, fmtStamp } from "@/lib/journey";
 import { ConfidenceBadge, SourceChip } from "./bits";
+import { AgentAvatar, SubjectIcon } from "./Brand";
 import { cn } from "@/lib/utils";
 
 const verdictLabel = {
@@ -108,13 +109,13 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
   const drafterOff = !j.agentOn.drafter;
 
   const header = (
-    <div className="px-4 pt-4 pb-2">
+    <div className="agent-panel px-4 pt-4 pb-2">
       <p className="text-sm text-muted-foreground">Agent · proposes and drafts only</p>
       <h2 className="font-serif text-2xl">Seats go fast. Here's what to do now.</h2>
     </div>
   );
   const content = (
-        <div className="space-y-6 px-4 pb-10">
+        <div className="agent-panel space-y-6 px-4 pb-10">
           <div className="rounded-lg border border-warning/40 bg-warning-soft p-4 text-sm">
             <div className="flex items-center gap-2 font-medium text-warning"><AlertTriangle className="size-4" /> STAT 2 is full</div>
             <p className="mt-1 text-foreground">
@@ -130,7 +131,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
             ].map(([n, d], i) => (
               <li key={n} className="flex items-center gap-2">
                 {j.agentOn[(["reader", "planner", "backup"] as const)[i]!] === false ? <span className="text-xs text-muted-foreground">Off</span> : !scanning || step > i ? <CheckCircle2 className="size-4 text-success" /> : step === i ? <Loader2 className="size-4 animate-spin text-primary" /> : <span className="size-4 rounded-full border" />}
-                <b>{n}</b> <span className="text-muted-foreground">{d}</span>
+                <AgentAvatar agent={n === "Reader" ? "reader" : n === "Planner" ? "planner" : "backup"} /><b>{n}</b> <span className="text-muted-foreground">{d}</span>
               </li>
             ))}
           </ol>
@@ -152,7 +153,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="text-xs text-muted-foreground">#{idx + 1} · {verdictLabel[o.verdict]}</div>
-                        <div className="font-semibold">{o.course}</div>
+                        <div className="flex items-center gap-2 font-semibold"><SubjectIcon course={`${o.course} ${o.title}`} />{o.course}</div>
                         <div className="text-sm text-muted-foreground">{o.title}</div>
                       </div>
                       <ConfidenceBadge score={o.confidence} conflict={!!o.conflict} />
@@ -224,7 +225,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
               </section>
 
               <section className="space-y-3 rounded-xl border bg-card p-4 shadow-soft">
-                <h3 className="text-lg font-semibold">In parallel: counselor email</h3>
+                <h3 className="flex items-center gap-2 text-lg font-semibold"><AgentAvatar agent="drafter" />In parallel: counselor email</h3>
                 {drafterOff ? (
                   <p className="text-sm text-muted-foreground">The Drafter is turned off, so no email was drafted. You can write to {student.counselor} yourself.</p>
                 ) : j.emailSent ? (
@@ -267,7 +268,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
   if (docked) return <div>{header}{content}</div>;
   return (
     <Sheet open={j.panelOpen} onOpenChange={j.setPanelOpen}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent side="right" className="brand-app agent-panel w-full overflow-y-auto sm:max-w-xl">
         <SheetHeader>
           <SheetDescription>Agent · proposes and drafts only</SheetDescription>
           <SheetTitle className="font-serif text-2xl">Seats go fast. Here's what to do now.</SheetTitle>

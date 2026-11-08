@@ -7,6 +7,7 @@ import { PageHeader, SourceChip } from "@/components/app/bits";
 import { useEvents, useScriptNow, When, PermChip, EventStatusChip } from "@/components/app/activityBits";
 import { lastActive, type ActivityEvent } from "@/lib/activity";
 import { useJourney, fmtClock, fmtStamp, fmtStampSec, type AgentId } from "@/lib/journey";
+import { AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
 
 type Search = { tab?: "timeline" | "decisions" | undefined; helper?: AgentId | undefined };
@@ -113,7 +114,7 @@ function Timeline({ helper }: { helper?: AgentId | undefined }) {
             const t = lastActive(events, h);
             return (
               <div key={h} className={cn("rounded-xl border p-4", !j.agentOn[h] && "opacity-60")}>
-                <div className="font-medium">{helperInfo[h].name}</div>
+                <div className="flex items-center gap-2 font-semibold"><AgentAvatar agent={h} />{helperInfo[h].name}</div>
                 <p className="mt-1 text-sm">{helperInfo[h].plain}</p>
                 <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                   <span>{!j.agentOn[h] ? "Off" : t ? `Last active ${fmtStamp(t)}` : "Not active yet"}</span>
@@ -155,6 +156,7 @@ function EventCard({ e, now, helper }: { e: ActivityEvent; now: number | null; h
       <ol className="mt-3 space-y-1.5 border-l-2 pl-4">
         {steps.map((s, i) => (
           <li key={i} className={cn("flex flex-wrap items-center gap-x-3 gap-y-1 text-sm", s.skipped && "text-muted-foreground line-through")}>
+            <AgentAvatar agent={s.helper} />
             <time className="w-16 shrink-0 font-mono text-xs text-muted-foreground" title={fmtStampSec(s.at)}>{fmtClock(s.at)}</time>
             <span className="flex-1">{s.text}{s.skipped && <span className="ml-1 no-underline">(skipped — {helperInfo[s.helper].name} is off)</span>}</span>
             <PermChip p={s.perm} />
@@ -239,7 +241,7 @@ function Decisions() {
                 <tr key={d.id} className="border-t align-top">
                   <td className="whitespace-nowrap p-3">{fmtStamp(d.when)}</td>
                   <td className="p-3">{d.who !== "Maya Torres" && <span className="text-xs text-muted-foreground">{d.who} decided: </span>}<b>{d.what}</b></td>
-                  <td className="p-3">{d.suggested ?? "—"}<div className="mt-1.5 flex flex-wrap gap-1">{[...new Set(d.evidence)].map((e) => <SourceChip key={e} id={e} />)}</div></td>
+                  <td className="p-3"><AgentAvatar agent={d.what.startsWith("Approved") ? "drafter" : "planner"} /> {d.suggested ?? "—"}<div className="mt-1.5 flex flex-wrap gap-1">{[...new Set(d.evidence)].map((e) => <SourceChip key={e} id={e} />)}</div></td>
                   <td className="p-3">{d.next ?? "—"}</td>
                 </tr>
               ))}

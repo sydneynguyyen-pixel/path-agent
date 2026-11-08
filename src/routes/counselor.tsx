@@ -3,11 +3,14 @@ import { Inbox, Check, X, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { options, student, DROP_DEADLINE, REQUIREMENT_LABEL } from "@/data/scenario";
 import { useJourney, fmtStamp } from "@/lib/journey";
+import { AgentAvatar, SubjectIcon } from "@/components/app/Brand";
 import { ConfidenceBadge, PageHeader, SimLabel, SourceChip } from "@/components/app/bits";
 
 export const Route = createFileRoute("/counselor")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Counselor review — Academic Path Agent" },
       { name: "description", content: "The counselor's side: review the student's evidence and confirm or decline in one read." },
       { property: "og:title", content: "Counselor review — Academic Path Agent" },
@@ -31,7 +34,7 @@ function Counselor() {
       />
       {!sent ? (
         <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground">
-          <Inbox className="mx-auto size-6" />
+          <AgentAvatar agent="drafter" className="mx-auto" />
           <p className="mt-2">No requests yet. When Maya holds a seat in an uncertain course and approves the email, it shows up here.</p>
           <Link to="/portal" className="mt-3 inline-block text-sm text-foreground underline">Start from registration</Link>
         </div>
@@ -40,7 +43,7 @@ function Counselor() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="text-xs text-muted-foreground">From {student.name} · {fmtStamp(j.decisions.find((d) => d.what.startsWith("Approved"))!.when)}</div>
-              <h2 className="mt-1 text-xl font-medium">Does {o.course} count toward {REQUIREMENT_LABEL}?</h2>
+              <AgentAvatar agent="drafter" /><h2 className="mt-1 flex items-center gap-2 text-xl font-medium"><SubjectIcon course={o.course} />Does {o.course} count toward {REQUIREMENT_LABEL}?</h2>
               <p className="mt-1 text-sm text-muted-foreground">Seat already held. Student will drop by {DROP_DEADLINE} if you decline.</p>
             </div>
             <ConfidenceBadge score={o.confidence} conflict={!!o.conflict} />

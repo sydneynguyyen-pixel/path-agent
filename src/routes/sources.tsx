@@ -8,6 +8,8 @@ import { useJourney } from "@/lib/journey";
 export const Route = createFileRoute("/sources")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { title: "Connected sources — Academic Path Agent" },
       { name: "description", content: "Canvas, the student system, degree audit, articulation data and email: what the agent reads and why." },
       { property: "og:title", content: "Connected sources — Academic Path Agent" },

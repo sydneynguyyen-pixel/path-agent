@@ -1,5 +1,9 @@
 # Roadmap
 
+- [x] Apply supplied brand system across all app pages without changing behavior; verify portal and mobile exceptions.
+- [x] Refine the Path Agent logo blob to match the supplied mascots and add a small graduation cap.
+- [x] Color the agent characters themselves, preserving their outlines and leaving their surrounding circles neutral.
+
 - [x] School logos for Bayview CC and Northgate State
 - [x] Degree view: full multi-year path (all terms through graduation), calmer layout
 - [x] Terms view: current term vs registering term, other terms' registration windows

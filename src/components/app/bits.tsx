@@ -2,6 +2,7 @@ import { CheckCircle2, CircleDot, AlertTriangle, Circle, ArrowRightLeft, FileTex
 import { confidenceLevel } from "@/lib/confidence";
 import { sources, type ReqStatus } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function ConfidenceBadge({ score, conflict }: { score: number; conflict?: boolean }) {
@@ -12,6 +13,7 @@ export function ConfidenceBadge({ score, conflict }: { score: number; conflict?:
     <span
       className={cn(
         "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+        `confidence-${level}`,
         level === "high" && "border-success/30 bg-success-soft text-success",
         level === "medium" && "border-info/30 bg-info-soft text-info",
         level === "low" && "border-warning/40 bg-warning-soft text-warning",

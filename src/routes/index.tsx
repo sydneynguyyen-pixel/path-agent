@@ -40,7 +40,7 @@ function Attention() {
     const hold = recoveryPath(chosen) === "hold";
     title = hold ? `You hold a seat in ${chosen.course}` : `You're set with ${chosen.course}`;
     body = hold ? `Counselor confirmation is pending. Drop by ${DROP_DEADLINE} if not confirmed.` : "It clearly counts toward Statistics. The agent didn't register anything — you did.";
-    action = <Button variant="outline" asChild><Link to="/decisions">View decision log</Link></Button>;
+    action = <Button variant="outline" asChild><Link to="/activity" search={{ tab: "decisions" }}>View your decisions</Link></Button>;
     tone = "bg-success-soft";
   } else if (j.counselor === "confirmed" && chosen) {
     icon = <Sparkles className="size-5" />;

@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Inbox, Check, X, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { options, student, DROP_DEADLINE, REQUIREMENT_LABEL } from "@/data/scenario";
-import { useJourney, fmtTime } from "@/lib/journey";
+import { useJourney, fmtStamp } from "@/lib/journey";
 import { ConfidenceBadge, PageHeader, SimLabel, SourceChip } from "@/components/app/bits";
 
 export const Route = createFileRoute("/counselor")({
@@ -39,7 +39,7 @@ function Counselor() {
         <article className="rounded-2xl border bg-card p-6 shadow-soft">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-xs text-muted-foreground">From {student.name} · {fmtTime(j.decisions.find((d) => d.what.startsWith("Approved"))!.when)}</div>
+              <div className="text-xs text-muted-foreground">From {student.name} · {fmtStamp(j.decisions.find((d) => d.what.startsWith("Approved"))!.when)}</div>
               <h2 className="mt-1 text-xl font-medium">Does {o.course} count toward {REQUIREMENT_LABEL}?</h2>
               <p className="mt-1 text-sm text-muted-foreground">Seat already held. Student will drop by {DROP_DEADLINE} if you decline.</p>
             </div>

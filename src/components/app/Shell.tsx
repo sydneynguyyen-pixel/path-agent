@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, ScrollText, Database, SlidersHorizontal, ChevronRight, UserCheck, UserRound, Settings, GraduationCap } from "lucide-react";
+import { RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, SlidersHorizontal, ChevronRight, UserCheck, UserRound, Settings, GraduationCap } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { sources, student } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { AgentPanel } from "./AgentPanel";
+import { useEvents } from "./activityBits";
+import { waitingCount } from "@/lib/activity";
 
 const groups = [
   {
@@ -18,8 +20,7 @@ const groups = [
   {
     label: "Agent",
     links: [
-      { to: "/activity", label: "What it did", icon: Bot },
-      { to: "/decisions", label: "Decision log", icon: ScrollText },
+      { to: "/activity", label: "Activity", icon: Bot },
       { to: "/permissions", label: "Agent controls", icon: SlidersHorizontal },
     ],
   },
@@ -42,6 +43,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const onPortal = path === "/portal";
+  const waiting = waitingCount(useEvents());
 
   useEffect(() => {
     if (j.onboarded === false && path !== "/welcome") navigate({ to: "/welcome" });
@@ -79,8 +81,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     >
                       <l.icon className="size-4" />
                       {l.label}
-                      {l.to === "/decisions" && j.decisions.length > 0 && (
-                        <span className="ml-auto grid size-5 place-items-center rounded-full bg-primary text-[10px] text-primary-foreground">{j.decisions.length}</span>
+                      {l.to === "/activity" && waiting > 0 && (
+                        <span title={`${waiting} thing${waiting > 1 ? "s" : ""} waiting for you`} aria-label={`${waiting} waiting for you`} className="ml-auto grid size-5 place-items-center rounded-full bg-warning text-[10px] text-primary-foreground">{waiting}</span>
                       )}
                     </Link>
                   ))}

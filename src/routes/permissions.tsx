@@ -1,51 +1,71 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Pause, Play, Lock, Eye, EyeOff } from "lucide-react";
+import { Pause, Play, Lock, Eye, EyeOff, Zap, UserRoundCheck, Ban, FileText, CalendarDays, GraduationCap, ArrowRightLeft, Mail, MousePointerClick } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { agents } from "@/data/scenario";
-import { useJourney, type AgentId, type AccessKey } from "@/lib/journey";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useJourney, fmtStamp, type AgentId, type AccessKey } from "@/lib/journey";
 import { PageHeader } from "@/components/app/bits";
-import { SourceLogo } from "@/components/app/SourceLogo";
+import { useEvents } from "@/components/app/activityBits";
+import { lastActive } from "@/lib/activity";
 import { connectedSources } from "@/components/app/sourcesData";
+import { helperInfo } from "@/routes/activity";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/permissions")({
   head: () => ({
     meta: [
       { title: "Agent controls — Academic Path Agent" },
-      { name: "description", content: "Turn each agent on or off, choose what it can read, and see what it can never do." },
+      { name: "description", content: "Turn any of the four helpers off, limit what they can read, and see who decides each action." },
       { property: "og:title", content: "Agent controls — Academic Path Agent" },
-      { property: "og:description", content: "Full control over every agent and every part of the app it touches." },
+      { property: "og:description", content: "Your assistant is a team of four helpers. You decide what each can do." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Controls,
 });
 
+const HELPERS: AgentId[] = ["reader", "planner", "backup", "drafter"];
 const agentAccess: Record<AgentId, AccessKey[]> = {
   reader: ["registration", "canvas", "sis", "audit"],
   planner: ["audit", "articulation"],
   backup: ["sis", "canvas"],
   drafter: ["email"],
 };
-
-const agentDoes: Record<AgentId, { can: string; never: string }> = {
-  reader: { can: "Reads records and the registration page when you're on it.", never: "Never reads other tabs, personal email, or grades you haven't released." },
-  planner: { can: "Decides which courses still count and how confident it is.", never: "Never marks something as counting without a source." },
-  backup: { can: "Finds open sections and checks your deadlines.", never: "Never adds, drops, or waitlists you." },
-  drafter: { can: "Drafts emails for you to edit.", never: "Never sends without “Approve and send as Maya Torres”." },
+const never: Record<AgentId, string> = {
+  reader: "Never reads other tabs, personal email, or grades you haven't released.",
+  planner: "Never says a class counts without a source to point to.",
+  backup: "Never adds, drops, or waitlists you.",
+  drafter: "Never sends. You approve every email.",
 };
+const sourceIcon: Record<AccessKey, typeof FileText> = {
+  registration: MousePointerClick, canvas: CalendarDays, sis: GraduationCap, audit: FileText, articulation: ArrowRightLeft, email: Mail,
+};
+const sourceLabel = (k: AccessKey) => (k === "registration" ? "Registration page" : connectedSources.find((s) => s.id === k)?.what ?? k);
 
-const areas: { key: AccessKey; label: string; desc: string }[] = [
-  { key: "registration", label: "Registration page", desc: "Watch only while you're on it, to catch errors like “Section full”." },
+type Decider = "auto" | "auto_draft" | "ok" | "blocked";
+const deciderMap: Record<Decider, { label: string; icon: typeof Zap; cls: string }> = {
+  auto: { label: "Automatic", icon: Zap, cls: "bg-secondary text-foreground" },
+  auto_draft: { label: "Automatic, never sent", icon: Zap, cls: "bg-secondary text-foreground" },
+  ok: { label: "Needs your OK every time", icon: UserRoundCheck, cls: "bg-warning-soft text-warning" },
+  blocked: { label: "Blocked. Only you can do this", icon: Ban, cls: "bg-muted text-muted-foreground" },
+};
+const actions: [string, Decider][] = [
+  ["Read your documents and registration page", "auto"],
+  ["Suggest classes that still count", "auto"],
+  ["Draft an email to your counselor", "auto_draft"],
+  ["Send an email", "ok"],
+  ["Register, drop or waitlist you", "blocked"],
 ];
 
 function Controls() {
   const j = useJourney();
+  const events = useEvents();
   return (
     <div className="max-w-4xl">
       <PageHeader
         title="Agent controls"
-        sub="Four agents work for you. Turn any of them off, or limit what they can read."
+        sub="Your assistant is a team of four helpers. Turn any off, or limit what it can read."
         right={
           <Button variant={j.paused ? "default" : "outline"} onClick={() => j.setPaused(!j.paused)}>
             {j.paused ? <><Play className="size-4" /> Resume all</> : <><Pause className="size-4" /> Pause all agents</>}
@@ -53,61 +73,97 @@ function Controls() {
         }
       />
 
-      {j.paused && <div className="mb-6 rounded-2xl bg-warning-soft p-4 text-sm">All agents are paused. Nothing is read or drafted until you resume.</div>}
+      {j.paused && <div className="mb-6 rounded-2xl bg-warning-soft p-4 text-sm">All helpers are paused. Nothing is read or drafted until you resume.</div>}
 
       <section className="mb-8">
         <h2 className="mb-3 text-lg font-medium">Where it watches</h2>
-        {areas.map((a) => (
-          <div key={a.key} className="flex items-center gap-4 rounded-2xl border p-4">
-            {j.access[a.key] && !j.paused ? <Eye className="size-5 text-success" /> : <EyeOff className="size-5 text-muted-foreground" />}
-            <div className="flex-1"><div className="font-medium">{a.label}</div><div className="text-sm text-muted-foreground">{a.desc}</div></div>
-            <Switch checked={j.access[a.key]} onCheckedChange={(v) => j.setAccess(a.key, v)} aria-label={a.label} />
+        <div className="flex items-center gap-4 rounded-2xl border p-4">
+          {j.access.registration && !j.paused ? <Eye className="size-5 text-success" /> : <EyeOff className="size-5 text-muted-foreground" />}
+          <div className="flex-1"><div className="font-medium">Registration page</div><div className="text-sm text-muted-foreground">Watch only while you're on it, to catch errors like “Section full”.</div></div>
+          <Switch checked={j.access.registration} onCheckedChange={(v) => j.setAccess("registration", v)} aria-label="Registration page" />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">Nothing else in your browser is visible to the assistant.</p>
+      </section>
+
+      <section className="mb-8">
+        <h2 className="mb-1 text-lg font-medium">Actions</h2>
+        <p className="mb-3 text-sm text-muted-foreground">How much the assistant may do on its own.</p>
+        <TooltipProvider>
+          <div role="radiogroup" aria-label="Permission level" className="mb-4 inline-flex flex-wrap rounded-full border bg-card p-1 text-sm">
+            <span role="radio" aria-checked="true" className="rounded-full bg-primary px-4 py-1.5 text-primary-foreground">Watch only (current)</span>
+            <span role="radio" aria-checked="false" aria-disabled="true" className="rounded-full px-4 py-1.5 text-muted-foreground">Suggest</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span role="radio" aria-checked="false" aria-disabled="true" tabIndex={0} className="cursor-not-allowed rounded-full px-4 py-1.5 text-muted-foreground/60">Act with your OK</span>
+              </TooltipTrigger>
+              <TooltipContent>Not available in this version.</TooltipContent>
+            </Tooltip>
           </div>
-        ))}
-        <p className="mt-2 text-xs text-muted-foreground">Nothing else in your browser is visible to the agent.</p>
+        </TooltipProvider>
+        <div className="overflow-hidden rounded-2xl border bg-card">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary text-left text-xs text-muted-foreground"><tr><th className="p-3">What it can do</th><th className="p-3">Who decides</th></tr></thead>
+            <tbody>
+              {actions.map(([what, d]) => {
+                const m = deciderMap[d];
+                return (
+                  <tr key={what} className="border-t">
+                    <td className="p-3">{what}</td>
+                    <td className="p-3"><span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium", m.cls)}><m.icon className="size-3.5" aria-hidden /> {m.label}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-medium">Each agent</h2>
+        <h2 className="mb-3 text-lg font-medium">Each helper</h2>
         <div className="grid gap-4 md:grid-cols-2">
-          {agents.map((a) => {
-            const id = a.id as AgentId;
+          {HELPERS.map((id) => {
             const on = j.agentOn[id] && !j.paused;
+            const t = lastActive(events, id);
+            const skippedEvent = events.find((e) => e.steps.some((s) => s.helper === id && s.skipped));
             return (
-              <article key={a.id} className={cn("rounded-2xl border p-5", !on && "bg-secondary/50")}>
+              <article key={id} className={cn("rounded-2xl border p-5", !on && "bg-secondary/50")}>
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-medium">{a.name}</div>
-                    <div className="text-xs text-muted-foreground">{on ? "On" : j.paused ? "Paused" : "Off"} · {a.role}</div>
+                  <div className={cn(!on && "opacity-60")}>
+                    <div className="font-medium">{helperInfo[id].name}</div>
+                    <div className="text-xs text-muted-foreground">{on ? "On" : j.paused ? "Paused" : "Off"} · {t ? `Last active ${fmtStamp(t)}` : "Not active yet"}</div>
                   </div>
-                  <Switch checked={j.agentOn[id]} onCheckedChange={(v) => j.setAgentOn(id, v)} aria-label={`${a.name} on`} />
+                  <Switch checked={j.agentOn[id]} onCheckedChange={(v) => j.setAgentOn(id, v)} aria-label={`${helperInfo[id].name} on`} />
                 </div>
-                <p className="mt-3 text-sm">{agentDoes[id].can}</p>
-                <div className="mt-3 text-xs text-muted-foreground">Can read</div>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {agentAccess[id].map((k) => {
-                    const src = connectedSources.find((s) => s.id === k);
-                    const allowed = j.access[k];
-                    return (
-                      <button key={k} onClick={() => j.setAccess(k, !allowed)} className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs", !allowed && "text-muted-foreground line-through opacity-60")} title={allowed ? "Click to block" : "Click to allow"}>
-                        {src ? <SourceLogo id={k} className="size-4 rounded border-0 [&_img]:size-3.5" /> : <Eye className="size-3" />}
-                        {src?.name.split(" (")[0] ?? "Registration page"}
-                      </button>
-                    );
-                  })}
+                {!j.agentOn[id] && (
+                  <p className="mt-3 rounded-xl border border-dashed p-2.5 text-sm">
+                    Off. Skipped on your last registration.{" "}
+                    {skippedEvent && <Link to="/activity" hash={`event-${skippedEvent.id}`} className="text-primary underline">See what was skipped</Link>}
+                  </p>
+                )}
+                <div className={cn(!on && "opacity-60")}>
+                  <p className="mt-3 text-sm">{helperInfo[id].plain}</p>
+                  <div className="mt-3 text-xs text-muted-foreground">Can read</div>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {agentAccess[id].map((k) => {
+                      const Icon = sourceIcon[k];
+                      const allowed = j.access[k];
+                      return (
+                        <button key={k} onClick={() => j.setAccess(k, !allowed)} aria-pressed={allowed} className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs", !allowed && "text-muted-foreground line-through")} title={allowed ? "Click to block" : "Click to allow"}>
+                          <Icon className="size-3.5" aria-hidden /> {sourceLabel(k)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 flex items-start gap-1.5 rounded-xl bg-secondary p-2.5 text-xs">
+                    <Lock className="mt-0.5 size-3.5 shrink-0" /> {never[id]}
+                  </div>
                 </div>
-                <div className="mt-3 flex items-start gap-1.5 rounded-xl bg-secondary p-2.5 text-xs">
-                  <Lock className="mt-0.5 size-3.5 shrink-0" /> {agentDoes[id].never}
-                </div>
+                <Link to="/activity" search={{ helper: id }} className="mt-3 inline-block text-sm text-primary underline">See what it did</Link>
               </article>
             );
           })}
         </div>
       </section>
-
-      <p className="mt-6 text-sm text-muted-foreground">
-        See what each agent actually did in <Link to="/activity" className="underline">What it did</Link>. Turned-off agents are skipped and you'll see why.
-      </p>
     </div>
   );
 }

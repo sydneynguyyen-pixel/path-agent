@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { options, rankOptions, student, syllabi, PILEUP_THRESHOLD, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist, type Option } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
-import { useJourney, fmtTime } from "@/lib/journey";
+import { useJourney, fmtStamp } from "@/lib/journey";
 import { ConfidenceBadge, SourceChip } from "./bits";
 import { cn } from "@/lib/utils";
 
@@ -228,7 +228,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
                 {drafterOff ? (
                   <p className="text-sm text-muted-foreground">The Drafter is turned off, so no email was drafted. You can write to {student.counselor} yourself.</p>
                 ) : j.emailSent ? (
-                  <p className="text-sm"><CheckCircle2 className="mr-1 inline size-4 text-success" />Approved by {student.name} at {fmtTime(j.decisions.at(-1)!.when)}. Demo only: no email was sent.</p>
+                  <p className="text-sm"><CheckCircle2 className="mr-1 inline size-4 text-success" />Approved by {student.name} at {fmtStamp(j.decisions.at(-1)!.when)}. Demo only: no email was sent.</p>
                 ) : (
                   <>
                     <p className="text-sm text-muted-foreground">Doesn't block your seat. Draft to {student.counselor} ({student.counselorEmail}). Edit anything; nothing is sent until you approve.</p>
@@ -257,7 +257,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
               )}
               <div className="flex gap-3">
                 <Link to="/" className="text-primary underline" onClick={() => j.setPanelOpen(false)}>See degree view</Link>
-                <Link to="/decisions" className="text-primary underline" onClick={() => j.setPanelOpen(false)}>Decision log</Link>
+                <Link to="/activity" search={{ tab: "decisions" }} className="text-primary underline" onClick={() => j.setPanelOpen(false)}>Your decisions</Link>
                 {path === "hold" && j.emailSent && <Link to="/counselor" className="text-primary underline" onClick={() => j.setPanelOpen(false)}>Counselor view</Link>}
               </div>
             </section>

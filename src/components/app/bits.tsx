@@ -1,5 +1,5 @@
 import { CheckCircle2, CircleDot, AlertTriangle, Circle, ArrowRightLeft, FileText, ShieldCheck, ShieldQuestion, Shield, Hourglass } from "lucide-react";
-import { confidenceLevel, needsCounselor } from "@/lib/confidence";
+import { confidenceLevel } from "@/lib/confidence";
 import { sources, type ReqStatus } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { cn } from "@/lib/utils";
@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 export function ConfidenceBadge({ score, conflict }: { score: number; conflict?: boolean }) {
   const level = conflict ? "low" : confidenceLevel(score);
   const Icon = level === "high" ? ShieldCheck : level === "medium" ? Shield : ShieldQuestion;
-  const label = level === "high" ? "High confidence" : level === "medium" ? "Medium confidence" : "Low confidence";
+  const label = level === "high" ? "Sure" : level === "medium" ? "Fairly sure" : "Check with your counselor";
   return (
     <span
       className={cn(
@@ -16,13 +16,27 @@ export function ConfidenceBadge({ score, conflict }: { score: number; conflict?:
         level === "medium" && "border-info/30 bg-info-soft text-info",
         level === "low" && "border-warning/40 bg-warning-soft text-warning",
       )}
-      title={`${Math.round(score * 100)}%`}
+      title={`How sure the assistant is: ${Math.round(score * 100)}%`}
     >
       <Icon className="size-3.5" aria-hidden />
-      {label} · {Math.round(score * 100)}%
-      {needsCounselor(score, conflict) && <span className="ml-1 font-semibold">· Unconfirmed</span>}
+      {label}
     </span>
   );
+}
+
+/** Plain-language label for a source, so students never see internal names like "Row 118". */
+export function plainSource(id: string) {
+  const s = (sources as Record<string, { doc: string }>)[id];
+  const d = s?.doc ?? "";
+  if (d.includes("Articulation")) return "From Northgate's transfer rules";
+  if (d.includes("Transfer Credit Policy")) return "From Northgate's transfer policy";
+  if (d.includes("Degree Audit")) return "From your degree audit";
+  if (d.includes("Policy Manual")) return "From Bayview's policy manual";
+  if (d.includes("General Catalog")) return "From Northgate's course catalog";
+  if (d.includes("Syllabus")) return `From your ${d.split(" Syllabus")[0]} syllabus`;
+  if (d.includes("Portal")) return "From the registration page";
+  if (d.includes("Counselor")) return "From your counselor";
+  return "From your documents";
 }
 
 export function SourceChip({ id }: { id: string }) {
@@ -30,11 +44,12 @@ export function SourceChip({ id }: { id: string }) {
   const s = (sources as Record<string, (typeof sources)[keyof typeof sources]>)[id]!;
   return (
     <button
+      title={`${s.doc} — ${s.section}`}
       onClick={() => openEvidence(id)}
       className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
     >
       <FileText className="size-3" aria-hidden />
-      {s.section}
+      {plainSource(id)}
     </button>
   );
 }

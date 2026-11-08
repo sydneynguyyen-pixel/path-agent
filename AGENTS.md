@@ -28,3 +28,7 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Journey state lives in one React context (src/lib/journey.tsx) so every page reflects the same scripted demo and "Reset demo" can restore it in one call.
+- All mock data lives in src/data/scenario.ts and is fully synthetic; scripted agent output will later be replaced by real AI calls.
+- The confidence threshold rule lives in src/lib/confidence.ts (tested); any claim below it or with conflicting sources is shown as unconfirmed and routed to the counselor.

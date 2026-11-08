@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertTriangle } from "lucide-react";
-import { syllabi, options, PILEUP_THRESHOLD } from "@/data/scenario";
+import { useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { syllabi, options, terms, PILEUP_THRESHOLD } from "@/data/scenario";
+import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { useJourney } from "@/lib/journey";
 import { PageHeader, SimLabel, SourceChip } from "@/components/app/bits";
 import { cn } from "@/lib/utils";
@@ -19,6 +22,8 @@ export const Route = createFileRoute("/semester")({
 
 function Semester() {
   const j = useJourney();
+  const [sel, setSel] = useState("su27");
+  const term = terms.find((t) => t.id === sel)!;
   const chosen = j.seatHeld ? options.find((o) => o.id === j.chosenId) : undefined;
   const rows = [
     ...syllabi.map((s) => ({ course: s.course, items: s.items, sourceId: s.sourceId, isNew: false })),
@@ -30,7 +35,39 @@ function Semester() {
 
   return (
     <div>
-      <PageHeader title="Summer 2027, week by week" sub="Your three syllabi merged. Weeks with 3+ deadlines are marked so you can plan ahead." right={<SimLabel>Synthetic syllabi</SimLabel>} />
+      <PageHeader title="Your terms" sub="Where you are now, what you're registering for, and what comes next." right={<SimLabel>Synthetic data</SimLabel>} />
+      <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
+        {terms.filter((t) => t.status !== "done").map((t) => (
+          <button key={t.id} onClick={() => setSel(t.id)} className={cn("shrink-0 rounded-2xl border px-4 py-2.5 text-left text-sm", sel === t.id ? "border-primary bg-primary text-primary-foreground" : "bg-card")}>
+            <div className="font-medium">{t.name}</div>
+            <div className={cn("text-xs", sel === t.id ? "opacity-80" : "text-muted-foreground")}>
+              {t.status === "in_progress" ? "Current term" : t.status === "registering" ? "Registering now" : "Planned"}
+            </div>
+          </button>
+        ))}
+      </div>
+      {term.id !== "su27" ? (
+        <div className="rounded-2xl border p-6">
+          <div className="flex items-center gap-3">
+            <SchoolLogo school={term.school} />
+            <div>
+              <div className="font-medium">{term.name} · {term.school === "bayview" ? "Bayview CC" : "Northgate State"}</div>
+              <div className="text-sm text-muted-foreground">{term.status === "in_progress" ? "In progress · finals week Jun 9–13" : term.registration}</div>
+            </div>
+          </div>
+          <ul className="mt-5 divide-y">
+            {term.courses.map((c) => (
+              <li key={c.code + c.title} className="flex justify-between py-2.5 text-sm"><span><b className="font-medium">{c.code}</b> <span className="text-muted-foreground">{c.title}</span></span><span className="text-muted-foreground">{c.units}</span></li>
+            ))}
+          </ul>
+          {term.status === "planned" && <p className="mt-4 text-xs text-muted-foreground">Planned from your degree audit. When registration opens, the agent will check seats and deadlines the same way it does for summer.</p>}
+        </div>
+      ) : (
+      <>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+        <div><b className="font-medium">Summer 2027, week by week.</b> <span className="text-muted-foreground">Your syllabi merged. Busy weeks are highlighted.</span></div>
+        <Link to="/portal" className="text-xs underline">Registration open · closes Jun 18</Link>
+      </div>
       <div className="overflow-x-auto rounded-2xl border bg-card">
         <div className="grid min-w-[760px] grid-cols-[140px_repeat(8,1fr)]">
           <div className="border-b p-3 text-xs text-muted-foreground">Course</div>
@@ -58,6 +95,8 @@ function Semester() {
         </div>
       </div>
       {chosen && <p className="mt-4 text-sm text-muted-foreground">{chosen.course} added because you hold a seat. The agent registered nothing.</p>}
+      </>
+      )}
     </div>
   );
 }

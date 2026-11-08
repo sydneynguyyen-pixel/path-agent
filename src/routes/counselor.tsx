@@ -25,9 +25,9 @@ function Counselor() {
   return (
     <div>
       <PageHeader
-        title={`${student.counselor}'s queue`}
-        sub="The counselor sees the student's request with the evidence already gathered. Deciding takes one read, not a back-and-forth."
-        right={<SimLabel>Counselor view · simulated</SimLabel>}
+        title="The counselor's side"
+        sub={`A preview of what ${student.counselor} sees in her school's advising tool when you ask for confirmation. You don't use this screen; it's here so you can see the whole loop.`}
+        right={<SimLabel>Preview · not Maya's view</SimLabel>}
       />
       {!sent ? (
         <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground">

@@ -10,23 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as CounselorRouteImport } from './routes/counselor'
 import { Route as DecisionsRouteImport } from './routes/decisions'
 import { Route as PermissionsRouteImport } from './routes/permissions'
 import { Route as PortalRouteImport } from './routes/portal'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SemesterRouteImport } from './routes/semester'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SourcesRouteImport } from './routes/sources'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ActivityRoute = ActivityRouteImport.update({
@@ -54,9 +51,19 @@ const PortalRoute = PortalRouteImport.update({
   path: '/portal',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SemesterRoute = SemesterRouteImport.update({
   id: '/semester',
   path: '/semester',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SourcesRoute = SourcesRouteImport.update({
@@ -64,87 +71,106 @@ const SourcesRoute = SourcesRouteImport.update({
   path: '/sources',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/activity': typeof ActivityRoute
   '/counselor': typeof CounselorRoute
   '/decisions': typeof DecisionsRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
+  '/profile': typeof ProfileRoute
   '/semester': typeof SemesterRoute
+  '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
+  '/welcome': typeof WelcomeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/activity': typeof ActivityRoute
   '/counselor': typeof CounselorRoute
   '/decisions': typeof DecisionsRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
+  '/profile': typeof ProfileRoute
   '/semester': typeof SemesterRoute
+  '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
+  '/welcome': typeof WelcomeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/activity': typeof ActivityRoute
   '/counselor': typeof CounselorRoute
   '/decisions': typeof DecisionsRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
+  '/profile': typeof ProfileRoute
   '/semester': typeof SemesterRoute
+  '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRoute
+  '/welcome': typeof WelcomeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/about'
     | '/activity'
     | '/counselor'
     | '/decisions'
     | '/permissions'
     | '/portal'
+    | '/profile'
     | '/semester'
+    | '/settings'
     | '/sources'
+    | '/welcome'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/about'
     | '/activity'
     | '/counselor'
     | '/decisions'
     | '/permissions'
     | '/portal'
+    | '/profile'
     | '/semester'
+    | '/settings'
     | '/sources'
+    | '/welcome'
   id:
     | '__root__'
     | '/'
-    | '/about'
     | '/activity'
     | '/counselor'
     | '/decisions'
     | '/permissions'
     | '/portal'
+    | '/profile'
     | '/semester'
+    | '/settings'
     | '/sources'
+    | '/welcome'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
   ActivityRoute: typeof ActivityRoute
   CounselorRoute: typeof CounselorRoute
   DecisionsRoute: typeof DecisionsRoute
   PermissionsRoute: typeof PermissionsRoute
   PortalRoute: typeof PortalRoute
+  ProfileRoute: typeof ProfileRoute
   SemesterRoute: typeof SemesterRoute
+  SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRoute
+  WelcomeRoute: typeof WelcomeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -154,13 +180,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/activity': {
@@ -198,11 +217,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/semester': {
       id: '/semester'
       path: '/semester'
       fullPath: '/semester'
       preLoaderRoute: typeof SemesterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sources': {
@@ -212,19 +245,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
   ActivityRoute: ActivityRoute,
   CounselorRoute: CounselorRoute,
   DecisionsRoute: DecisionsRoute,
   PermissionsRoute: PermissionsRoute,
   PortalRoute: PortalRoute,
+  ProfileRoute: ProfileRoute,
   SemesterRoute: SemesterRoute,
+  SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRoute,
+  WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

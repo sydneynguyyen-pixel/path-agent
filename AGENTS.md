@@ -32,3 +32,6 @@ use the editor.
 - Journey state lives in one React context (src/lib/journey.tsx) so every page reflects the same scripted demo and "Reset demo" can restore it in one call.
 - All mock data lives in src/data/scenario.ts and is fully synthetic; scripted agent output will later be replaced by real AI calls.
 - Confidence threshold and recovery-path rules live in src/lib/confidence.ts (tested): clearly-counts options go to self-register now with no email; conflict, grade-condition or low-confidence options use hold-seat-now with a non-blocking counselor email. Option ranking (seats first, then fit) lives in rankOptions in scenario.ts.
+- Onboarding completion is stored in localStorage ("pa-onboarded") and read after hydration; Shell redirects to /welcome until done, and /welcome renders without the app frame.
+- The simulated school portal uses its own portal-* tokens so it looks like the school's system, with the agent shown only as an overlay.
+- Design rationale lives outside the app (delivered as a document), not as a route.

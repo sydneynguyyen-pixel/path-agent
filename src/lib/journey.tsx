@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { options, student, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
 
@@ -6,7 +6,13 @@ export type Stage = "idle" | "failed" | "chosen";
 
 export type Decision = { id: string; who: string; what: string; when: Date; evidence: string[] };
 
+export type AgentId = "reader" | "planner" | "backup" | "drafter";
+export type AccessKey = "registration" | "canvas" | "sis" | "audit" | "articulation" | "email";
+
 type State = {
+  agentOn: Record<AgentId, boolean>;
+  access: Record<AccessKey, boolean>;
+  notify: { email: boolean; push: boolean; digest: boolean };
   stage: Stage;
   chosenId: string | null;
   seatHeld: boolean;
@@ -22,6 +28,9 @@ type State = {
 };
 
 const initial: State = {
+  agentOn: { reader: true, planner: true, backup: true, drafter: true },
+  access: { registration: true, canvas: true, sis: true, audit: true, articulation: true, email: true },
+  notify: { email: true, push: false, digest: true },
   stage: "idle",
   chosenId: null,
   seatHeld: false,
@@ -50,6 +59,12 @@ type Ctx = State & {
   openEvidence: (id: string | null) => void;
   reset: () => void;
   atRisk: boolean;
+  onboarded: boolean | null;
+  finishOnboarding: () => void;
+  replayOnboarding: () => void;
+  setAgentOn: (id: AgentId, on: boolean) => void;
+  setAccess: (k: AccessKey, on: boolean) => void;
+  setNotify: (k: keyof State["notify"], on: boolean) => void;
 };
 
 const JourneyCtx = createContext<Ctx | null>(null);
@@ -77,6 +92,11 @@ const log = (what: string, evidence: string[]): Decision => ({ id: crypto.random
 
 export function JourneyProvider({ children }: { children: ReactNode }) {
   const [s, set] = useState<State>(initial);
+  // null until hydrated, so SSR and first client render match.
+  const [onboarded, setOnboarded] = useState<boolean | null>(null);
+  useEffect(() => {
+    setOnboarded(window.localStorage.getItem("pa-onboarded") === "1");
+  }, []);
 
   const failAdd = useCallback(() => {
     const t0 = Date.now();
@@ -146,9 +166,21 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       setPanelOpen: (b) => set((p) => ({ ...p, panelOpen: b })),
       setPaused: (b) => set((p) => ({ ...p, paused: b, panelOpen: b ? false : p.panelOpen })),
       openEvidence: (id) => set((p) => ({ ...p, evidenceId: id })),
-      reset: () => set(initial),
+      reset: () => set((p) => ({ ...initial, agentOn: p.agentOn, access: p.access, notify: p.notify })),
+      onboarded,
+      finishOnboarding: () => {
+        window.localStorage.setItem("pa-onboarded", "1");
+        setOnboarded(true);
+      },
+      replayOnboarding: () => {
+        window.localStorage.removeItem("pa-onboarded");
+        setOnboarded(false);
+      },
+      setAgentOn: (id, on) => set((p) => ({ ...p, agentOn: { ...p.agentOn, [id]: on } })),
+      setAccess: (k, on) => set((p) => ({ ...p, access: { ...p.access, [k]: on } })),
+      setNotify: (k, on) => set((p) => ({ ...p, notify: { ...p.notify, [k]: on } })),
     };
-  }, [s, failAdd, choose]);
+  }, [s, failAdd, choose, onboarded]);
 
   return <JourneyCtx.Provider value={value}>{children}</JourneyCtx.Provider>;
 }

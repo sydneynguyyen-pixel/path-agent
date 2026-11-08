@@ -85,6 +85,8 @@ export function AgentPanel() {
   const chosen = options.find((o) => o.id === j.chosenId);
   const path = chosen ? recoveryPath(chosen) : null;
   const ranked = rankOptions(options);
+  const plannerOff = !j.agentOn.reader || !j.agentOn.planner;
+  const drafterOff = !j.agentOn.drafter;
 
   return (
     <Sheet open={j.panelOpen} onOpenChange={j.setPanelOpen}>
@@ -108,13 +110,18 @@ export function AgentPanel() {
               ["Backup finder", "Checked open seats, section times and your deadlines"],
             ].map(([n, d], i) => (
               <li key={n} className="flex items-center gap-2">
-                {!scanning || step > i ? <CheckCircle2 className="size-4 text-success" /> : step === i ? <Loader2 className="size-4 animate-spin text-primary" /> : <span className="size-4 rounded-full border" />}
+                {j.agentOn[(["reader", "planner", "backup"] as const)[i]!] === false ? <span className="text-xs text-muted-foreground">Off</span> : !scanning || step > i ? <CheckCircle2 className="size-4 text-success" /> : step === i ? <Loader2 className="size-4 animate-spin text-primary" /> : <span className="size-4 rounded-full border" />}
                 <b>{n}</b> <span className="text-muted-foreground">{d}</span>
               </li>
             ))}
           </ol>
 
-          {!scanning && j.stage === "failed" && (
+          {plannerOff && j.stage === "failed" && (
+            <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+              The Reader or Planner is turned off in <Link to="/permissions" className="underline" onClick={() => j.setPanelOpen(false)}>Agent controls</Link>, so I won't suggest options. Turn them back on to continue.
+            </div>
+          )}
+          {!plannerOff && !scanning && j.stage === "failed" && (
             <section className="space-y-3">
               <h3 className="text-lg font-semibold">Options, ranked by open seats, then fit</h3>
               {ranked.map((o, idx) => {
@@ -199,7 +206,9 @@ export function AgentPanel() {
 
               <section className="space-y-3 rounded-xl border bg-card p-4 shadow-soft">
                 <h3 className="text-lg font-semibold">In parallel: counselor email</h3>
-                {j.emailSent ? (
+                {drafterOff ? (
+                  <p className="text-sm text-muted-foreground">The Drafter is turned off, so no email was drafted. You can write to {student.counselor} yourself.</p>
+                ) : j.emailSent ? (
                   <p className="text-sm"><CheckCircle2 className="mr-1 inline size-4 text-success" />Approved by {student.name} at {fmtTime(j.decisions.at(-1)!.when)}. Demo only: no email was sent.</p>
                 ) : (
                   <>

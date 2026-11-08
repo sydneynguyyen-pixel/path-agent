@@ -38,6 +38,11 @@
   --color-sky: var(--sky);
   --color-mint: var(--mint);
   --color-butter: var(--butter);
+  --color-portal-navy: var(--portal-navy);
+  --color-portal-navy-foreground: var(--portal-navy-foreground);
+  --color-portal-bg: var(--portal-bg);
+  --color-portal-gold: var(--portal-gold);
+  --color-portal-link: var(--portal-link);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -86,6 +91,11 @@
   --sky: oklch(0.94 0.035 225);
   --mint: oklch(0.94 0.05 160);
   --butter: oklch(0.95 0.06 85);
+  --portal-navy: oklch(0.3 0.08 255);
+  --portal-navy-foreground: oklch(0.98 0 0);
+  --portal-bg: oklch(0.93 0.005 250);
+  --portal-gold: oklch(0.78 0.13 85);
+  --portal-link: oklch(0.42 0.14 255);
   --border: oklch(0.91 0.004 250);
   --input: oklch(0.91 0.004 250);
   --ring: oklch(0.18 0.005 260);

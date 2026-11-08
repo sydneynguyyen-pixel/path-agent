@@ -362,3 +362,79 @@ export const student = {
   counselor: "Dr. Priya Okafor",
   counselorEmail: "p.okafor@northgate.example",
 };
+
+// ---------- Full academic path (synthetic) ----------
+export type TermStatus = "done" | "in_progress" | "registering" | "planned";
+export type Term = {
+  id: string;
+  name: string;
+  school: "bayview" | "northgate";
+  system: "quarter" | "semester";
+  status: TermStatus;
+  registration?: string;
+  courses: { code: string; title: string; units: string; grade?: string; flag?: "qr1" }[];
+};
+
+export const terms: Term[] = [
+  { id: "f25", name: "Fall 2025", school: "bayview", system: "quarter", status: "done", courses: [
+    { code: "ENGL 1A", title: "Composition", units: "5 qu", grade: "A-" },
+    { code: "MATH 1A", title: "Calculus I", units: "5 qu", grade: "B+" },
+    { code: "PSYC 1", title: "General Psychology", units: "5 qu", grade: "A" },
+  ] },
+  { id: "w26", name: "Winter 2026", school: "bayview", system: "quarter", status: "done", courses: [
+    { code: "BIO 10", title: "Biology + Lab", units: "6 qu", grade: "B" },
+    { code: "COMM 1", title: "Public Speaking", units: "4 qu", grade: "A" },
+    { code: "SOC 1", title: "Intro Sociology", units: "5 qu", grade: "A-" },
+  ] },
+  { id: "s26", name: "Spring 2026", school: "bayview", system: "quarter", status: "done", courses: [
+    { code: "PHIL 2", title: "Ethics", units: "5 qu", grade: "B+" },
+    { code: "PSYC 2", title: "Research Methods", units: "5 qu", grade: "A-" },
+  ] },
+  { id: "f26", name: "Fall 2026", school: "bayview", system: "quarter", status: "done", courses: [
+    { code: "ANTH 2", title: "Cultural Anthropology", units: "5 qu", grade: "A" },
+    { code: "ART 1", title: "Art History", units: "4 qu", grade: "B+" },
+  ] },
+  { id: "w27", name: "Winter 2027", school: "bayview", system: "quarter", status: "done", courses: [
+    { code: "PSYC 14", title: "Developmental Psych", units: "5 qu", grade: "A" },
+    { code: "ECON 1", title: "Macroeconomics", units: "5 qu", grade: "B" },
+  ] },
+  { id: "sp27", name: "Spring 2027", school: "bayview", system: "quarter", status: "in_progress", courses: [
+    { code: "HIST 17", title: "U.S. History", units: "5 qu" },
+    { code: "PSYC 33", title: "Personal Growth", units: "3 qu" },
+  ] },
+  { id: "su27", name: "Summer 2027", school: "bayview", system: "quarter", status: "registering", registration: "Open now · closes Jun 18", courses: [
+    { code: "ENGL 1B", title: "Critical Thinking & Writing", units: "5 qu" },
+    { code: "BIO 12", title: "Human Biology", units: "5 qu" },
+    { code: "HIST 18", title: "Modern World History", units: "5 qu" },
+    { code: "STAT 2", title: "Statistics (QR-1)", units: "5 qu", flag: "qr1" },
+  ] },
+  { id: "fa27", name: "Fall 2027", school: "northgate", system: "semester", status: "planned", registration: "Transfer orientation Jul 20 · registers Jul 22", courses: [
+    { code: "PSYC 100", title: "Foundations of Psychology", units: "3 su" },
+    { code: "PSYC 110", title: "Research Design", units: "3 su" },
+    { code: "GE-D", title: "Social Science GE", units: "3 su" },
+    { code: "Elective", title: "Open elective", units: "3 su" },
+  ] },
+  { id: "sp28", name: "Spring 2028", school: "northgate", system: "semester", status: "planned", registration: "Registers Nov 2027", courses: [
+    { code: "PSYC 301", title: "Cognitive Psychology", units: "3 su" },
+    { code: "PSYC 320", title: "Social Psychology", units: "3 su" },
+    { code: "UD-GE", title: "Upper-division GE", units: "3 su" },
+    { code: "Elective", title: "Open elective", units: "3 su" },
+  ] },
+  { id: "fa28", name: "Fall 2028", school: "northgate", system: "semester", status: "planned", registration: "Registers Apr 2028", courses: [
+    { code: "PSYC 350", title: "Abnormal Psychology", units: "3 su" },
+    { code: "PSYC 390", title: "Lab Seminar", units: "3 su" },
+    { code: "Elective", title: "Minor course", units: "6 su" },
+  ] },
+  { id: "sp29", name: "Spring 2029", school: "northgate", system: "semester", status: "planned", registration: "Registers Nov 2028", courses: [
+    { code: "PSYC 495", title: "Capstone", units: "3 su" },
+    { code: "Elective", title: "Minor course", units: "6 su" },
+    { code: "Elective", title: "Open elective", units: "3 su" },
+  ] },
+];
+
+export const progress = { earned: 50.6, inProgress: 5.3, needed: 120, gradTerm: "Spring 2029" };
+
+export const schools = {
+  bayview: { name: "Bayview Community College", short: "Bayview CC", system: "Quarter system", role: "Current school" },
+  northgate: { name: "Northgate State University", short: "Northgate State", system: "Semester system", role: "Transfer school · admitted Fall 2027" },
+} as const;

@@ -1,43 +1,41 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Database } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { PageHeader, SimLabel } from "@/components/app/bits";
+import { SourceLogo } from "@/components/app/SourceLogo";
+import { connectedSources } from "@/components/app/sourcesData";
+import { useJourney } from "@/lib/journey";
 
 export const Route = createFileRoute("/sources")({
   head: () => ({
     meta: [
-      { title: "Connected sources (simulated) — Academic Path Agent" },
-      { name: "description", content: "Where data would come from in a school deployment: Canvas, student system, degree audit, articulation." },
+      { title: "Connected sources — Academic Path Agent" },
+      { name: "description", content: "Canvas, the student system, degree audit, articulation data and email: what the agent reads and why." },
       { property: "og:title", content: "Connected sources — Academic Path Agent" },
-      { property: "og:description", content: "Simulated view of the systems a school would connect." },
+      { property: "og:description", content: "See and control every system the agent reads from." },
     ],
   }),
   component: Sources,
 });
 
-const list = [
-  ["Canvas (LMS)", "Syllabi and assignment deadlines", "3 syllabi"],
-  ["Student information system", "Transcript, enrollment, section seats", "1 transcript"],
-  ["Degree audit", "Northgate requirements and progress", "6 requirements"],
-  ["Articulation data", "Course-to-course transfer rules", "2026-27 file"],
-  ["Course catalogs", "Bayview and Northgate catalogs, policy manuals", "2 catalogs"],
-];
-
 function Sources() {
+  const j = useJourney();
   return (
-    <div>
-      <PageHeader title="Connected sources" sub="In a real deployment, the school connects these. Here, every source is a synthetic file." right={<SimLabel>Simulated — no real connections</SimLabel>} />
-      <div className="grid gap-4 md:grid-cols-2">
-        {list.map(([n, d, c]) => (
-          <div key={n} className="flex gap-4 rounded-xl border border-dashed bg-card p-5">
-            <Database className="size-6 text-primary" />
-            <div>
-              <div className="font-semibold">{n}</div>
-              <div className="text-sm text-muted-foreground">{d}</div>
-              <div className="mt-2 text-xs text-muted-foreground">Simulated · {c}</div>
+    <div className="max-w-3xl">
+      <PageHeader title="Connected sources" sub="Your school connected these systems. Turn any off and the agent stops reading it." right={<SimLabel>Simulated connections</SimLabel>} />
+      <div className="divide-y rounded-2xl border">
+        {connectedSources.map((s) => (
+          <div key={s.id} className="flex items-center gap-4 p-4">
+            <SourceLogo id={s.id} />
+            <div className="min-w-0 flex-1">
+              <div className="font-medium">{s.name}</div>
+              <div className="text-sm text-muted-foreground">{s.what}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{s.vendor} · used by {s.usedBy.join(", ")} · {j.access[s.id] ? "Last synced 2 min ago" : "Off"}</div>
             </div>
+            <Switch checked={j.access[s.id]} onCheckedChange={(v) => j.setAccess(s.id, v)} aria-label={`Allow ${s.name}`} />
           </div>
         ))}
       </div>
+      <p className="mt-4 text-xs text-muted-foreground">Logos show the kind of vendor a school would connect. No real connection is made; all records here are synthetic.</p>
     </div>
   );
 }

@@ -46,7 +46,7 @@ const initial: State = {
 };
 
 type Ctx = State & {
-  failAdd: () => void;
+  failAdd: (openSheet?: boolean) => void;
   choose: (id: string) => void;
   backToOptions: () => void;
   markAdded: () => void;
@@ -98,12 +98,12 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     setOnboarded(window.localStorage.getItem("pa-onboarded") === "1");
   }, []);
 
-  const failAdd = useCallback(() => {
+  const failAdd = useCallback((openSheet = true) => {
     const t0 = Date.now();
     set((p) => ({
       ...p,
       stage: "failed",
-      panelOpen: true,
+      panelOpen: openSheet,
       agentTimes: { reader: new Date(t0), planner: new Date(t0 + 1400), backup: new Date(t0 + 2800) },
     }));
   }, []);

@@ -70,7 +70,7 @@ function SelfRegisterSteps({ o }: { o: Option }) {
   );
 }
 
-export function AgentPanel() {
+export function AgentPanel({ docked = false }: { docked?: boolean }) {
   const j = useJourney();
   const [step, setStep] = useState(0);
 
@@ -88,13 +88,13 @@ export function AgentPanel() {
   const plannerOff = !j.agentOn.reader || !j.agentOn.planner;
   const drafterOff = !j.agentOn.drafter;
 
-  return (
-    <Sheet open={j.panelOpen} onOpenChange={j.setPanelOpen}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetDescription>Agent · proposes and drafts only</SheetDescription>
-          <SheetTitle className="font-serif text-2xl">Seats go fast. Here's what to do now.</SheetTitle>
-        </SheetHeader>
+  const header = (
+    <div className="px-4 pt-4 pb-2">
+      <p className="text-sm text-muted-foreground">Agent · proposes and drafts only</p>
+      <h2 className="font-serif text-2xl">Seats go fast. Here's what to do now.</h2>
+    </div>
+  );
+  const content = (
         <div className="space-y-6 px-4 pb-10">
           <div className="rounded-lg border border-warning/40 bg-warning-soft p-4 text-sm">
             <div className="flex items-center gap-2 font-medium text-warning"><AlertTriangle className="size-4" /> STAT 2 is full</div>
@@ -244,6 +244,16 @@ export function AgentPanel() {
             </section>
           )}
         </div>
+  );
+  if (docked) return <div>{header}{content}</div>;
+  return (
+    <Sheet open={j.panelOpen} onOpenChange={j.setPanelOpen}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
+        <SheetHeader>
+          <SheetDescription>Agent · proposes and drafts only</SheetDescription>
+          <SheetTitle className="font-serif text-2xl">Seats go fast. Here's what to do now.</SheetTitle>
+        </SheetHeader>
+        {content}
       </SheetContent>
     </Sheet>
   );

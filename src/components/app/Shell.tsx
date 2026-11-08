@@ -41,6 +41,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const j = useJourney();
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const onPortal = path === "/portal";
 
   useEffect(() => {
     if (j.onboarded === false && path !== "/welcome") navigate({ to: "/welcome" });
@@ -143,7 +144,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <AgentPanel />
+      {!onPortal && <AgentPanel />}
 
       <Sheet open={!!ev} onOpenChange={(o) => !o && j.openEvidence(null)}>
         <SheetContent side="right" className="z-[60] sm:max-w-md">

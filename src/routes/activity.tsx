@@ -1,8 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { BookOpen, Lightbulb, UserRoundCheck, X, Target, ChevronDown, Check, Ban, ArrowRight, Download, SlidersHorizontal, Info } from "lucide-react";
+import { useState } from "react";
+import { Search as SearchIcon, ArrowDownUp, ChevronDown, Check, Ban, ArrowRight, Download, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { filterActivity, type ActivityFilters } from "@/lib/activity-filters";
 import { PageHeader, SourceChip } from "@/components/app/bits";
 import { useEvents, useScriptNow, When, PermChip, EventStatusChip } from "@/components/app/activityBits";
 import { lastActive, type ActivityEvent } from "@/lib/activity";
@@ -59,50 +62,55 @@ function Activity() {
   );
 }
 
-function Intro() {
-  const [shown, setShown] = useState(false);
-  useEffect(() => setShown(window.localStorage.getItem("pa-activity-intro") !== "dismissed"), []);
-  const set = (v: boolean) => { window.localStorage.setItem("pa-activity-intro", v ? "shown" : "dismissed"); setShown(v); };
-  if (!shown) return <button onClick={() => set(true)} className="mb-4 inline-flex items-center gap-1 text-sm text-primary underline"><Info className="size-4" /> How this works</button>;
-  return (
-    <section className="relative mb-6 rounded-2xl border bg-lilac p-5">
-      <button aria-label="Dismiss" onClick={() => set(false)} className="absolute right-3 top-3 text-muted-foreground"><X className="size-4" /></button>
-      <p className="pr-6">
-        Path Agent is your teammate for your degree plan. It reads your documents and watches your plan. It can suggest and draft. It can never register you for a class or send anything without your OK.
-      </p>
-      <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-        <li className="flex items-center gap-2"><BookOpen className="size-4" /> <b>Reads</b> your school documents</li>
-        <li className="flex items-center gap-2"><Lightbulb className="size-4" /> <b>Suggests</b> what to do next</li>
-        <li className="flex items-center gap-2"><UserRoundCheck className="size-4" /> <b>Asks you first</b> before anything leaves</li>
-      </ul>
-      <p className="mt-3 text-xs text-muted-foreground">These four helpers are the agent: Reader, Planner, Backup finder and Drafter.</p>
-    </section>
-  );
-}
-
 function Timeline({ helper }: { helper?: AgentId | undefined }) {
   const j = useJourney();
   const events = useEvents();
   const now = useScriptNow();
-  const shown = helper ? events.filter((e) => e.steps.some((s) => s.helper === helper)) : events;
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<ActivityFilters["status"]>("all");
+  const [order, setOrder] = useState<ActivityFilters["order"]>("newest");
+  const shown = filterActivity(events, { query, helper, status, order });
+  const filtered = Boolean(query || helper || status !== "all");
+  const clear = () => { setQuery(""); setStatus("all"); navigate({ to: "/activity", search: {} }); };
   return (
     <>
-      <Intro />
-      <div className="mb-5 flex items-center gap-2 rounded-xl border bg-card px-4 py-2.5 text-sm shadow-soft">
-        <Target className="size-4 text-primary" /> <b>Goal:</b> get you the credits your degree needs and graduate on time.
-      </div>
-      {helper && (
-        <div className="mb-4 flex items-center gap-2 text-sm">
-          Showing only the <b>{helperInfo[helper].name}</b>'s steps.
-          <Link to="/activity" className="text-primary underline">Show everything</Link>
+      <div className="mb-4 flex flex-wrap items-center gap-3" role="search" aria-label="Activity filters">
+        <div className="relative min-w-[200px] flex-1">
+          <SearchIcon className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground" />
+          <Input aria-label="Search activity" placeholder="Search activity, classes, or sources…" value={query} onChange={e => setQuery(e.target.value)} className="bg-card pl-9" />
         </div>
-      )}
+        <Select value={helper ?? "all"} onValueChange={value => navigate({ to: "/activity", search: value === "all" ? {} : { helper: value as AgentId } })}>
+          <SelectTrigger aria-label="Filter by helper" className="w-[160px] bg-card"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="all">All helpers</SelectItem>{HELPERS.map(h => <SelectItem key={h} value={h}>{helperInfo[h].name}</SelectItem>)}</SelectContent>
+        </Select>
+        <Select value={status} onValueChange={value => setStatus(value as ActivityFilters["status"])}>
+          <SelectTrigger aria-label="Filter by status" className="w-[190px] bg-card"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem><SelectItem value="attention">Needs your attention</SelectItem>
+            <SelectItem value="done">Done</SelectItem><SelectItem value="waiting">Waiting on counselor</SelectItem><SelectItem value="nothing">Nothing needed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="sm" onClick={() => setOrder(order === "newest" ? "oldest" : "newest")}><ArrowDownUp className="size-4" />{order === "newest" ? "Newest first" : "Oldest first"}</Button>
+      </div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span aria-live="polite">{shown.length} of {events.length} records{helper ? ` · ${helperInfo[helper].name}` : ""}</span>
+        {filtered && <Button size="sm" variant="ghost" onClick={clear}>Clear filters</Button>}
+      </div>
       {shown.length === 0 ? (
         <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground">
-          Nothing has happened yet. When you register or upload a document, your assistant will show its work here.
+          {filtered ? "No activity matches your search or filters." : "Nothing has happened yet. Your assistant’s work will appear here."}
         </div>
       ) : (
-        <ol className="space-y-4">{shown.map((e) => <EventCard key={e.id} e={e} now={now} helper={helper} />)}</ol>
+        <div className="overflow-hidden rounded-2xl border bg-card">
+          <div className="hidden grid-cols-[120px_minmax(0,1fr)_180px_180px_24px] gap-4 border-b bg-secondary px-5 py-3 text-xs font-medium text-muted-foreground lg:grid"><span>Time</span><span>Activity</span><span>Helpers</span><span>Status</span><span /></div>
+          <ol>{shown.map((e, i) => {
+            const date = e.at.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+            const previous = shown[i - 1];
+            const newDate = !previous || previous.at.toDateString() !== e.at.toDateString();
+            return <EventCard key={e.id} e={e} now={now} helper={helper} dateLabel={newDate ? date : undefined} />;
+          })}</ol>
+        </div>
       )}
 
       <details className="group mt-8 rounded-2xl border bg-card shadow-soft">
@@ -129,7 +137,7 @@ function Timeline({ helper }: { helper?: AgentId | undefined }) {
   );
 }
 
-function EventCard({ e, now, helper }: { e: ActivityEvent; now: number | null; helper?: AgentId | undefined }) {
+function EventCard({ e, now, helper, dateLabel }: { e: ActivityEvent; now: number | null; helper?: AgentId | undefined; dateLabel?: string | undefined }) {
   const j = useJourney();
   const navigate = useNavigate();
   const act = () => {
@@ -140,17 +148,17 @@ function EventCard({ e, now, helper }: { e: ActivityEvent; now: number | null; h
   };
   const steps = helper ? e.steps.filter((s) => s.helper === helper) : e.steps;
   return (
-    <li id={`event-${e.id}`} className={cn("rounded-2xl border bg-card p-5 shadow-soft", e.handoff && "border-2 border-warning/50")}>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold">{e.headline}</h2>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <When d={e.at} now={now} />
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Target className="size-3" /> {e.goal === "credits" ? "Serves: the credits you need" : "Serves: graduating on time"}</span>
-          </div>
-        </div>
-        <EventStatusChip s={e.status} />
-      </div>
+    <li id={`event-${e.id}`} className="border-b last:border-b-0">
+      {dateLabel && <div className="border-b bg-secondary/50 px-5 py-2 text-xs font-semibold">{dateLabel}</div>}
+      <details className="group/record">
+        <summary className="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_24px] items-center gap-4 px-5 py-4 transition-colors hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring lg:grid-cols-[120px_minmax(0,1fr)_180px_180px_24px]">
+          <div className="hidden border-l-2 pl-3 lg:block"><time dateTime={e.at.toISOString()} className="block font-mono text-xs">{fmtClock(e.at)}</time><When d={e.at} now={now} /></div>
+          <div className="min-w-0"><h2 className="text-sm font-semibold">{e.headline}</h2><p className="mt-1 truncate text-xs text-muted-foreground">{e.found?.[0] ?? e.because}</p><div className="mt-2 flex flex-wrap items-center gap-2 lg:hidden"><time className="font-mono text-xs text-muted-foreground">{fmtClock(e.at)}</time><EventStatusChip s={e.status} /></div></div>
+          <div className="hidden items-center gap-1 lg:flex">{[...new Set(steps.map(s => s.helper))].map(h => <span key={h} title={helperInfo[h].name}><AgentAvatar agent={h} /></span>)}</div>
+          <div className="hidden lg:block"><EventStatusChip s={e.status} /></div>
+          <ChevronDown className="size-4 text-muted-foreground transition-transform group-open/record:rotate-180" />
+        </summary>
+        <div className="border-t bg-secondary/20 px-5 py-5 lg:pl-[160px]">
       <p className="mt-2 text-sm"><b>Because:</b> {e.because}</p>
 
       <ol className="mt-3 space-y-1.5 border-l-2 pl-4">
@@ -164,7 +172,7 @@ function EventCard({ e, now, helper }: { e: ActivityEvent; now: number | null; h
         ))}
       </ol>
 
-      <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+      <div className="mt-4 grid gap-6 text-sm sm:grid-cols-3">
         {e.found && <Outcome title="What I found" items={e.found} />}
         {e.suggest && <Outcome title="What I suggest" items={e.suggest} />}
         <Outcome title="What I did NOT do" items={e.didNot} icon="no" />
@@ -201,13 +209,15 @@ function EventCard({ e, now, helper }: { e: ActivityEvent; now: number | null; h
           {e.details.confidence && <div className="md:col-span-2"><div className="text-xs font-semibold text-muted-foreground">How sure (confidence)</div><p>{e.details.confidence}</p></div>}
         </div>
       </details>
+        </div>
+      </details>
     </li>
   );
 }
 
 function Outcome({ title, items, icon }: { title: string; items: string[]; icon?: "no" }) {
   return (
-    <div className="rounded-xl border p-3">
+    <div>
       <div className="text-xs font-semibold text-muted-foreground">{title}</div>
       <ul className="mt-1 space-y-1">
         {items.map((x) => (

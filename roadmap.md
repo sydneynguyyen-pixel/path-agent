@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Reshape Activity as a searchable, filterable chronological log with expandable records.
+- [x] Remove the redundant standalone Goal pill from Activity.
+
 - [x] Expand Activity and Agent controls to use the available page width.
 - [x] Align Terms selectors and give course names and source links comfortable spacing.
 

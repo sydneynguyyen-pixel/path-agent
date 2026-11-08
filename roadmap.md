@@ -10,3 +10,4 @@
 - [x] Remove design rationale from the app (delivered as a document)
 - [x] Profile and Settings pages
 - [x] First-time onboarding flow; reduce overstimulation
+- [x] Real vendor logos for degree audit (DegreeWorks) and student system (Banner)

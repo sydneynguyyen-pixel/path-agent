@@ -75,6 +75,13 @@ export const sources = {
     section: "STAT 2 · Sec 01",
     passage: "Add failed: Section full (40/40). Waitlist 6/10.",
   },
+  "counselor-confirm": {
+    id: "counselor-confirm",
+    doc: "Counselor decision (simulated)",
+    school: "Northgate State University",
+    section: "Counselor ruling",
+    passage: "Dr. Priya Okafor confirmed the course satisfies QR-1 Statistics for M. Torres. Recorded in the decision log.",
+  },
   "bcc-drop": {
     id: "bcc-drop",
     doc: "Bayview CC Academic Policy Manual 2026",
@@ -316,6 +323,7 @@ export const PILEUP_THRESHOLD = 3;
 export const agents = [
   {
     id: "reader",
+    why: "Every later claim must point to a passage, so it extracts before anyone reasons.",
     name: "Reader",
     role: "Reads records and documents",
     inputs: ["Transcript (Bayview, synthetic)", "Degree audit (Northgate)", "Articulation file 2026-27", "Northgate catalog", "3 summer syllabi", "Portal response: Section full"],
@@ -323,6 +331,7 @@ export const agents = [
   },
   {
     id: "planner",
+    why: "Seats vanish in minutes, so it sorts by open seats first and only then by fit; anything uncertain is routed, not guessed.",
     name: "Planner",
     role: "Checks what still counts",
     inputs: ["QR-1 requirement", "Articulation rules", "Confidence threshold 0.75"],
@@ -330,6 +339,7 @@ export const agents = [
   },
   {
     id: "backup",
+    why: "A course that counts but collides with three deadlines in one week is a worse plan, so it checks workload.",
     name: "Backup finder",
     role: "Finds open sections and checks workload",
     inputs: ["Summer schedule (simulated)", "Merged syllabi deadlines"],
@@ -337,6 +347,7 @@ export const agents = [
   },
   {
     id: "drafter",
+    why: "Only uncertain options need a human ruling; it drafts so the counselor can decide in one read.",
     name: "Drafter",
     role: "Drafts the counselor email",
     inputs: ["Chosen option", "Evidence passages", "Drop deadline §6.1"],

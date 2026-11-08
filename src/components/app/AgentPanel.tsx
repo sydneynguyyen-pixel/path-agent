@@ -230,6 +230,7 @@ export function AgentPanel() {
               <div className="flex gap-3">
                 <Link to="/" className="text-primary underline" onClick={() => j.setPanelOpen(false)}>See degree view</Link>
                 <Link to="/decisions" className="text-primary underline" onClick={() => j.setPanelOpen(false)}>Decision log</Link>
+                {path === "hold" && j.emailSent && <Link to="/counselor" className="text-primary underline" onClick={() => j.setPanelOpen(false)}>Counselor view</Link>}
               </div>
             </section>
           )}

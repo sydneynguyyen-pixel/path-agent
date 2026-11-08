@@ -1,9 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { RotateCcw, Eye, Pause, GraduationCap, CalendarDays, MousePointerClick, Bot, ScrollText, Database, ShieldCheck, ChevronRight } from "lucide-react";
+import { RotateCcw, Eye, Pause, GraduationCap, CalendarDays, MousePointerClick, Bot, ScrollText, Database, ShieldCheck, ChevronRight, UserCheck, Lightbulb } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { sources, student } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { AgentPanel } from "./AgentPanel";
+import { DemoProgress } from "./DemoProgress";
 
 const groups = [
   {
@@ -19,6 +20,7 @@ const groups = [
     links: [
       { to: "/activity", label: "Agent activity", icon: Bot },
       { to: "/decisions", label: "Decision log", icon: ScrollText },
+      { to: "/counselor", label: "Counselor view", icon: UserCheck },
     ],
   },
   {
@@ -26,6 +28,7 @@ const groups = [
     links: [
       { to: "/sources", label: "Connected sources", icon: Database },
       { to: "/permissions", label: "Permissions", icon: ShieldCheck },
+      { to: "/about", label: "Design rationale", icon: Lightbulb },
     ],
   },
 ] as const;
@@ -65,6 +68,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     >
                       <l.icon className="size-4" />
                       {l.label}
+                      {l.to === "/counselor" && j.emailSent && !j.counselor && (
+                        <span className="ml-auto grid size-5 place-items-center rounded-full bg-warning text-[10px] text-primary-foreground">1</span>
+                      )}
                       {l.to === "/decisions" && j.decisions.length > 0 && (
                         <span className="ml-auto grid size-5 place-items-center rounded-full bg-primary text-[10px] text-primary-foreground">{j.decisions.length}</span>
                       )}
@@ -110,7 +116,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </Link>
               ))}
             </nav>
-            <button onClick={j.reset} className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground opacity-60 hover:opacity-100" title="Reset demo">
+            <div className="ml-auto"><DemoProgress /></div>
+            <button onClick={j.reset} className=" inline-flex items-center gap-1 text-xs text-muted-foreground opacity-60 hover:opacity-100" title="Reset demo">
               <RotateCcw className="size-3" /> Reset demo
             </button>
           </header>

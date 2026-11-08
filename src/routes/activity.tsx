@@ -52,6 +52,7 @@ function Activity() {
         <div className="text-xs text-muted-foreground">{agent.role}</div>
         <h2 className="text-2xl font-semibold">{agent.name}</h2>
         <div className="text-sm text-muted-foreground">{t ? `Ran at ${fmtTime(t)}` : "Waiting — try the registration demo."}</div>
+        <div className="mt-4 rounded-xl bg-lilac p-3 text-sm"><b>Why did it do that?</b> {agent.why}</div>
         <div className="mt-6 grid gap-6 md:grid-cols-2">
           <div>
             <h3 className="text-sm font-semibold">Inputs (what it read)</h3>

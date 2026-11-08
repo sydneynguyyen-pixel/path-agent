@@ -12,6 +12,7 @@ type State = {
   seatHeld: boolean;
   emailSent: boolean;
   waitlisted: boolean;
+  counselor: null | "confirmed" | "declined";
   draft: string;
   decisions: Decision[];
   panelOpen: boolean;
@@ -26,6 +27,7 @@ const initial: State = {
   seatHeld: false,
   emailSent: false,
   waitlisted: false,
+  counselor: null,
   draft: "",
   decisions: [],
   panelOpen: false,
@@ -42,6 +44,7 @@ type Ctx = State & {
   joinWaitlist: () => void;
   setDraft: (s: string) => void;
   approve: () => void;
+  counselorDecide: (d: "confirmed" | "declined") => void;
   setPanelOpen: (b: boolean) => void;
   setPaused: (b: boolean) => void;
   openEvidence: (id: string | null) => void;
@@ -102,7 +105,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     const chosen = options.find((o) => o.id === s.chosenId);
     return {
       ...s,
-      atRisk: s.stage !== "idle" && !s.seatHeld,
+      atRisk: (s.stage !== "idle" && !s.seatHeld) || s.counselor === "declined",
       failAdd,
       choose,
       backToOptions: () => set((p) => ({ ...p, stage: "failed", chosenId: null, draft: "" })),
@@ -123,6 +126,21 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
           ...p,
           emailSent: true,
           decisions: [...p.decisions, log(`Approved and sent (simulated) email to ${student.counselor} about ${chosen!.course}`, [...chosen!.sourceIds, "bcc-drop"])],
+        })),
+      counselorDecide: (d) =>
+        set((p) => ({
+          ...p,
+          counselor: d,
+          decisions: [
+            ...p.decisions,
+            {
+              id: crypto.randomUUID(),
+              who: student.counselor,
+              what: d === "confirmed" ? `Confirmed ${chosen!.course} counts toward ${REQUIREMENT_LABEL}` : `Declined ${chosen!.course} for ${REQUIREMENT_LABEL}; advised drop by ${DROP_DEADLINE}`,
+              when: new Date(),
+              evidence: chosen!.sourceIds,
+            },
+          ],
         })),
       setDraft: (d) => set((p) => ({ ...p, draft: d })),
       setPanelOpen: (b) => set((p) => ({ ...p, panelOpen: b })),

@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as ActivityRouteImport } from './routes/activity'
+import { Route as CounselorRouteImport } from './routes/counselor'
 import { Route as DecisionsRouteImport } from './routes/decisions'
 import { Route as PermissionsRouteImport } from './routes/permissions'
 import { Route as PortalRouteImport } from './routes/portal'
@@ -22,9 +24,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ActivityRoute = ActivityRouteImport.update({
   id: '/activity',
   path: '/activity',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CounselorRoute = CounselorRouteImport.update({
+  id: '/counselor',
+  path: '/counselor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DecisionsRoute = DecisionsRouteImport.update({
@@ -55,7 +67,9 @@ const SourcesRoute = SourcesRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/activity': typeof ActivityRoute
+  '/counselor': typeof CounselorRoute
   '/decisions': typeof DecisionsRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
@@ -64,7 +78,9 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/activity': typeof ActivityRoute
+  '/counselor': typeof CounselorRoute
   '/decisions': typeof DecisionsRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
@@ -74,7 +90,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/activity': typeof ActivityRoute
+  '/counselor': typeof CounselorRoute
   '/decisions': typeof DecisionsRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
@@ -85,7 +103,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/activity'
+    | '/counselor'
     | '/decisions'
     | '/permissions'
     | '/portal'
@@ -94,7 +114,9 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/activity'
+    | '/counselor'
     | '/decisions'
     | '/permissions'
     | '/portal'
@@ -103,7 +125,9 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/activity'
+    | '/counselor'
     | '/decisions'
     | '/permissions'
     | '/portal'
@@ -113,7 +137,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   ActivityRoute: typeof ActivityRoute
+  CounselorRoute: typeof CounselorRoute
   DecisionsRoute: typeof DecisionsRoute
   PermissionsRoute: typeof PermissionsRoute
   PortalRoute: typeof PortalRoute
@@ -130,11 +156,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/activity': {
       id: '/activity'
       path: '/activity'
       fullPath: '/activity'
       preLoaderRoute: typeof ActivityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/counselor': {
+      id: '/counselor'
+      path: '/counselor'
+      fullPath: '/counselor'
+      preLoaderRoute: typeof CounselorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/decisions': {
@@ -177,7 +217,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   ActivityRoute: ActivityRoute,
+  CounselorRoute: CounselorRoute,
   DecisionsRoute: DecisionsRoute,
   PermissionsRoute: PermissionsRoute,
   PortalRoute: PortalRoute,

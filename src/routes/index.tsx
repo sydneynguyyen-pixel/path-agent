@@ -29,7 +29,7 @@ function DegreeView() {
         right={<SimLabel>Synthetic data</SimLabel>}
       />
 
-      {j.seatHeld && chosen && (
+      {j.seatHeld && chosen && !j.counselor && (
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-success/30 bg-success-soft p-4 text-sm">
           <CheckCircle2 className="mt-0.5 size-5 text-success" />
           <div>
@@ -63,6 +63,17 @@ function DegreeView() {
             src = chosen.sourceIds[0]!;
             conf = chosen.confidence;
             conflict = !!chosen.conflict;
+          }
+          if (r.id === "qr1" && chosen && j.counselor === "confirmed") {
+            status = "done";
+            detail = `${chosen.course} §${chosen.section} · confirmed by ${student.counselor}`;
+            src = "counselor-confirm";
+            conf = 0.99;
+            conflict = false;
+          }
+          if (r.id === "qr1" && chosen && j.counselor === "declined") {
+            status = "at_risk";
+            detail = `Counselor declined ${chosen.course}. Drop it by ${DROP_DEADLINE}; MATH 13 still has seats.`;
           }
           return (
             <div key={r.id} className="grid gap-3 p-5 md:grid-cols-[1fr_auto] md:items-center">

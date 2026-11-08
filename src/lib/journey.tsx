@@ -25,6 +25,7 @@ type State = {
   paused: boolean;
   agentTimes: Record<string, Date>;
   evidenceId: string | null;
+  guide: boolean;
 };
 
 const initial: State = {
@@ -43,6 +44,7 @@ const initial: State = {
   paused: false,
   agentTimes: {},
   evidenceId: null,
+  guide: false,
 };
 
 type Ctx = State & {
@@ -58,6 +60,7 @@ type Ctx = State & {
   setPaused: (b: boolean) => void;
   openEvidence: (id: string | null) => void;
   reset: () => void;
+  setGuide: (b: boolean) => void;
   atRisk: boolean;
   onboarded: boolean | null;
   finishOnboarding: () => void;
@@ -115,6 +118,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       ...p,
       stage: "chosen",
       chosenId: id,
+      guide: false,
       draft: hold ? buildDraft(id) : "",
       agentTimes: hold ? { ...p.agentTimes, drafter: new Date() } : p.agentTimes,
       decisions: [...p.decisions, log(`Chose ${o.course} §${o.section} as replacement for STAT 2`, o.sourceIds)],
@@ -128,7 +132,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       atRisk: (s.stage !== "idle" && !s.seatHeld) || s.counselor === "declined",
       failAdd,
       choose,
-      backToOptions: () => set((p) => ({ ...p, stage: "failed", chosenId: null, draft: "" })),
+      backToOptions: () => set((p) => ({ ...p, stage: "failed", chosenId: null, draft: "", guide: false })),
       markAdded: () =>
         set((p) => ({
           ...p,
@@ -163,6 +167,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
           ],
         })),
       setDraft: (d) => set((p) => ({ ...p, draft: d })),
+      setGuide: (b) => set((p) => ({ ...p, guide: b })),
       setPanelOpen: (b) => set((p) => ({ ...p, panelOpen: b })),
       setPaused: (b) => set((p) => ({ ...p, paused: b, panelOpen: b ? false : p.panelOpen })),
       openEvidence: (id) => set((p) => ({ ...p, evidenceId: id })),

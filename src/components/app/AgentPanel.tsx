@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { AlertTriangle, CheckCircle2, Loader2, Send, Scale, Info, Zap, Clock, Users, ListPlus, LogOut } from "lucide-react";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { AlertTriangle, CheckCircle2, Loader2, Send, Scale, Info, Zap, Clock, Users, ListPlus, LogOut, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -53,19 +53,38 @@ function WaitlistAction() {
 
 function SelfRegisterSteps({ o }: { o: Option }) {
   const j = useJourney();
+  const onPortal = useRouterState({ select: (s) => s.location.pathname }) === "/portal";
+  const code = o.course.replace("BCC ", "");
+  if (j.seatHeld) return <div className="flex items-center gap-1.5 text-sm font-medium text-success"><CheckCircle2 className="size-4" /> You registered for {code} §{o.section}.</div>;
+  if (onPortal) {
+    return (
+      <>
+        <ol className="list-decimal space-y-1 pl-5 text-sm">
+          <li className={cn(j.guide && "text-muted-foreground line-through")}>Let me find {code} in the class search.</li>
+          <li>Pick <b>section {o.section}</b> ({o.sectionTime}) — I'll highlight it and check it fits your week.</li>
+          <li>You click <b>Add</b>, then <b>Submit</b>.</li>
+        </ol>
+        {j.guide ? (
+          <p className="flex items-center gap-1.5 text-sm text-primary"><Loader2 className="size-4 animate-spin" /> Waiting for you to Add and Submit in the portal…</p>
+        ) : (
+          <Button onClick={() => j.setGuide(true)}><Search className="size-4" /> Find it for me</Button>
+        )}
+        <p className="text-xs text-muted-foreground">I fill in the search and point. You click Add and Submit — I never register for you.</p>
+      </>
+    );
+  }
   return (
     <>
       <ol className="list-decimal space-y-1 pl-5 text-sm">
         <li>Open the registration portal.</li>
-        <li><b>Add {o.course.replace("BCC ", "")}, section {o.section}</b> ({o.sectionTime}).</li>
+        <li><b>Add {code}, section {o.section}</b> ({o.sectionTime}).</li>
         <li>Confirm the add went through.</li>
       </ol>
       <p className="text-xs text-muted-foreground">You register yourself. The agent never registers or enrolls for you.</p>
-      {j.seatHeld ? (
-        <div className="flex items-center gap-1.5 text-sm font-medium text-success"><CheckCircle2 className="size-4" /> You added it.</div>
-      ) : (
-        <Button onClick={j.markAdded}>I added it myself</Button>
-      )}
+      <div className="flex gap-2">
+        <Button asChild><Link to="/portal" onClick={() => { j.setGuide(true); j.setPanelOpen(false); }}>Take me there</Link></Button>
+        <Button variant="outline" onClick={j.markAdded}>I added it myself</Button>
+      </div>
     </>
   );
 }

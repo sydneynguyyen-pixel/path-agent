@@ -20,6 +20,14 @@ Calm, academic, reassuring: warm paper background, deep ink-teal primary, soft s
 - Evidence drawer (global): click any claim to see the source passage and document name.
 - Quarter-to-semester conversion shown as cited rules from each school's policy.
 
+## Additions
+- Done state: after approval, degree view moves the requirement from "at risk" to "pending counselor confirmation" with the chosen course shown; semester view adds the chosen course's deadlines. Banner: "Nothing was registered. Your counselor confirms next."
+- Activity view: handoff sequence Reader -> Planner -> Backup finder -> Drafter with timestamps; click an agent to see its inputs and outputs.
+- `/decisions` Decision log page: every approval (who, what, when, evidence link opening the drawer).
+- Confidence badges use label + icon (High/Medium/Low), not color alone; amber for "at risk", never red anywhere.
+- Send is simulated: toast and card note "Demo only: no email was sent."
+- Degree view shows the quarter-to-semester conversion as cited rules from both Bayview and Northgate policies.
+
 ## Guardrails in UI
 - Every "counts" claim has a source + confidence; below threshold auto-routes to counselor as unconfirmed.
 - Footer note: no legal, financial-aid or immigration advice.

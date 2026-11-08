@@ -24,22 +24,23 @@ function Semester() {
     ...syllabi.map((s) => ({ course: s.course, items: s.items, sourceId: s.sourceId, isNew: false })),
     ...(chosen ? [{ course: chosen.course.replace("BCC ", ""), items: chosen.deadlines.map((d) => ({ week: d.week, label: d.label.split(" ").slice(2).join(" ") })), sourceId: chosen.sourceIds[0]!, isNew: true }] : []),
   ];
+  const tints = ["bg-lilac", "bg-sky", "bg-butter", "bg-mint"];
   const weeks = Array.from({ length: 8 }, (_, i) => i + 1);
   const load = (w: number) => rows.reduce((n, r) => n + r.items.filter((i) => i.week === w).length, 0);
 
   return (
     <div>
       <PageHeader title="Summer 2027, week by week" sub="Your three syllabi merged. Weeks with 3+ deadlines are marked so you can plan ahead." right={<SimLabel>Synthetic syllabi</SimLabel>} />
-      <div className="overflow-x-auto rounded-2xl border bg-card shadow-soft">
+      <div className="overflow-x-auto rounded-2xl border bg-card">
         <div className="grid min-w-[760px] grid-cols-[140px_repeat(8,1fr)]">
           <div className="border-b p-3 text-xs text-muted-foreground">Course</div>
           {weeks.map((w) => (
-            <div key={w} className={cn("border-b border-l p-3 text-xs font-medium", load(w) >= PILEUP_THRESHOLD && "bg-warning-soft text-warning")}>
+            <div key={w} className={cn("border-b border-l p-3 text-center text-xs font-medium", load(w) >= PILEUP_THRESHOLD && "bg-primary text-primary-foreground")}>
               Wk {w}
               {load(w) >= PILEUP_THRESHOLD && <div className="mt-1 flex items-center gap-1"><AlertTriangle className="size-3" /> Pile-up · {load(w)}</div>}
             </div>
           ))}
-          {rows.map((r) => (
+          {rows.map((r, ri) => (
             <div key={r.course} className="contents">
               <div className={cn("border-b p-3 text-sm font-medium", r.isNew && "bg-accent")}>
                 {r.course} {r.isNew && <span className="block text-xs font-normal text-muted-foreground">Seat held by you</span>}
@@ -48,7 +49,7 @@ function Semester() {
               {weeks.map((w) => (
                 <div key={w} className={cn("border-b border-l p-2", r.isNew && "bg-accent/50")}>
                   {r.items.filter((i) => i.week === w).map((i) => (
-                    <div key={i.label} className="rounded-md bg-secondary px-2 py-1 text-xs">{i.label}</div>
+                    <div key={i.label} className={cn("rounded-xl px-2.5 py-2 text-xs font-medium text-foreground/80", tints[ri % 4])}>{i.label}</div>
                   ))}
                 </div>
               ))}

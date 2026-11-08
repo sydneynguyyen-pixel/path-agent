@@ -117,6 +117,10 @@
   --shadow-frame: 0 10px 36px rgb(0 0 0 / 7%);
   --shadow-widget: 0 2px 5px oklch(0.18 0 0 / 5%), 0 12px 24px -8px oklch(0.18 0 0 / 14%);
   --shadow-widget-hover: 0 3px 7px oklch(0.18 0 0 / 6%), 0 16px 30px -8px oklch(0.18 0 0 / 18%);
+  --term-band-background: #111111;
+  --term-band-foreground: #FFFFFF;
+  --term-band-icon-outline: oklch(1 0 0 / 85%);
+  --term-band-chip-background: oklch(1 0 0 / 14%);
   --aqua-gradient: linear-gradient(100deg, #BDE8E1 0%, #BFE3F4 100%);
   --aqua-ring-start: #A8E0D8;
   --aqua-ring-end: #9CCBEF;
@@ -247,6 +251,10 @@
 .agent-bare img { width: 100%; height: 100%; }
 .brand-logo { width: 46px; height: 46px; flex-shrink: 0; }
 .term-band { padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.term-band-solid { background: var(--term-band-background); color: var(--term-band-foreground); min-height: 44px; padding: 10px 16px; }
+.term-band-solid .term-band-name { font-size: 18px; font-weight: 600; line-height: 24px; }
+.term-band-solid .term-icon, .term-band-solid .term-icon [stroke] { stroke: var(--term-band-icon-outline); stroke-width: 1.5px; }
+.term-band-chip { background: var(--term-band-chip-background); color: var(--term-band-foreground); }
 .brand-app { font-size: 14px; line-height: 1.5; }
 .brand-app :is(h1,h2,h3) { font-family: var(--font-sans); font-weight: 600; }
 .brand-app h1 { font-size: 32px; }

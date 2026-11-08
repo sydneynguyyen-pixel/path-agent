@@ -7,7 +7,7 @@ import { ConfidenceBadge, SourceChip, StatusBadge } from "@/components/app/bits"
 import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { TermIcon, SubjectIcon, AgentAvatar, seasonFor } from "@/components/app/Brand";
+import { TermIcon, SubjectIcon, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -66,10 +66,10 @@ function Attention() {
 }
 
 const termTone: Record<Term["status"], string> = {
-  done: "bg-card border text-foreground",
+  done: "term-band-chip opacity-75",
   in_progress: "aqua-chip",
-  registering: "bg-primary text-primary-foreground",
-  planned: "bg-card text-muted-foreground border",
+  registering: "aqua-chip",
+  planned: "term-band-chip opacity-75",
 };
 const termLabel: Record<Term["status"], string> = { done: "Completed", in_progress: "Current term", registering: "Registering now", planned: "Planned" };
 
@@ -90,8 +90,8 @@ function PathTimeline() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {terms.filter((t) => t.school === sch).map((t) => (
               <article key={t.id} className={cn("term-card rounded-2xl border", t.status === "registering" && "border-2 border-primary")}>
-                <div className={cn("term-band", `mesh-${seasonFor(t.name)}`)}>
-                  <div className="flex items-center gap-2 text-lg font-semibold"><TermIcon term={t.name} />{t.name}</div>
+                <div className="term-band term-band-solid">
+                  <div className="flex min-w-0 items-center gap-2 text-lg font-semibold"><TermIcon term={t.name} /><span className={cn("term-band-name", (t.status === "done" || t.status === "planned") && "opacity-75")}>{t.name}</span></div>
                   <span className={cn("rounded-full px-2 py-0.5 text-[11px]", termTone[t.status])}>{termLabel[t.status]}</span>
                 </div>
                 {t.registration && <div className="mt-3 px-4 text-xs text-muted-foreground">{t.registration}</div>}

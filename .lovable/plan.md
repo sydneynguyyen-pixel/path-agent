@@ -28,6 +28,8 @@ Calm, academic, reassuring: warm paper background, deep ink-teal primary, soft s
 - Send is simulated: toast and card note "Demo only: no email was sent."
 - Degree view shows the quarter-to-semester conversion as cited rules from both Bayview and Northgate policies.
 
+- Understated "Reset demo" link in the nav corner: restores starting state (not at risk, no option, no draft, empty decision log, panel closed, not paused).
+
 ## Guardrails in UI
 - Every "counts" claim has a source + confidence; below threshold auto-routes to counselor as unconfirmed.
 - Footer note: no legal, financial-aid or immigration advice.

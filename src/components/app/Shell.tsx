@@ -54,7 +54,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   if (path === "/welcome") return <>{children}</>;
 
-  const current = [...allLinks, ...extra].find((l) => l.to === path) ?? allLinks[0];
+  const navPath = path === "/course-skills" || path === "/skills-export" ? "/skills" : path;
+  const current = [...allLinks, ...extra].find((l) => l.to === navPath) ?? allLinks[0];
   const ev = j.evidenceId ? (sources as Record<string, (typeof sources)[keyof typeof sources] | undefined>)[j.evidenceId] : null;
   const anyOff = Object.values(j.agentOn).some((v) => !v);
 
@@ -76,9 +77,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={l.to}
                       to={l.to}
-                      className="nav-link flex items-center gap-3 rounded-full px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60"
+                      className={`nav-link flex items-center gap-3 rounded-full px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60${l.to === "/skills" && path !== "/skills" && navPath === "/skills" ? " bg-primary text-primary-foreground font-medium shadow-soft" : ""}`}
                       activeProps={{ className: "bg-primary text-primary-foreground font-medium shadow-soft" }}
-                      activeOptions={{ exact: true }}
+                      activeOptions={{ exact: true, includeSearch: false }}
+                      aria-current={navPath === l.to ? "page" : undefined}
                     >
                       <l.icon className="size-4" />
                       {l.label}
@@ -130,7 +132,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </span>
             <nav className="ml-4 flex gap-1 overflow-x-auto md:hidden">
               {allLinks.map((l) => (
-                <Link key={l.to} to={l.to} className="rounded-full px-2 py-1 text-xs text-muted-foreground" activeProps={{ className: "bg-primary text-primary-foreground" }} activeOptions={{ exact: true }}>
+                <Link key={l.to} to={l.to} className="rounded-full px-2 py-1 text-xs text-muted-foreground" activeProps={{ className: "bg-primary text-primary-foreground" }} activeOptions={{ exact: true, includeSearch: false }}>
                   {l.label}
                 </Link>
               ))}

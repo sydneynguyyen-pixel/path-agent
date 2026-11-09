@@ -25,7 +25,7 @@ export function fmtAgo(d: Date, now: number) {
 }
 
 export type AgentId = "reader" | "planner" | "backup" | "drafter";
-export type AccessKey = "registration" | "canvas" | "sis" | "audit" | "articulation" | "email";
+export type AccessKey = "registration" | "canvas" | "sis" | "audit" | "articulation" | "handshake" | "email";
 
 type State = {
   skillReviews: Record<string, SkillReview>;
@@ -59,7 +59,7 @@ const initial: State = {
   dismissedRoles: [],
   careerInterests: [],
   agentOn: { reader: true, planner: true, backup: true, drafter: true },
-  access: { registration: true, canvas: true, sis: true, audit: true, articulation: true, email: true },
+  access: { registration: true, canvas: true, sis: true, audit: true, articulation: true, handshake: true, email: true },
   notify: { email: true, push: false, digest: true },
   stage: "idle",
   chosenId: null,

@@ -41,7 +41,7 @@ function Settings() {
 
       <Section title="Agent & data">
         <Row title="Agent controls" desc="Turn agents on or off and choose what they read."><Button variant="outline" size="sm" asChild><Link to="/permissions">Open</Link></Button></Row>
-        <Row title="Connected sources" desc="Canvas, student system, degree audit, articulation, email."><Button variant="outline" size="sm" asChild><Link to="/sources">Open</Link></Button></Row>
+        <Row title="Connected sources" desc="Canvas, student system, degree audit, articulation, career center, email."><Button variant="outline" size="sm" asChild><Link to="/sources">Open</Link></Button></Row>
         <Row title="Download my data" desc="Everything the agent read and produced."><Button variant="outline" size="sm" onClick={() => toast("Demo only: nothing was downloaded.")}>Download</Button></Row>
       </Section>
 

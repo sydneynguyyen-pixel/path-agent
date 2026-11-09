@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Pause, Play, Lock, Eye, EyeOff, Check, UserRoundCheck, FileText, CalendarDays, GraduationCap, ArrowRightLeft, Mail, MousePointerClick, ArrowRight, ChevronDown } from "lucide-react";
+import { Pause, Play, Lock, Eye, EyeOff, Check, UserRoundCheck, FileText, CalendarDays, GraduationCap, ArrowRightLeft, Briefcase, Mail, MousePointerClick, ArrowRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useJourney, fmtStamp, type AgentId, type AccessKey } from "@/lib/journey";
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/permissions")({
 
 const HELPERS: AgentId[] = ["reader", "planner", "backup", "drafter"];
 const agentAccess: Record<AgentId, AccessKey[]> = {
-  reader: ["registration", "canvas", "sis", "audit"],
+  reader: ["registration", "canvas", "sis", "audit", "handshake"],
   planner: ["audit", "articulation"],
   backup: ["sis", "canvas"],
   drafter: ["email"],
@@ -39,7 +39,7 @@ const never: Record<AgentId, string> = {
   drafter: "Never sends. You approve every email.",
 };
 const sourceIcon: Record<AccessKey, typeof FileText> = {
-  registration: MousePointerClick, canvas: CalendarDays, sis: GraduationCap, audit: FileText, articulation: ArrowRightLeft, email: Mail,
+  registration: MousePointerClick, canvas: CalendarDays, sis: GraduationCap, audit: FileText, articulation: ArrowRightLeft, handshake: Briefcase, email: Mail,
 };
 const sourceLabel = (k: AccessKey) => (k === "registration" ? "Registration page" : connectedSources.find((s) => s.id === k)?.what ?? k);
 

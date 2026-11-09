@@ -80,7 +80,7 @@ export const sources = {
     doc: "Counselor decision (simulated)",
     school: "Northgate State University",
     section: "Counselor ruling",
-    passage: "Dr. Priya Okafor confirmed the course satisfies QR-1 Statistics for M. Torres. Recorded in the decision log.",
+    passage: "Dr. Jenna Baylor confirmed the course satisfies QR-1 Statistics for M. Torres. Recorded in the decision log.",
   },
   "bcc-drop": {
     id: "bcc-drop",
@@ -359,8 +359,8 @@ export const student = {
   name: "Maya Torres",
   from: "Bayview Community College (quarter)",
   to: "Northgate State University (semester)",
-  counselor: "Dr. Priya Okafor",
-  counselorEmail: "p.okafor@northgate.example",
+  counselor: "Dr. Jenna Baylor",
+  counselorEmail: "j.baylor@northgate.example",
 };
 
 // ---------- Full academic path (synthetic) ----------

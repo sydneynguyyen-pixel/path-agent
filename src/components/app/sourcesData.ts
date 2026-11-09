@@ -1,7 +1,8 @@
 import canvas from "@/assets/canvas.svg.asset.json";
 import banner from "@/assets/banner.png.asset.json";
-import degreeworks from "@/assets/degreeworks.png.asset.json";
-import assist from "@/assets/assist.png.asset.json";
+import degreeworks from "@/assets/degreeworks-logo.png";
+import handshake from "@/assets/handshake-logo.png";
+import assist from "@/assets/assist-logo.png";
 import gmail from "@/assets/gmail.svg.asset.json";
 import type { AccessKey } from "@/lib/journey";
 
@@ -11,7 +12,8 @@ export type ConnectedSource = { id: AccessKey; name: string; vendor: string; wha
 export const connectedSources: ConnectedSource[] = [
   { id: "canvas", name: "Canvas", vendor: "Instructure", what: "Syllabi and assignment deadlines", logo: canvas.url, usedBy: ["Reader", "Backup finder"] },
   { id: "sis", name: "Student system (Banner)", vendor: "Ellucian Banner", what: "Transcript, enrollment, open seats", logo: banner.url, usedBy: ["Reader", "Backup finder"] },
-  { id: "audit", name: "Degree audit (DegreeWorks)", vendor: "Ellucian DegreeWorks", what: "Northgate requirements and progress", logo: degreeworks.url, usedBy: ["Reader", "Planner"] },
-  { id: "articulation", name: "Articulation data (ASSIST)", vendor: "ASSIST", what: "Course-to-course transfer rules", logo: assist.url, usedBy: ["Planner"] },
+  { id: "audit", name: "Degree audit (DegreeWorks)", vendor: "Ellucian DegreeWorks", what: "Northgate requirements and progress", logo: degreeworks, usedBy: ["Reader", "Planner"] },
+  { id: "articulation", name: "Articulation data (ASSIST)", vendor: "ASSIST", what: "Course-to-course transfer rules", logo: assist, usedBy: ["Planner"] },
+  { id: "handshake", name: "Career center (Handshake)", vendor: "Handshake", what: "Jobs, internships and career-center appointments", logo: handshake, usedBy: ["Reader"] },
   { id: "email", name: "School email (drafts only)", vendor: "Google Workspace", what: "Save drafts you approve and send", logo: gmail.url, usedBy: ["Drafter"] },
 ];

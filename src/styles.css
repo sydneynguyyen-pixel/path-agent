@@ -299,6 +299,10 @@
 .brand-app .edge-term-card:hover { transform: none; }
 .brand-app .edge-term-card.term-selected { border: 2px solid var(--primary); transform: translateY(-4px); box-shadow: var(--shadow-term-selected); }
 .brand-app .edge-term-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.term-compact-meta { padding: 4px 16px 14px; color: var(--muted-foreground); font-size: 12px; }
+.brand-app .term-compact .term-edge-stripe { height: 4px; }
+.brand-app .term-compact .term-edge-header { flex-wrap: nowrap; }
+.brand-app .term-compact .term-edge-name { font-size: 16px; line-height: 22px; }
 .term-selected-footer { border-top: 1px solid var(--term-footer-border); padding: 10px 14px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted-foreground); font-size: 12px; font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { .brand-app .edge-term-card.term-selected { transform: none; } }
 .brand-app .nav-link { padding: 8px 12px; min-height: 46px; }

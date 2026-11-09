@@ -82,6 +82,9 @@ function PathTimeline() {
   const j = useJourney();
   const [selectedId, setSelectedId] = useState(defaultSelectedTermId);
   const chosen = options.find((o) => o.id === j.chosenId);
+  // Only the current and registering terms show their course lists by default.
+  // Completed and planned terms stay compact until the student selects them.
+  const isOpen = (t: Term) => t.status === "in_progress" || t.status === "registering" || selectedId === t.id;
   return (
     <div className="space-y-8">
       {(["bayview", "northgate"] as const).map((sch) => (
@@ -98,7 +101,7 @@ function PathTimeline() {
               <article key={t.id} role="button" tabIndex={0} aria-label={t.name} aria-pressed={selectedId === t.id}
                 onClick={() => setSelectedId((current) => selectTerm(current, t.id))}
                 onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setSelectedId((current) => selectTerm(current, t.id)); } }}
-                className={cn("term-card edge-term-card", `term-state-${t.status}`, selectedId === t.id && "term-selected")}>
+                className={cn("term-card edge-term-card", `term-state-${t.status}`, selectedId === t.id && "term-selected", !isOpen(t) && "term-compact")}>
                 <div className={cn("term-edge-stripe", `mesh-${seasonFor(t.name)}`)} />
                 <div className="term-edge-header">
                   <div className="flex min-w-0 items-center gap-2"><TermIcon term={t.name} /><div className="min-w-0">{t.status === "in_progress" && <div className="term-here">You are here</div>}<span className="term-edge-name">{t.name}</span></div></div>
@@ -109,8 +112,9 @@ function PathTimeline() {
                     {termLabel[t.status]}
                   </span>
                 </div>
-                {t.registration && <div className="mt-3 flex items-center gap-1.5 px-4 text-xs text-muted-foreground">{t.status === "registering" && <CalendarClock className="size-3 shrink-0" />}{t.status === "registering" ? "Open now, closes Jun 18." : t.registration}</div>}
-                <ul className="mt-3 space-y-1.5 text-sm">
+                {!isOpen(t) && <div className="term-compact-meta">{t.courses.length} {t.courses.length === 1 ? "course" : "courses"}</div>}
+                {isOpen(t) && t.registration && <div className="mt-3 flex items-center gap-1.5 px-4 text-xs text-muted-foreground">{t.status === "registering" && <CalendarClock className="size-3 shrink-0" />}{t.status === "registering" ? "Open now, closes Jun 18." : t.registration}</div>}
+                {isOpen(t) && <ul className="mt-3 space-y-1.5 text-sm">
                   {t.courses.map((c) => {
                     const isQr = c.flag === "qr1";
                     const replaced = isQr && j.seatHeld && chosen;
@@ -126,7 +130,7 @@ function PathTimeline() {
                       </li>
                     );
                   })}
-                </ul>
+                </ul>}
                 {selectedId === t.id && <div className="term-selected-footer"><span>Selected</span><Button size="sm" className="h-8 font-semibold" asChild onClick={(event) => event.stopPropagation()}><Link to={t.status === "registering" ? "/portal" : "/semester"} search={t.status === "registering" ? {} : { term: t.id }}>{termAction[t.status]}</Link></Button></div>}
               </article>
             ))}

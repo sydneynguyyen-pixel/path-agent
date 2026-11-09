@@ -1,14 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { ArrowRight, Check, FileSearch, ShieldCheck, Hand, GraduationCap, Eye } from "lucide-react";
+import { useCallback, useState } from "react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { SchoolLogo } from "@/components/app/SchoolLogo";
-import { SourceLogo } from "@/components/app/SourceLogo";
-import { connectedSources } from "@/components/app/sourcesData";
+import { AccountStep, ConfirmStep, ConnectStep, SchoolsStep, VerifyStep, type SchoolChoices } from "@/components/app/OnboardingSteps";
+import { SetupTour } from "@/components/app/SetupTour";
+import { schoolSignIns, type SchoolSignIn } from "@/components/app/sourcesData";
 import { useJourney } from "@/lib/journey";
+import { isSignupCode } from "@/lib/onboarding";
 import { BrandLogo, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
+import valleyHero from "@/assets/valley-hero.jpg";
 
 export const Route = createFileRoute("/welcome")({
   head: () => ({
@@ -16,7 +18,7 @@ export const Route = createFileRoute("/welcome")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { title: "Welcome — Academic Path Agent" },
-      { name: "description", content: "Set up your path agent: confirm your schools, connect sources, and choose what it may do." },
+      { name: "description", content: "See how Path Agent works, create your account, connect your schools, and choose what it may do." },
       { property: "og:title", content: "Welcome — Academic Path Agent" },
       { property: "og:description", content: "A two-minute setup for your transfer path agent." },
     ],
@@ -24,92 +26,76 @@ export const Route = createFileRoute("/welcome")({
   component: Welcome,
 });
 
-const STEPS = ["Welcome", "Your schools", "Connect", "Your rules", "Ready"];
+const STEPS = ["Welcome", "Tour", "Account", "Verify", "Schools", "Connect", "Confirm", "Rules"] as const;
+const CONTINUE_LABEL: Partial<Record<(typeof STEPS)[number], string>> = {
+  Welcome: "See how it works",
+  Account: "Email me a code",
+  Verify: "Verify",
+  Confirm: "Looks right",
+  Rules: "Start my path",
+};
 
 function Welcome() {
   const j = useJourney();
   const navigate = useNavigate();
-  const [step, setStep] = useState(0);
-  const [connected, setConnected] = useState<string[]>([]);
-  const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  const [index, setIndex] = useState(0);
+  const [code, setCode] = useState("");
+  const [choices, setChoices] = useState<SchoolChoices>({ college: null, transfer: null, major: null });
+  const [connected, setConnected] = useState<SchoolSignIn["id"][]>([]);
+  const step = STEPS[index]!;
+  const back = () => setIndex((i) => i - 1);
   const finish = () => {
     j.finishOnboarding();
     navigate({ to: "/" });
   };
+  const next = () => (step === "Rules" ? finish() : setIndex((i) => i + 1));
+  const onConnected = useCallback((id: SchoolSignIn["id"]) => setConnected((c) => [...c, id]), []);
+  const ready =
+    step === "Verify" ? isSignupCode(code)
+    : step === "Schools" ? !!(choices.college && choices.transfer && choices.major)
+    : step === "Connect" ? connected.length === schoolSignIns.length
+    : true;
 
   return (
-    <div className="brand-app flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-xl rounded-[1.75rem] border bg-card p-8 shadow-frame md:p-10">
+    <div className="brand-app welcome-scene flex min-h-screen items-center justify-center p-4 pb-[36vh] md:pb-4">
+      <img src={valleyHero} alt="" className="welcome-art" width={1920} height={1088} />
+      <div className={cn("w-full rounded-[1.75rem] border bg-card p-8 shadow-frame transition-[max-width] duration-500 md:p-10", step === "Tour" ? "max-w-4xl" : "max-w-xl")}>
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BrandLogo />
             <span className="font-semibold">Path Agent</span>
           </div>
-          <div className="flex gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
-            {STEPS.map((s, i) => <span key={s} className={cn("h-1.5 w-6 rounded-full", i <= step ? "bg-primary" : "bg-secondary")} />)}
+          <div className="flex gap-1" aria-label={`Step ${index + 1} of ${STEPS.length}`}>
+            {STEPS.map((s, i) => <span key={s} className={cn("h-1.5 w-4 rounded-full", i <= index ? "bg-primary" : "bg-secondary")} />)}
           </div>
         </div>
 
-        {step === 0 && (
+        {step === "Welcome" && (
           <div>
-            <h1 className="text-3xl font-medium">Hi Maya. Let's keep your transfer on track.</h1>
-            <p className="mt-3 text-muted-foreground">Bayview gave you access to Path Agent. It reads your school records so you always know what counts toward your degree.</p>
+            <h1 className="text-3xl font-medium">Keep your transfer on track.</h1>
+            <p className="mt-3 text-muted-foreground">Path Agent reads your school records so you always know what counts toward your degree.</p>
             <ul className="mt-6 space-y-3 text-sm">
               {[
-                [FileSearch, "Shows where every answer comes from", "Each claim links to the exact policy or record."],
-                [Hand, "Helps when plans break", "Full class? You get options that still count, within minutes."],
-                [ShieldCheck, "Never acts for you", "It never registers or sends anything without your approval."],
-              ].map(([Icon, t, d]) => {
-                const I = Icon as typeof FileSearch;
-                return (
-                  <li key={t as string} className="flex gap-3">
-                    <AgentAvatar agent={I === FileSearch ? "reader" : I === Hand ? "backup" : "planner"} />
-                    <div><div className="font-medium">{t as string}</div><div className="text-muted-foreground">{d as string}</div></div>
-                  </li>
-                );
-              })}
+                ["reader", "Shows where every answer comes from", "Each claim links to the exact policy or record."],
+                ["backup", "Helps when plans break", "Full class? You get options that still count, within minutes."],
+                ["planner", "Never acts for you", "It never registers or sends anything without your approval."],
+              ].map(([agent, t, d]) => (
+                <li key={t} className="flex gap-3">
+                  <AgentAvatar agent={agent as "reader" | "backup" | "planner"} />
+                  <div><div className="font-medium">{t}</div><div className="text-muted-foreground">{d}</div></div>
+                </li>
+              ))}
             </ul>
           </div>
         )}
 
-        {step === 1 && (
-          <div>
-            <h1 className="text-2xl font-medium">Is this right?</h1>
-            <p className="mt-2 text-muted-foreground">We found these schools on your record.</p>
-            <div className="mt-6 space-y-3">
-              {[["bayview", "Bayview Community College", "Current · quarter system · Associate in Arts"], ["northgate", "Northgate State University", "Admitted for Fall 2027 · semester system · Psychology B.A."]].map(([k, n, d]) => (
-                <div key={k} className="flex items-center gap-4 rounded-2xl border p-4">
-                  <SchoolLogo school={k as "bayview" | "northgate"} className="size-11" />
-                  <div className="flex-1"><div className="font-medium">{n}</div><div className="text-sm text-muted-foreground">{d}</div></div>
-                  <Check className="size-5 text-success" />
-                </div>
-              ))}
-            </div>
-            <p className="mt-4 text-xs text-muted-foreground">Fictional schools for this prototype. Quarter units convert to semester units using both schools' policies.</p>
-          </div>
-        )}
+        {step === "Account" && <AccountStep />}
+        {step === "Verify" && <VerifyStep code={code} onCode={setCode} />}
+        {step === "Schools" && <SchoolsStep choices={choices} onChange={setChoices} />}
+        {step === "Connect" && <ConnectStep connected={connected} onConnected={onConnected} />}
+        {step === "Confirm" && <ConfirmStep />}
 
-        {step === 2 && (
-          <div>
-            <h1 className="text-2xl font-medium">Connect your records</h1>
-            <p className="mt-2 text-muted-foreground">Your school set these up. Tap to allow each one. You can change this anytime.</p>
-            <div className="mt-6 space-y-2">
-              {connectedSources.map((s) => {
-                const on = connected.includes(s.id);
-                return (
-                  <button key={s.id} onClick={() => setConnected((c) => (on ? c.filter((x) => x !== s.id) : [...c, s.id]))} className={cn("flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors", on && "border-primary bg-secondary")}>
-                    <SourceLogo id={s.id} />
-                    <div className="flex-1"><div className="text-sm font-medium">{s.name}</div><div className="text-xs text-muted-foreground">{s.what}</div></div>
-                    <span className={cn("rounded-full px-2.5 py-1 text-xs", on ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground")}>{on ? "Allowed" : "Allow"}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <button className="mt-3 text-xs text-muted-foreground underline" onClick={() => setConnected(connectedSources.map((s) => s.id))}>Allow all</button>
-          </div>
-        )}
-
-        {step === 3 && (
+        {step === "Rules" && (
           <div>
             <h1 className="text-2xl font-medium">Your rules for the agent</h1>
             <p className="mt-2 text-muted-foreground">These are on by default. The last two can't be turned off.</p>
@@ -122,24 +108,16 @@ function Welcome() {
           </div>
         )}
 
-        {step === 4 && (
-          <div>
-            <AgentAvatar agent="planner" bare />
-            <h1 className="mt-4 text-2xl font-medium">You're set.</h1>
-            <p className="mt-2 text-muted-foreground">Your home page shows your whole path and the one thing that needs attention. Summer registration is open now — register as usual and I'll watch for problems.</p>
+        {step === "Tour" ? (
+          <SetupTour onBack={back} onDone={next} />
+        ) : (
+          <div className="mt-10 flex items-center justify-between">
+            {index > 0 ? <Button variant="ghost" onClick={back}>Back</Button> : <span />}
+            <Button onClick={next} disabled={!ready}>
+              {CONTINUE_LABEL[step] ?? "Continue"} <ArrowRight className="size-4" />
+            </Button>
           </div>
         )}
-
-        <div className="mt-10 flex items-center justify-between">
-          {step > 0 ? <Button variant="ghost" onClick={() => setStep(step - 1)}>Back</Button> : <span />}
-          {step < STEPS.length - 1 ? (
-            <Button onClick={next} disabled={step === 2 && connected.length === 0}>
-              {step === 0 ? "Get started" : "Continue"} <ArrowRight className="size-4" />
-            </Button>
-          ) : (
-            <Button onClick={finish}>Go to my plan <ArrowRight className="size-4" /></Button>
-          )}
-        </div>
       </div>
     </div>
   );

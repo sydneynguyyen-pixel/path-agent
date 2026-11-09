@@ -8,6 +8,7 @@ import { BrandLogo, AgentAvatar } from "./Brand";
 import mayaPhoto from "@/assets/maya.jpg";
 import { Button } from "@/components/ui/button";
 import { AgentPanel } from "./AgentPanel";
+import { BlankPage, blankPages } from "./BlankState";
 import { useEvents } from "./activityBits";
 import { waitingCount } from "@/lib/activity";
 import { useSlidingPill } from "@/hooks/use-sliding-pill";
@@ -50,8 +51,8 @@ function SidebarNav({ navPath }: { navPath: string }) {
   const badge = "ml-auto grid size-5 place-items-center rounded-full bg-warning text-[10px] text-primary-foreground";
 
   return (
-    <nav ref={containerRef} className="relative mt-8 flex-1 space-y-7">
-      <span ref={pillRef} className="sliding-pill glass" aria-hidden="true" />
+    <nav ref={containerRef} className="relative mt-8 min-h-0 flex-1 space-y-7 overflow-y-auto pb-4 [scrollbar-width:none]">
+      <span ref={pillRef} className="sliding-pill bg-secondary" aria-hidden="true" />
       {groups.map((g) => (
         <div key={g.label}>
           <div className="px-3 text-xs text-muted-foreground">{g.label}</div>
@@ -93,12 +94,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const onPortal = path === "/portal";
+  const blankPage = blankPages[path];
+  // The location changes before the next page has loaded. Follow the rendered route so leaving /welcome doesn't remount it.
+  const welcomeOnScreen = useRouterState({ select: (s) => s.matches.some((m) => m.routeId === "/welcome") });
 
   useEffect(() => {
     if (j.onboarded === false && path !== "/welcome") navigate({ to: "/welcome" });
   }, [j.onboarded, path, navigate]);
 
-  if (path === "/welcome") return <>{children}</>;
+  if (welcomeOnScreen) return <>{children}</>;
 
   const navPath = path === "/course-skills" || path === "/skills-export" ? "/skills" : path;
   const current = [...allLinks, ...extra].find((l) => l.to === navPath) ?? allLinks[0];
@@ -106,10 +110,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const anyOff = Object.values(j.agentOn).some((v) => !v);
 
   return (
-    <div className="brand-app min-h-screen p-3 md:p-5">
-      <div className="relative flex min-h-[calc(100vh-2.5rem)] overflow-hidden rounded-[2rem] border bg-card shadow-frame">
+    <div className="brand-app min-h-screen p-3 md:h-dvh md:min-h-0 md:overflow-hidden md:p-5">
+      <div className="relative flex min-h-[calc(100vh-2.5rem)] overflow-hidden rounded-[2rem] border bg-card shadow-frame md:h-full md:min-h-0">
         <aside className="relative z-10 hidden w-64 shrink-0 flex-col px-4 py-6 md:flex">
-          <div className="app-aura" aria-hidden="true" />
           <div className="flex items-center gap-2.5 px-2">
             <BrandLogo />
             <span className="font-semibold tracking-tight">Path Agent</span>
@@ -117,12 +120,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
           <SidebarNav navPath={navPath} />
 
-          <div className="space-y-4">
-            <Link to="/permissions" className="aqua-chip flex items-center gap-2 rounded-full px-3 py-2.5 text-xs">
+          <div className="mt-3 space-y-4">
+            <Link to="/permissions" className="flex items-center gap-2 rounded-full bg-secondary px-3 py-2.5 text-xs">
               {j.paused ? (
                 <><Pause className="size-3.5" /> All agents paused</>
               ) : (
-                <><span className="size-2 rounded-full bg-success animate-pulse-dot" /><Eye className="size-3.5" /> {anyOff ? "Some agents off" : "Watching registration only"}</>
+                <><span className="size-2 rounded-full bg-success animate-pulse-dot" /><Eye className="size-3.5" /> {j.pathBuilt === false ? "Ready when you are" : anyOff ? "Some agents off" : "Watching registration only"}</>
               )}
             </Link>
             <Link to="/profile" className="flex items-center gap-3 rounded-2xl px-2 py-1.5 hover:bg-foreground/5">
@@ -135,7 +138,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <div className="m-2 flex min-w-0 flex-1 flex-col rounded-[2rem] border bg-card md:ml-0">
+        <div className="m-2 flex min-w-0 flex-1 flex-col rounded-[2rem] border bg-card md:ml-0 md:min-h-0 md:overflow-hidden">
           <header className="flex items-center gap-3 border-b px-6 py-4 text-sm">
             <span className="text-muted-foreground">Maya</span>
             <ChevronRight className="size-3.5 text-muted-foreground" />
@@ -149,15 +152,21 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </Link>
               ))}
             </nav>
-            <Button variant="ghost" size="sm" onClick={j.reset} className="ml-auto gap-1 text-xs text-muted-foreground opacity-60 hover:opacity-100" title="Reset demo">
+            <Button variant="ghost" size="sm" onClick={j.reset} className={`ml-auto gap-1 text-xs text-muted-foreground opacity-60 hover:opacity-100${j.pathBuilt === false ? " invisible" : ""}`} title="Reset demo">
               <RotateCcw className="size-3" /> Reset demo
             </Button>
           </header>
-          <main key={path} className={`app-page relative z-10 flex-1 px-6 py-8 md:px-10${onPortal ? "" : " page-stagger"}`}>{children}</main>
-          <footer className="px-6 pb-6 text-xs text-muted-foreground md:px-10">
-            Prototype with fully synthetic data. Fictional schools and student. The agent proposes and drafts; it never registers, enrolls, or sends.
-            It does not give legal, financial-aid, or immigration advice.
-          </footer>
+          {/* Keyed by route so each page opens at the top of this scroll area. */}
+          <div key={path} className="flex min-h-0 flex-1 flex-col md:overflow-y-auto">
+            <main className={`app-page relative z-10 flex-1 px-6 py-8 md:px-10${onPortal ? "" : " page-stagger"}`}>
+              {/* Until hydration we can't tell a new student from a returning one, so show neither. */}
+              {j.pathBuilt === null && (blankPage || path === "/") ? null : j.pathBuilt === false && blankPage ? <BlankPage {...blankPage} /> : children}
+            </main>
+            <footer className="px-6 pb-6 text-xs text-muted-foreground md:px-10">
+              Prototype with fully synthetic data. Fictional schools and student. The agent proposes and drafts; it never registers, enrolls, or sends.
+              It does not give legal, financial-aid, or immigration advice.
+            </footer>
+          </div>
         </div>
       </div>
 

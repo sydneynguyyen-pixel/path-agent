@@ -10,6 +10,7 @@ import { recoveryPath } from "@/lib/confidence";
 import { useJourney, fmtStamp } from "@/lib/journey";
 import { ConfidenceBadge, SourceChip } from "./bits";
 import { AgentAvatar, SubjectIcon } from "./Brand";
+import { Spot } from "./Illustrations";
 import { cn } from "@/lib/utils";
 import { AddsSkills } from "./SkillsBits";
 
@@ -57,7 +58,7 @@ function SelfRegisterSteps({ o }: { o: Option }) {
   const j = useJourney();
   const onPortal = useRouterState({ select: (s) => s.location.pathname }) === "/portal";
   const code = o.course.replace("BCC ", "");
-  if (j.seatHeld) return <div className="flex items-center gap-1.5 text-sm font-medium text-success"><CheckCircle2 className="size-4" /> You registered for {code} §{o.section}.</div>;
+  if (j.seatHeld) return <div className="flex items-center gap-1.5 text-sm font-medium text-success"><CheckCircle2 className="size-4 text-mark-yes" /> You registered for {code} §{o.section}.</div>;
   if (onPortal) {
     return (
       <>
@@ -131,7 +132,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
               ["Backup finder", "Checked open seats, section times and your deadlines"],
             ].map(([n, d], i) => (
               <li key={n} className="flex items-center gap-2">
-                {j.agentOn[(["reader", "planner", "backup"] as const)[i]!] === false ? <span className="text-xs text-muted-foreground">Off</span> : !scanning || step > i ? <CheckCircle2 className="size-4 text-success" /> : step === i ? <Loader2 className="size-4 animate-spin text-primary" /> : <span className="size-4 rounded-full border" />}
+                {j.agentOn[(["reader", "planner", "backup"] as const)[i]!] === false ? <span className="text-xs text-muted-foreground">Off</span> : !scanning || step > i ? <CheckCircle2 className="size-4 text-mark-yes" /> : step === i ? <Loader2 className="size-4 animate-spin text-primary" /> : <span className="size-4 rounded-full border" />}
                 <AgentAvatar agent={n === "Reader" ? "reader" : n === "Planner" ? "planner" : "backup"} /><b>{n}</b> <span className="text-muted-foreground">{d}</span>
               </li>
             ))}
@@ -231,7 +232,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
                 {drafterOff ? (
                   <p className="text-sm text-muted-foreground">The Drafter is turned off, so no email was drafted. You can write to {student.counselor} yourself.</p>
                 ) : j.emailSent ? (
-                  <p className="text-sm"><CheckCircle2 className="mr-1 inline size-4 text-success" />Approved by {student.name} at {fmtStamp(j.decisions.at(-1)!.when)}. Demo only: no email was sent.</p>
+                  <div className="flex items-center gap-3"><Spot name="envelope" className="w-16" /><p className="text-sm"><CheckCircle2 className="mr-1 inline size-4 text-mark-yes" />Approved by {student.name} at {fmtStamp(j.decisions.at(-1)!.when)}. Demo only: no email was sent.</p></div>
                 ) : (
                   <>
                     <p className="text-sm text-muted-foreground">Doesn't block your seat. Draft to {student.counselor} ({student.counselorEmail}). Edit anything; nothing is sent until you approve.</p>
@@ -252,7 +253,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
 
           {chosen && j.seatHeld && (
             <section className="space-y-2 rounded-xl border border-success/30 bg-success-soft p-5 text-sm">
-              <div className="flex items-center gap-2 font-semibold text-success"><CheckCircle2 className="size-5" /> {path === "hold" ? "You hold a seat." : `You're set with ${chosen.course}.`}</div>
+              <div className="flex items-center gap-2 font-semibold text-success"><CheckCircle2 className="size-5 text-mark-yes" /> {path === "hold" ? "You hold a seat." : `You're set with ${chosen.course}.`}</div>
               {path === "hold" ? (
                 <p>Counselor confirmation is pending. Drop by {DROP_DEADLINE} if not confirmed.{!j.emailSent && " Approve the email above to ask your counselor."}</p>
               ) : (

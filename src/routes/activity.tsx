@@ -11,6 +11,7 @@ import { useEvents, useScriptNow, When, PermChip, EventStatusChip } from "@/comp
 import { lastActive, type ActivityEvent } from "@/lib/activity";
 import { useJourney, fmtClock, fmtStamp, fmtStampSec, type AgentId } from "@/lib/journey";
 import { AgentAvatar } from "@/components/app/Brand";
+import { Spot } from "@/components/app/Illustrations";
 import { cn } from "@/lib/utils";
 
 type Search = { tab?: "timeline" | "decisions" | undefined; helper?: AgentId | undefined };
@@ -45,7 +46,7 @@ function Activity() {
   const { tab, helper } = Route.useSearch();
   return (
     <div className="w-full min-w-0">
-      <PageHeader title="Activity" sub="Here's what your assistant did for you, and what it left for you to decide." />
+      <PageHeader title="Activity" sub="Here's what your assistant did for you, and what it left for you to decide." right={<Spot name="journal" className="hidden w-32 sm:block" />} />
       <div role="tablist" className="mb-6 inline-flex rounded-full border bg-card p-1 text-sm">
         {([["timeline", "Timeline"], ["decisions", "Your decisions"]] as const).map(([k, l]) => {
           const active = (tab ?? "timeline") === k;
@@ -99,6 +100,7 @@ function Timeline({ helper }: { helper?: AgentId | undefined }) {
       </div>
       {shown.length === 0 ? (
         <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground">
+          <Spot name="rocks" className="mx-auto mb-3 w-28" />
           {filtered ? "No activity matches your search or filters." : "Nothing has happened yet. Your assistant’s work will appear here."}
         </div>
       ) : (
@@ -221,7 +223,7 @@ function Outcome({ title, items, icon }: { title: string; items: string[]; icon?
       <div className="text-xs font-semibold text-muted-foreground">{title}</div>
       <ul className="mt-1 space-y-1">
         {items.map((x) => (
-          <li key={x} className="flex gap-1.5">{icon === "no" ? <Ban className="mt-0.5 size-3.5 shrink-0" aria-hidden /> : <Check className="mt-0.5 size-3.5 shrink-0" aria-hidden />}{x}</li>
+          <li key={x} className="flex gap-1.5">{icon === "no" ? <Ban className="mt-0.5 size-3.5 shrink-0 text-mark-no" aria-hidden /> : <Check className="mt-0.5 size-3.5 shrink-0 text-mark-yes" aria-hidden />}{x}</li>
         ))}
       </ul>
     </div>
@@ -239,7 +241,7 @@ function Decisions() {
         </Button>
       </div>
       {decisions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground">You haven't decided anything yet. Your choices will be recorded here.</div>
+        <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground"><Spot name="flowers" className="mx-auto mb-3 w-24" />You haven't decided anything yet. Your choices will be recorded here.</div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border bg-card shadow-soft">
           <table className="w-full min-w-[640px] text-sm">
@@ -267,8 +269,8 @@ export function CanCantStrip() {
   return (
     <div className="sticky bottom-4 z-30 mt-8 rounded-2xl border bg-card/95 px-4 py-2.5 text-xs shadow-frame backdrop-blur">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span><Check className="mr-1 inline size-3.5" /><b>Can:</b> read your files, suggest classes, draft emails, say how sure it is.</span>
-        <span><Ban className="mr-1 inline size-3.5" /><b>Can't:</b> register you, send anything without your OK, change your degree record, see anything you haven't shared.</span>
+        <span><Check className="mr-1 inline size-3.5 text-mark-yes" /><b>Can:</b> read your files, suggest classes, draft emails, say how sure it is.</span>
+        <span><Ban className="mr-1 inline size-3.5 text-mark-no" /><b>Can't:</b> register you, send anything without your OK, change your degree record, see anything you haven't shared.</span>
         <Link to="/permissions" className="text-primary underline">Change what it's allowed to do</Link>
       </div>
     </div>

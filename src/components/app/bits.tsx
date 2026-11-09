@@ -85,7 +85,7 @@ export function SimLabel({ children }: { children: React.ReactNode }) {
 
 export function PageHeader({ title, sub, right }: { title: string; sub?: string; right?: React.ReactNode }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-4 sm:flex-nowrap sm:[&>*:nth-child(2)]:shrink-0">
       <div>
         <h1 className="text-3xl font-medium text-foreground md:text-[2rem]">{title}</h1>
         {sub && <p className="mt-2 max-w-2xl text-muted-foreground">{sub}</p>}

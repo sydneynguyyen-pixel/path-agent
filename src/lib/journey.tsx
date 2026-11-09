@@ -102,6 +102,9 @@ type Ctx = State & {
   onboarded: boolean | null;
   finishOnboarding: () => void;
   replayOnboarding: () => void;
+  /** Whether the student has built their path yet. Null until hydrated. False is the blank first-run app. */
+  pathBuilt: boolean | null;
+  finishBuild: () => void;
   setAgentOn: (id: AgentId, on: boolean) => void;
   setAccess: (k: AccessKey, on: boolean) => void;
   setNotify: (k: keyof State["notify"], on: boolean) => void;
@@ -140,8 +143,10 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
   }, []);
   // null until hydrated, so SSR and first client render match.
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
+  const [pathBuilt, setPathBuilt] = useState<boolean | null>(null);
   useEffect(() => {
     setOnboarded(window.localStorage.getItem("pa-onboarded") === "1");
+    setPathBuilt(window.localStorage.getItem("pa-path-built") === "1");
   }, []);
 
   const failAdd = useCallback((openSheet = true) => {
@@ -238,13 +243,20 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       },
       replayOnboarding: () => {
         window.localStorage.removeItem("pa-onboarded");
+        window.localStorage.removeItem("pa-path-built");
         setOnboarded(false);
+        setPathBuilt(false);
+      },
+      pathBuilt,
+      finishBuild: () => {
+        window.localStorage.setItem("pa-path-built", "1");
+        setPathBuilt(true);
       },
       setAgentOn: (id, on) => set((p) => ({ ...p, agentOn: { ...p.agentOn, [id]: on } })),
       setAccess: (k, on) => set((p) => ({ ...p, access: { ...p.access, [k]: on } })),
       setNotify: (k, on) => set((p) => ({ ...p, notify: { ...p.notify, [k]: on } })),
     };
-  }, [s, failAdd, choose, onboarded]);
+  }, [s, failAdd, choose, onboarded, pathBuilt]);
 
   return <JourneyCtx.Provider value={value}>{children}</JourneyCtx.Provider>;
 }

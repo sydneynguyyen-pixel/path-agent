@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/app/bits";
+import { Spot } from "@/components/app/Illustrations";
 import { useJourney } from "@/lib/journey";
 import { CONFIDENCE_THRESHOLD } from "@/lib/confidence";
 
@@ -24,8 +25,8 @@ function Settings() {
   const j = useJourney();
   const navigate = useNavigate();
   return (
-    <div className="max-w-3xl space-y-8">
-      <PageHeader title="Settings" />
+    <div className="mx-auto max-w-3xl space-y-8">
+      <PageHeader title="Settings" right={<Spot name="wateringcan" className="hidden w-32 sm:block" />} />
 
       <Section title="Notifications">
         <Toggle title="Email me when a plan needs attention" on={j.notify.email} onChange={(v) => j.setNotify("email", v)} />

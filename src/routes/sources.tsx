@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader, SimLabel } from "@/components/app/bits";
 import { SourceLogo } from "@/components/app/SourceLogo";
+import { Spot } from "@/components/app/Illustrations";
 import { connectedSources } from "@/components/app/sourcesData";
 import { useJourney } from "@/lib/journey";
 
@@ -22,8 +23,8 @@ export const Route = createFileRoute("/sources")({
 function Sources() {
   const j = useJourney();
   return (
-    <div className="max-w-3xl">
-      <PageHeader title="Connected sources" sub="Your school connected these systems. Turn any off and the agent stops reading it." right={<SimLabel>Simulated connections</SimLabel>} />
+    <div className="mx-auto max-w-3xl">
+      <PageHeader title="Connected sources" sub="Your school connected these systems. Turn any off and the agent stops reading it." right={<div className="flex items-center gap-4"><Spot name="stones" className="hidden w-40 sm:block" /><SimLabel>Simulated connections</SimLabel></div>} />
       <div className="divide-y rounded-2xl border">
         {connectedSources.map((s) => (
           <div key={s.id} className="flex items-center gap-4 p-4">

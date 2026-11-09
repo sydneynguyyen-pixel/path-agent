@@ -7,6 +7,7 @@ import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { useJourney } from "@/lib/journey";
 import { PageHeader, SimLabel, SourceChip } from "@/components/app/bits";
 import { TermIcon, SubjectIcon } from "@/components/app/Brand";
+import { SeasonBanner } from "@/components/app/SeasonBanner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CourseLearningLink } from "@/components/app/SkillsBits";
@@ -50,6 +51,7 @@ function Semester() {
 
   return (
     <div>
+      <SeasonBanner term={term.name} />
       <PageHeader title="Your terms" sub="Where you are now, what you're registering for, and what comes next." right={<SimLabel>Synthetic data</SimLabel>} />
       {/* The padding gives shadows room inside the scroller; the negative margins keep the row in place. */}
       <div ref={containerRef} className="term-tabs relative -mx-3 -mt-3 mb-3 flex gap-2 overflow-x-auto px-3 py-3">

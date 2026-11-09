@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/app/bits";
+import { Spot } from "@/components/app/Illustrations";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { progress, schools, student } from "@/data/scenario";
 import mayaPhoto from "@/assets/maya.jpg";
+import valleyHome from "@/assets/valley-home.jpg";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -28,11 +30,12 @@ function Profile() {
     ["Preferred class times", "Mornings, Mon–Thu"],
   ];
   return (
-    <div className="max-w-3xl">
-      <PageHeader title="Profile" sub="The agent uses this to rank options. Data comes from your school records." />
-      <div className="flex items-center gap-4 rounded-2xl border p-5">
-        <img src={mayaPhoto} alt="" className="size-16 rounded-full object-cover" />
-        <div>
+    <div className="mx-auto max-w-3xl">
+      <PageHeader title="Profile" sub="The agent uses this to rank options. Data comes from your school records." right={<Spot name="backpack" className="hidden w-32 sm:block" />} />
+      <div className="relative flex items-center gap-4 overflow-hidden rounded-2xl border p-6 pr-20 sm:pr-6">
+        <img src={valleyHome} alt="" className="profile-card-art" />
+        <img src={mayaPhoto} alt="" className="relative size-16 rounded-full object-cover" />
+        <div className="relative">
           <div className="text-lg font-medium">{student.name}</div>
           <div className="text-sm text-muted-foreground">Student ID 000-SYN-4471 · synthetic record</div>
         </div>

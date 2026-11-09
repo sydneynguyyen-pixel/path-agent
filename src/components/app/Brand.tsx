@@ -1,9 +1,11 @@
 import { useId, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import reader from "@/assets/reader-colored.png";
-import planner from "@/assets/planner-colored.png";
-import backup from "@/assets/backup-colored.png";
-import drafter from "@/assets/drafter-colored.png";
+import reader from "@/assets/reader-watercolor.png";
+import planner from "@/assets/planner-watercolor.png";
+import backup from "@/assets/backup-watercolor.png";
+import drafter from "@/assets/drafter-watercolor.png";
+
+const mascots = { reader, planner, backup, drafter } as const;
 
 export type Subject = "math" | "statistics" | "science" | "history" | "art" | "psychology" | "english" | "neutral";
 export function subjectFor(course: string): Subject {
@@ -53,9 +55,8 @@ export function TermIcon({ term, className }: { term: string; className?: string
   };
   return <Sticker family={family} className={cn("term-icon", className)}>{shapes[family]}</Sticker>;
 }
-const mascots = { reader, planner, backup, drafter };
 export function AgentAvatar({ agent, className, bare = false }: { agent: keyof typeof mascots; className?: string; bare?: boolean }) {
-  return <span className={cn("agent-avatar bg-card", bare && "agent-bare", className)}><img src={mascots[agent]} alt="" /></span>;
+  return <span className={cn("agent-avatar bg-card", bare && "agent-bare", className)}><img src={mascots[agent]} alt="" className="agent-mascot" /></span>;
 }
 export function BrandLogo({ className }: { className?: string }) {
   return <svg viewBox="0 0 48 48" aria-hidden="true" className={cn("brand-logo", className)}><rect width="48" height="48" rx="13" fill="var(--primary)" /><path d="M12 28c-3 2-3 7 1 8 0 5 6 6 8 2h6c2 4 8 3 8-2 4-1 4-6 1-8l-1-6c-1-7-5-11-11-11s-10 4-11 11Z" fill="var(--primary-foreground)" /><g fill="var(--primary)"><circle cx="20" cy="24" r="1.6" /><circle cx="28" cy="24" r="1.6" /></g><g fill="none" stroke="var(--primary)" strokeWidth="1.6" strokeLinecap="round"><path d="M21 28q3 4 6 0M12 29q4-2 4 2m20-2q-4-2-4 2" /></g><path d="M17 13v5q7 4 14 0v-5" fill="var(--primary)" stroke="var(--primary-foreground)" strokeWidth="1.2" /><path d="m12 11 12-5 12 5-12 5Z" fill="var(--primary-foreground)" stroke="var(--primary)" strokeWidth="1" /><path d="M35 12v7" fill="none" stroke="var(--primary-foreground)" strokeWidth="1.4" strokeLinecap="round" /></svg>;

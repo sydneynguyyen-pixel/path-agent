@@ -3,6 +3,7 @@ import { Fragment, useState } from "react";
 import { CheckCircle2, ArrowRight, AlertTriangle, CalendarClock, CalendarDays, CalendarPlus, Sparkles, ChevronDown } from "lucide-react";
 import { requirements, options, student, terms, progress, schools, outsideSchool, DROP_DEADLINE, type ReqStatus, type Term } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
+import { BlankHome } from "@/components/app/BlankState";
 import { useJourney } from "@/lib/journey";
 import { ConfidenceBadge, SourceChip, StatusBadge } from "@/components/app/bits";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
@@ -12,7 +13,9 @@ import { TermIcon, SubjectIcon, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
 import { seasonFor } from "@/components/app/Brand";
 import { defaultSelectedTermId, selectTerm } from "@/lib/term-selection";
+import valleyHome from "@/assets/valley-home.jpg";
 import { SkillsHomeCard } from "@/components/app/SkillsBits";
+import { Spot } from "@/components/app/Illustrations";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -35,29 +38,25 @@ function Attention() {
   let title = "Summer 2027 registration is open";
   let body = "Register as usual in your school portal. I'll watch for problems like full sections and help you recover.";
   let action = <Button asChild><Link to="/portal">Go to registration <ArrowRight className="size-4" /></Link></Button>;
-  let tone = "bg-secondary";
   if (j.atRisk) {
     icon = <AgentAvatar agent="backup" bare />;
     title = j.counselor === "declined" ? "Your counselor declined that course" : "Statistics needs a new plan";
     body = j.counselor === "declined" ? `Drop ${chosen?.course} by ${DROP_DEADLINE}. MATH 13 still has open seats.` : "STAT 2 is full. I found options that still count, ranked by open seats.";
     action = <Button onClick={() => j.setPanelOpen(true)}>See options</Button>;
-    tone = "bg-secondary";
   } else if (j.seatHeld && chosen && !j.counselor) {
     icon = <AgentAvatar agent="planner" bare />;
     const hold = recoveryPath(chosen) === "hold";
     title = hold ? `You hold a seat in ${chosen.course}` : `You're set with ${chosen.course}`;
     body = hold ? `Counselor confirmation is pending. Drop by ${DROP_DEADLINE} if not confirmed.` : "It clearly counts toward Statistics. The agent didn't register anything — you did.";
     action = <Button variant="outline" asChild><Link to="/activity" search={{ tab: "decisions" }}>View your decisions</Link></Button>;
-    tone = "bg-secondary";
   } else if (j.counselor === "confirmed" && chosen) {
     icon = <AgentAvatar agent="planner" bare />;
     title = "All set for summer";
     body = `${student.counselor} confirmed ${chosen.course} counts toward Statistics.`;
     action = <Button variant="outline" asChild><Link to="/semester">See your terms</Link></Button>;
-    tone = "bg-secondary";
   }
   return (
-    <div className={cn("flex flex-wrap items-center gap-4 rounded-2xl p-5", tone)}>
+    <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-5 shadow-frame">
       <div className="grid place-items-center">{icon}</div>
       <div className="min-w-0 flex-1">
         <div className="aqua-chip inline-flex rounded-full px-3 py-1 text-xs font-semibold">Needs your attention</div>
@@ -84,7 +83,8 @@ function TransferReadiness() {
   const ip = pre.filter((r) => r.status === "in_progress" || r.status === "pending").length;
   const left = pre.length - done - ip;
   return (
-    <div className="mb-3 rounded-2xl border bg-card p-4">
+    <div className="mb-3 flex items-center gap-6 rounded-2xl border bg-card p-4">
+      <div className="min-w-0 flex-1">
       <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
         <b className="font-medium">Ready to transfer: {done} of {pre.length} Bayview requirements</b>
         <span className="text-xs text-muted-foreground">{ip} in progress · {left} still to take</span>
@@ -93,8 +93,10 @@ function TransferReadiness() {
         {pre.map((r) => <div key={r.id} title={`${r.code} ${r.name}`} className={cn("flex-1 rounded-full", r.status === "done" || r.status === "transfer" ? "aqua-chip" : r.status === "in_progress" || r.status === "pending" ? "bg-primary/40" : "bg-secondary")} />)}
       </div>
       <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {pre.map((r) => <li key={r.id} className="flex items-center gap-1">{r.status === "done" || r.status === "transfer" ? <CheckCircle2 className="size-3" /> : <span className="size-3 rounded-full border" />}{r.name}</li>)}
+        {pre.map((r) => <li key={r.id} className="flex items-center gap-1">{r.status === "done" || r.status === "transfer" ? <CheckCircle2 className="size-3 text-mark-yes" /> : <span className="size-3 rounded-full border" />}{r.name}</li>)}
       </ul>
+      </div>
+      <Spot name="bridge" className="hidden w-32 sm:block" />
     </div>
   );
 }
@@ -152,7 +154,7 @@ function PathTimeline() {
                 <div className="term-edge-header">
                   <div className="flex min-w-0 items-center gap-2"><TermIcon term={t.name} /><div className="min-w-0">{t.status === "in_progress" && <div className="term-here">You are here</div>}<span className="term-edge-name">{t.name}</span></div></div>
                   <span className={cn("term-status-chip", termTone[t.status])}>
-                    {t.status === "done" && <CheckCircle2 className="size-3" />}
+                    {t.status === "done" && <CheckCircle2 className="size-3 text-mark-yes" />}
                     {t.status === "in_progress" && <><CalendarDays className="size-3 shrink-0" aria-hidden="true" /><span className="term-current-dot animate-pulse-dot" /></>}
                     {t.status === "registering" && <CalendarPlus className="size-3 shrink-0" aria-hidden="true" />}
                     {termLabel[t.status]}
@@ -273,10 +275,14 @@ function Conversion() {
 }
 
 function Home() {
+  const j = useJourney();
+  if (j.pathBuilt === false) return <BlankHome />;
   const pct = Math.round((progress.earned / progress.needed) * 100);
   const pctIp = Math.round(((progress.earned + progress.inProgress) / progress.needed) * 100);
   return (
     <div className="space-y-8">
+      <div className="home-cover">
+      <img src={valleyHome} alt="" className="home-cover-art" width={1376} height={768} />
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <h1 className="home-greeting font-semibold">Hi {student.name.split(" ")[0]}, you're on track.</h1>
@@ -301,7 +307,8 @@ function Home() {
         </div>
       </div>
 
-      <Attention />
+      <div className="home-cover-card"><Attention /></div>
+      </div>
 
       <Tabs defaultValue="path">
         <TabsList className="rounded-full">

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { GraduationCap, Eye, Lock, ArrowLeft, ArrowRight, RotateCw, Loader2, X, Play, CalendarDays, ListChecks, Sparkles, Timer, CheckCircle2 } from "lucide-react";
+import { Check, GraduationCap, Eye, Lock, ArrowLeft, ArrowRight, RotateCw, Loader2, X, Play, CalendarDays, ListChecks, Sparkles, Timer, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AgentPanel } from "@/components/app/AgentPanel";
 import { useJourney } from "@/lib/journey";
@@ -8,7 +8,7 @@ import { options } from "@/data/scenario";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { BrandLogo, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
-import { AddsSkills } from "@/components/app/SkillsBits";
+import { PathLoader, Spot } from "@/components/app/Illustrations";
 
 export const Route = createFileRoute("/portal")({
   head: () => ({
@@ -143,18 +143,18 @@ function Portal() {
   if (phase === "idle") {
     return (
       <div className="mx-auto max-w-lg rounded-2xl border bg-card p-8 text-center shadow-soft">
-        <BrandLogo className="mx-auto" />
-        <h1 className="mt-4 font-serif text-2xl">Register with Path Agent alongside</h1>
+        <Spot name="signpost" className="mx-auto w-32" />
+        <h1 className="mt-4 font-serif text-2xl">Register with Path Agent</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Open Bayview's class search. Path Agent watches quietly while you shop and check out, and only steps in if something goes wrong.
         </p>
-        <ul className="mx-auto mt-4 max-w-xs space-y-1 text-left text-xs text-muted-foreground">
-          <li>✓ Reads the page, your schedule and any errors</li>
-          <li>✓ Finds backups and points to the right section</li>
-          <li>✕ Never clicks Add or Submit for you</li>
+        <ul className="mx-auto mt-4 w-fit space-y-1.5 text-left text-xs text-muted-foreground">
+          <li className="flex items-center gap-1.5"><Check className="size-3.5 shrink-0 text-mark-yes" /> Reads the page, your schedule and any errors</li>
+          <li className="flex items-center gap-1.5"><Check className="size-3.5 shrink-0 text-mark-yes" /> Finds backups and points to the right section</li>
+          <li className="flex items-center gap-1.5"><X className="size-3.5 shrink-0 text-mark-no" /> Never clicks Add or Submit for you</li>
         </ul>
         <Button className="mt-6" onClick={() => setPhase("connecting")} disabled={j.paused || !j.access.registration}>
-          <Play className="size-4" /> Start Path Agent and open scheduler
+          <Play className="size-4" /> Open class search
         </Button>
         {(j.paused || !j.access.registration) && <p className="mt-2 text-xs text-muted-foreground">The agent is paused or not allowed to read registration. Change this in Agent controls.</p>}
       </div>
@@ -163,7 +163,7 @@ function Portal() {
   if (phase === "connecting") {
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center rounded-2xl border bg-card p-10 text-center shadow-soft">
-        <Loader2 className="size-8 animate-spin text-primary" />
+        <PathLoader />
         <p className="mt-4 font-medium">Opening Bayview Student Self-Service…</p>
         <p className="mt-1 text-sm text-muted-foreground">Path Agent is attaching to the page (read-only).</p>
       </div>
@@ -239,7 +239,7 @@ function Portal() {
                     return (
                       <Fragment key={r.crn}>
                         <tr className={cn("border-b", isTarget && "bg-primary/5 outline outline-2 -outline-offset-2 outline-primary")}>
-                          <td className="px-2 py-1.5"><span className="text-portal-link underline">{r.title}</span><AddsSkills course={`${r.subj} ${r.num}`} /></td>
+                          <td className="px-2 py-1.5"><span className="text-portal-link underline">{r.title}</span></td>
                           <td className="px-2 py-1.5">{r.subj}</td>
                           <td className="px-2 py-1.5">{r.num}</td>
                           <td className="px-2 py-1.5">{r.sec}</td>
@@ -321,7 +321,7 @@ function Portal() {
         {j.stage !== "idle" && watching && !showDock && (
           <button onClick={() => setDockOpen(true)} className="mt-3 inline-flex items-center gap-2 text-sm text-primary underline"><GraduationCap className="size-4" /> Show Path Agent</button>
         )}
-        {doneAt && <p className="mt-3 flex items-center gap-1.5 text-sm text-success"><CheckCircle2 className="size-4" /> You registered yourself. The agent only searched and pointed.</p>}
+        {doneAt && <p className="mt-3 flex items-center gap-1.5 text-sm text-success"><CheckCircle2 className="size-4 text-mark-yes" /> You registered yourself. The agent only searched and pointed.</p>}
       </div>
 
       {showDock && (

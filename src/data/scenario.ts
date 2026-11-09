@@ -361,7 +361,34 @@ export const student = {
   to: "Northgate State University (semester)",
   counselor: "Dr. Jenna Baylor",
   counselorEmail: "j.baylor@northgate.example",
+  email: "maya.torres@bayview.example",
+  schoolIds: { bayview: "B00482913", northgate: "N07741025" },
 };
+
+// ---------- Onboarding directory (synthetic) ----------
+export type DirectoryEntry = { id: string; name: string; detail: string; available: boolean };
+
+/** What a new student can search during setup. Only Bayview to Northgate Psychology has a scripted path. */
+export const setupDirectory: Record<"college" | "transfer" | "major", DirectoryEntry[]> = {
+  college: [
+    { id: "bayview", name: "Bayview Community College", detail: "Quarter system", available: true },
+    { id: "cedar", name: "Cedar Hollow College", detail: "Semester system", available: false },
+    { id: "marlin", name: "Marlin Coast College", detail: "Quarter system", available: false },
+  ],
+  transfer: [
+    { id: "northgate", name: "Northgate State University", detail: "Semester system", available: true },
+    { id: "alder", name: "Alder Ridge University", detail: "Semester system", available: false },
+    { id: "harbor", name: "Harbor Lakes State University", detail: "Quarter system", available: false },
+  ],
+  major: [
+    { id: "psych", name: "Psychology B.A.", detail: "College of Social Sciences", available: true },
+    { id: "soc", name: "Sociology B.A.", detail: "College of Social Sciences", available: false },
+    { id: "health", name: "Public Health B.S.", detail: "College of Health", available: false },
+  ],
+};
+
+/** The prototype sends no email, so the sign-up code is fixed. */
+export const DEMO_SIGNUP_CODE = "482913";
 
 // ---------- Full academic path (synthetic) ----------
 export type TermStatus = "done" | "in_progress" | "registering" | "planned";

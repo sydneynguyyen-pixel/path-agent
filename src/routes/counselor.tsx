@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { options, student, DROP_DEADLINE, REQUIREMENT_LABEL } from "@/data/scenario";
 import { useJourney, fmtStamp } from "@/lib/journey";
 import { AgentAvatar, SubjectIcon } from "@/components/app/Brand";
+import { Spot } from "@/components/app/Illustrations";
 import jennaPhoto from "@/assets/jenna.jpg";
 import { ConfidenceBadge, PageHeader, SimLabel, SourceChip } from "@/components/app/bits";
 
@@ -35,7 +36,7 @@ function Counselor() {
       />
       {!sent ? (
         <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground">
-          <AgentAvatar agent="drafter" className="mx-auto" />
+          <Spot name="mailbox" className="mx-auto w-24" />
           <p className="mt-2">No requests yet. When Maya holds a seat in an uncertain course and approves the email, it shows up here.</p>
           <Link to="/portal" className="mt-3 inline-block text-sm text-foreground underline">Start from registration</Link>
         </div>

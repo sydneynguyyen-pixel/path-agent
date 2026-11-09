@@ -34,7 +34,6 @@ function Semester() {
   const j = useJourney();
   const search = Route.useSearch();
   const [localSel, setSel] = useState<string>();
-  const [showDone, setShowDone] = useState(false);
   const sel = localSel ?? search.term ?? "su27";
   const term = terms.find((t) => t.id === sel);
   if (!term) return null;
@@ -51,8 +50,8 @@ function Semester() {
     <div>
       <PageHeader title="Your terms" sub="Where you are now, what you're registering for, and what comes next." right={<SimLabel>Synthetic data</SimLabel>} />
       <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
-        {terms.filter((t) => t.status !== "done" || showDone || t.id === sel).map((t) => (
-          <Button variant="outline" key={t.id} onClick={() => setSel(t.id)} className={cn("h-auto min-h-16 shrink-0 justify-start gap-3 px-5 py-3 text-left text-sm", sel === t.id ? "border-primary bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground" : "bg-card")}>
+        {terms.filter((t) => t.status !== "done").map((t) => (
+          <Button variant="outline" key={t.id} onClick={() => setSel(t.id)} className={cn("h-auto min-h-16 shrink-0 justify-start gap-3 px-5 py-3 text-left text-sm", "lift", sel === t.id ? "glass-dark hover:text-white" : "bg-card")}>
             <TermIcon term={t.name} />
             <span className="min-w-0">
               <span className="block font-medium">{t.name}</span>
@@ -62,9 +61,6 @@ function Semester() {
             </span>
           </Button>
         ))}
-        <Button variant="ghost" onClick={() => setShowDone((v) => !v)} className="h-auto min-h-16 shrink-0 px-4 text-xs text-muted-foreground">
-          {showDone ? "Hide" : "Show"} {terms.filter((t) => t.status === "done").length} completed terms
-        </Button>
       </div>
       {term.id !== "su27" ? (
         <div className="rounded-2xl border p-6">
@@ -85,8 +81,8 @@ function Semester() {
       ) : (
       <>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-        <div><b className="font-medium">Summer 2027, week by week.</b> <span className="text-muted-foreground">Your syllabi merged. Busy weeks are highlighted.</span></div>
-        <Link to="/portal" className="text-xs underline">Registration open · closes Jun 18</Link>
+        <div><b className="font-medium">Summer 2027, week by week</b></div>
+        <Link to="/portal" className="text-xs text-muted-foreground underline-offset-4 hover:underline">Registration closes Jun 18</Link>
       </div>
       <div className="overflow-x-auto rounded-2xl border bg-card">
         <div className="grid min-w-[1080px] grid-cols-[240px_repeat(8,minmax(105px,1fr))]">
@@ -120,6 +116,19 @@ function Semester() {
       </>
       )}
       {j.draftCourses.some(code => skillCourses.find(c => c.code === code)?.termId === term.id) && <section className="mt-6"><h2 className="font-semibold">Draft courses from your role plan</h2><p className="mt-1 text-xs text-muted-foreground">Saved to your plan only. You still register in your school's portal.</p><ul className="mt-3 divide-y rounded-2xl border bg-card px-5">{j.draftCourses.map(code => skillCourses.find(c => c.code === code)).filter(c => c?.termId === term.id).map(c => c && <li key={c.code} className="flex items-center gap-3 py-4"><SubjectIcon course={c.code} /><div className="min-w-0 flex-1"><span className="text-sm font-medium">{c.code} · {c.title}</span><div><CourseLearningLink course={c.code} /></div></div><span className="rounded-full bg-secondary px-3 py-1 text-xs">Draft · {c.units}</span></li>)}</ul></section>}
+      <section className="mt-12">
+        <h2 className="text-sm font-medium">Past terms</h2>
+        <div className="stagger mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {terms.filter((t) => t.status === "done").map((t) => (
+            <article key={t.id} className="lift rounded-2xl border bg-card p-4">
+              <div className="flex items-center gap-2"><TermIcon term={t.name} /><span className="font-medium">{t.name}</span><span className="ml-auto"><SchoolLogo school={t.school} className="size-6" /></span></div>
+              <ul className="mt-3 space-y-1.5 text-sm">
+                {t.courses.map((c) => <li key={c.code + c.title} className="flex justify-between gap-2"><span className="min-w-0 truncate"><b className="font-medium">{c.code}</b> <span className="text-muted-foreground">{c.title}</span></span><span className="shrink-0 text-muted-foreground">{c.grade}</span></li>)}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

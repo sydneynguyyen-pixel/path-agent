@@ -62,8 +62,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="brand-app min-h-screen p-3 md:p-5">
-      <div className="flex min-h-[calc(100vh-2.5rem)] overflow-hidden rounded-[2rem] border bg-card shadow-frame">
-        <aside className="hidden w-64 shrink-0 flex-col px-4 py-6 md:flex">
+      <div className="relative flex min-h-[calc(100vh-2.5rem)] overflow-hidden rounded-[2rem] border bg-card shadow-frame">
+        <div className="app-aura" aria-hidden="true" />
+        <aside className="relative z-10 hidden w-64 shrink-0 flex-col px-4 py-6 md:flex">
           <div className="flex items-center gap-2.5 px-2">
             <BrandLogo />
             <span className="font-semibold tracking-tight">Path Agent</span>
@@ -79,7 +80,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                       key={l.to}
                       to={l.to}
                       className={`nav-link flex items-center gap-3 rounded-full px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60${l.to === "/skills" && path !== "/skills" && navPath === "/skills" ? " bg-primary text-primary-foreground font-medium shadow-soft" : ""}`}
-                      activeProps={{ className: "bg-primary text-primary-foreground font-medium shadow-soft" }}
+                      activeProps={{ className: "glass font-medium" }}
                       activeOptions={{ exact: true, includeSearch: false }}
                       aria-current={navPath === l.to ? "page" : undefined}
                     >
@@ -98,7 +99,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <Link
                 to="/counselor"
                 className="mt-2 flex items-center gap-3 rounded-full px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent/60"
-                activeProps={{ className: "bg-primary text-primary-foreground font-medium shadow-soft" }}
+                activeProps={{ className: "glass font-medium" }}
               >
                 <UserCheck className="size-4" /> Counselor's side
                 {j.emailSent && !j.counselor && <span className="ml-auto grid size-5 place-items-center rounded-full bg-warning text-[10px] text-primary-foreground">1</span>}
@@ -142,7 +143,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <RotateCcw className="size-3" /> Reset demo
             </Button>
           </header>
-          <main className="flex-1 px-6 py-8 md:px-10">{children}</main>
+          <main key={path} className="page-enter relative z-10 flex-1 px-6 py-8 md:px-10">{children}</main>
           <footer className="px-6 pb-6 text-xs text-muted-foreground md:px-10">
             Prototype with fully synthetic data. Fictional schools and student. The agent proposes and drafts; it never registers, enrolls, or sends.
             It does not give legal, financial-aid, or immigration advice.

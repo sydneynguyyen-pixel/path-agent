@@ -138,7 +138,7 @@ function PathTimeline() {
   const planned = terms.filter((t) => t.status === "planned").length;
   const isOpen = (_t: Term) => true;
   return (
-    <div className="space-y-8">
+    <div className="stagger space-y-8">
       <TransferReadiness />
       <section>
         <h2 className="mb-3 text-sm font-medium">Happening now</h2>
@@ -294,7 +294,7 @@ function Home() {
           <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-secondary">
             <div className="relative h-full">
               <div className="absolute inset-y-0 left-0 rounded-full bg-secondary" style={{ width: `${pctIp}%` }} />
-              <div className="absolute inset-y-0 left-0 rounded-full aqua-chip" style={{ width: `${pct}%` }} />
+              <div className="bar-fill absolute inset-y-0 left-0 rounded-full aqua-chip" style={{ width: `${pct}%` }} />
             </div>
           </div>
           <div className="mt-1.5 text-xs text-muted-foreground">{pct}% complete · {progress.inProgress} su in progress</div>

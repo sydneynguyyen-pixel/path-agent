@@ -9,6 +9,10 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// Lovable-hosted images (/__l5e/assets-v1/*) only exist on Lovable's servers. This host
+// lets the config's dev proxy fetch them when the app runs on localhost.
+process.env["LOVABLE_PREVIEW_HOST"] ??= "id-preview--090bf327-b1f1-4dd3-a7cf-2d3dacb27b2e.lovable.app";
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).

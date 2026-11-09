@@ -12,6 +12,8 @@ export const getRouter = () => {
     scrollRestoration: true,
     // Lets Query own freshness; set caching defaults on the QueryClient, not the router.
     defaultPreloadStaleTime: 0,
+    // Only page changes cross-fade; tab and filter search params stay in place.
+    defaultViewTransition: { types: ({ pathChanged }) => (pathChanged ? ["page"] : false) },
   });
 
   return router;

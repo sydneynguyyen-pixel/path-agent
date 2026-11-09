@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CourseLearningLink } from "@/components/app/SkillsBits";
 import { skillCourses } from "@/data/scenario";
+import { useSlidingPill } from "@/hooks/use-sliding-pill";
 
 export const Route = createFileRoute("/semester")({
   validateSearch: (search: Record<string, unknown>): { term?: string } => {
@@ -34,6 +35,7 @@ function Semester() {
   const j = useJourney();
   const search = Route.useSearch();
   const [localSel, setSel] = useState<string>();
+  const { containerRef, pillRef } = useSlidingPill<HTMLDivElement>('[aria-pressed="true"]');
   const sel = localSel ?? search.term ?? "su27";
   const term = terms.find((t) => t.id === sel);
   if (!term) return null;
@@ -49,19 +51,22 @@ function Semester() {
   return (
     <div>
       <PageHeader title="Your terms" sub="Where you are now, what you're registering for, and what comes next." right={<SimLabel>Synthetic data</SimLabel>} />
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
+      {/* The padding gives shadows room inside the scroller; the negative margins keep the row in place. */}
+      <div ref={containerRef} className="term-tabs relative -mx-3 -mt-3 mb-3 flex gap-2 overflow-x-auto px-3 py-3">
+        <span ref={pillRef} className="sliding-pill glass glass-tinted" aria-hidden="true" />
         {terms.filter((t) => t.status !== "done").map((t) => (
-          <Button variant="outline" key={t.id} onClick={() => setSel(t.id)} className={cn("h-auto min-h-16 shrink-0 justify-start gap-3 px-5 py-3 text-left text-sm", "lift", sel === t.id ? "glass-dark hover:text-white" : "bg-card")}>
+          <Button variant="outline" key={t.id} aria-pressed={sel === t.id} onClick={() => setSel(t.id)} className={cn("relative z-[1] h-auto min-h-16 shrink-0 justify-start gap-3 px-5 py-3 text-left text-sm shadow-none", sel === t.id ? "border-transparent bg-transparent hover:bg-transparent" : "lift bg-card")}>
             <TermIcon term={t.name} />
             <span className="min-w-0">
               <span className="block font-medium">{t.name}</span>
-              <span className={cn("mt-0.5 block text-xs font-normal", sel === t.id ? "opacity-80" : "text-muted-foreground")}>
+              <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
                 {t.status === "done" ? "Completed" : t.status === "in_progress" ? "Current term" : t.status === "registering" ? "Registering now" : "Planned"}
               </span>
             </span>
           </Button>
         ))}
       </div>
+      <div key={term.id} className="swap-enter">
       {term.id !== "su27" ? (
         <div className="rounded-2xl border p-6">
           <div className="flex items-center gap-3">
@@ -115,6 +120,7 @@ function Semester() {
       {chosen && <p className="mt-4 text-sm text-muted-foreground">{chosen.course} added because you hold a seat. The agent registered nothing.</p>}
       </>
       )}
+      </div>
       {j.draftCourses.some(code => skillCourses.find(c => c.code === code)?.termId === term.id) && <section className="mt-6"><h2 className="font-semibold">Draft courses from your role plan</h2><p className="mt-1 text-xs text-muted-foreground">Saved to your plan only. You still register in your school's portal.</p><ul className="mt-3 divide-y rounded-2xl border bg-card px-5">{j.draftCourses.map(code => skillCourses.find(c => c.code === code)).filter(c => c?.termId === term.id).map(c => c && <li key={c.code} className="flex items-center gap-3 py-4"><SubjectIcon course={c.code} /><div className="min-w-0 flex-1"><span className="text-sm font-medium">{c.code} · {c.title}</span><div><CourseLearningLink course={c.code} /></div></div><span className="rounded-full bg-secondary px-3 py-1 text-xs">Draft · {c.units}</span></li>)}</ul></section>}
       <section className="mt-12">
         <h2 className="text-sm font-medium">Past terms</h2>

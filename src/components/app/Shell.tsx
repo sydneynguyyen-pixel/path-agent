@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { AgentPanel } from "./AgentPanel";
 import { useEvents } from "./activityBits";
 import { waitingCount } from "@/lib/activity";
+import { useSlidingPill } from "@/hooks/use-sliding-pill";
 
 const groups = [
   {
@@ -42,12 +43,56 @@ type NavLink = (typeof groups)[number]["links"][number];
 const allLinks: NavLink[] = groups.flatMap((g) => [...g.links] as NavLink[]);
 const extra = [{ to: "/counselor", label: "Counselor's side", icon: UserCheck }] as const;
 
+function SidebarNav({ navPath }: { navPath: string }) {
+  const j = useJourney();
+  const waiting = waitingCount(useEvents());
+  const { containerRef, pillRef } = useSlidingPill<HTMLElement>('[aria-current="page"]');
+  const badge = "ml-auto grid size-5 place-items-center rounded-full bg-warning text-[10px] text-primary-foreground";
+
+  return (
+    <nav ref={containerRef} className="relative mt-8 flex-1 space-y-7">
+      <span ref={pillRef} className="sliding-pill glass" aria-hidden="true" />
+      {groups.map((g) => (
+        <div key={g.label}>
+          <div className="px-3 text-xs text-muted-foreground">{g.label}</div>
+          <div className="mt-2 space-y-0.5">
+            {g.links.map((l) => (
+              <Link
+                key={l.to}
+                to={l.to}
+                className="nav-link relative z-[1] flex items-center gap-3 rounded-full px-3 py-2 text-sm text-sidebar-foreground"
+                aria-current={navPath === l.to ? "page" : undefined}
+              >
+                <l.icon className="size-4" />
+                {l.label}
+                {l.to === "/activity" && waiting > 0 && (
+                  <span title={`${waiting} thing${waiting > 1 ? "s" : ""} waiting for you`} aria-label={`${waiting} waiting for you`} className={badge}>{waiting}</span>
+                )}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className="border-t pt-5">
+        <div className="px-3 text-xs text-muted-foreground">Preview</div>
+        <Link
+          to="/counselor"
+          className="nav-link relative z-[1] mt-2 flex items-center gap-3 rounded-full px-3 py-2 text-sm text-muted-foreground"
+          aria-current={navPath === "/counselor" ? "page" : undefined}
+        >
+          <UserCheck className="size-4" /> Counselor's side
+          {j.emailSent && !j.counselor && <span className={badge}>1</span>}
+        </Link>
+      </div>
+    </nav>
+  );
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const j = useJourney();
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const onPortal = path === "/portal";
-  const waiting = waitingCount(useEvents());
 
   useEffect(() => {
     if (j.onboarded === false && path !== "/welcome") navigate({ to: "/welcome" });
@@ -63,49 +108,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="brand-app min-h-screen p-3 md:p-5">
       <div className="relative flex min-h-[calc(100vh-2.5rem)] overflow-hidden rounded-[2rem] border bg-card shadow-frame">
-        <div className="app-aura" aria-hidden="true" />
         <aside className="relative z-10 hidden w-64 shrink-0 flex-col px-4 py-6 md:flex">
+          <div className="app-aura" aria-hidden="true" />
           <div className="flex items-center gap-2.5 px-2">
             <BrandLogo />
             <span className="font-semibold tracking-tight">Path Agent</span>
           </div>
 
-          <nav className="mt-8 flex-1 space-y-7">
-            {groups.map((g) => (
-              <div key={g.label}>
-                <div className="px-3 text-xs text-muted-foreground">{g.label}</div>
-                <div className="mt-2 space-y-0.5">
-                  {g.links.map((l) => (
-                    <Link
-                      key={l.to}
-                      to={l.to}
-                      className={`nav-link flex items-center gap-3 rounded-full px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60${l.to === "/skills" && path !== "/skills" && navPath === "/skills" ? " bg-primary text-primary-foreground font-medium shadow-soft" : ""}`}
-                      activeProps={{ className: "glass font-medium" }}
-                      activeOptions={{ exact: true, includeSearch: false }}
-                      aria-current={navPath === l.to ? "page" : undefined}
-                    >
-                      <l.icon className="size-4" />
-                      {l.label}
-                      {l.to === "/activity" && waiting > 0 && (
-                        <span title={`${waiting} thing${waiting > 1 ? "s" : ""} waiting for you`} aria-label={`${waiting} waiting for you`} className="ml-auto grid size-5 place-items-center rounded-full bg-warning text-[10px] text-primary-foreground">{waiting}</span>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
-            <div className="border-t pt-5">
-              <div className="px-3 text-xs text-muted-foreground">Preview</div>
-              <Link
-                to="/counselor"
-                className="mt-2 flex items-center gap-3 rounded-full px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent/60"
-                activeProps={{ className: "glass font-medium" }}
-              >
-                <UserCheck className="size-4" /> Counselor's side
-                {j.emailSent && !j.counselor && <span className="ml-auto grid size-5 place-items-center rounded-full bg-warning text-[10px] text-primary-foreground">1</span>}
-              </Link>
-            </div>
-          </nav>
+          <SidebarNav navPath={navPath} />
 
           <div className="space-y-4">
             <Link to="/permissions" className="aqua-chip flex items-center gap-2 rounded-full px-3 py-2.5 text-xs">
@@ -115,7 +125,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 <><span className="size-2 rounded-full bg-success animate-pulse-dot" /><Eye className="size-3.5" /> {anyOff ? "Some agents off" : "Watching registration only"}</>
               )}
             </Link>
-            <Link to="/profile" className="flex items-center gap-3 rounded-2xl px-2 py-1.5 hover:bg-sidebar-accent/60">
+            <Link to="/profile" className="flex items-center gap-3 rounded-2xl px-2 py-1.5 hover:bg-foreground/5">
               <img src={mayaPhoto} alt="" className="size-9 rounded-full object-cover" />
               <div className="text-sm leading-tight">
                 <div className="font-medium">{student.name}</div>
@@ -143,7 +153,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <RotateCcw className="size-3" /> Reset demo
             </Button>
           </header>
-          <main key={path} className="page-enter relative z-10 flex-1 px-6 py-8 md:px-10">{children}</main>
+          <main key={path} className={`app-page relative z-10 flex-1 px-6 py-8 md:px-10${onPortal ? "" : " page-stagger"}`}>{children}</main>
           <footer className="px-6 pb-6 text-xs text-muted-foreground md:px-10">
             Prototype with fully synthetic data. Fictional schools and student. The agent proposes and drafts; it never registers, enrolls, or sends.
             It does not give legal, financial-aid, or immigration advice.

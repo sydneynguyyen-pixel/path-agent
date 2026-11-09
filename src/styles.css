@@ -267,7 +267,7 @@
 .brand-app h2 { font-size: 20px; }
 .brand-app h3 { font-size: 18px; }
 .brand-app .home-greeting { font-size: 42px; line-height: 1.15; letter-spacing: -0.03em; }
-.brand-app :is(button, a, article) { transition: background-color 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
+.brand-app :is(button, a, article) { transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease, opacity 220ms ease, transform 320ms var(--ease-out-soft), box-shadow 320ms var(--ease-out-soft); }
 .brand-app :is(button,[role=tab]) { border-radius: 9999px; }
 .brand-app article:hover { transform: translateY(-2px); }
 .brand-app :is(.rounded-xl,.rounded-2xl):not(.mesh-tile):not(.agent-avatar) { border-radius: 28px; }
@@ -279,7 +279,7 @@
 .brand-app .term-card { padding: 0; overflow: hidden; background: var(--card); }
 .brand-app .term-card ul { padding: 0 14px 16px; }
 .brand-app .term-course { align-items: center; padding: 6px 0; }
-.brand-app .edge-term-card { border: 1px solid var(--term-border); border-radius: 24px; cursor: pointer; transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease; }
+.brand-app .edge-term-card { border: 1px solid var(--term-border); border-radius: 24px; cursor: pointer; transition: transform 320ms var(--ease-out-soft), box-shadow 320ms var(--ease-out-soft), border-color 220ms ease; }
 .term-edge-stripe { height: 8px; background: radial-gradient(120% 90% at 50% 112%, var(--mesh-bottom) 0%, transparent 62%), radial-gradient(90% 80% at 85% 55%, var(--mesh-mid) 0%, transparent 70%), linear-gradient(180deg, var(--mesh-top) 0%, var(--mesh-mid) 135%); }
 .term-edge-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px 0; }
 .term-edge-name { font-size: 18px; font-weight: 600; line-height: 24px; }
@@ -306,8 +306,10 @@
 .term-selected-footer { border-top: 1px solid var(--term-footer-border); padding: 10px 14px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted-foreground); font-size: 12px; font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { .brand-app .edge-term-card.term-selected { transform: none; } }
 .brand-app .nav-link { padding: 8px 12px; min-height: 46px; }
-.brand-app .nav-link[aria-current=page] { color: var(--primary-foreground); }
-.brand-app .nav-link svg { width: 20px; height: 20px; }
+.brand-app .nav-link[aria-current=page] { color: var(--foreground); font-weight: 500; }
+.brand-app .nav-link:not([aria-current=page]):hover { background-color: rgb(17 17 17 / .05); }
+.brand-app .nav-link svg { width: 20px; height: 20px; transition: transform 320ms var(--ease-out-soft); }
+.brand-app .nav-link:hover svg { transform: scale(1.08); }
 .brand-app .confidence-high { background: var(--success-soft); color: var(--foreground); border-color: transparent; }
 .brand-app .confidence-medium { background: var(--warning-soft); color: var(--foreground); border-color: transparent; }
 .brand-app .confidence-low { background: var(--confidence-low); color: var(--foreground); border-color: transparent; }
@@ -349,53 +351,83 @@
 }
 
 /* ---------- Motion + liquid glass ---------- */
-@keyframes pa-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+:root {
+  --ease-out-soft: cubic-bezier(.16, 1, .3, 1);
+  --ease-glide: cubic-bezier(.32, .72, 0, 1);
+}
+@keyframes pa-rise { from { opacity: 0; transform: translate3d(0, 8px, 0); } to { opacity: 1; transform: none; } }
+@keyframes pa-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pa-fade-out { to { opacity: 0; } }
 @keyframes pa-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes pa-pop { 0% { transform: scale(.94); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
-@keyframes pa-aura { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(14px, -10px, 0) scale(1.06); } }
+@keyframes pa-aura { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(26px, -22px, 0) scale(1.08); } }
 
-.page-enter { animation: pa-rise .38s cubic-bezier(.22, 1, .36, 1) both; }
-[role="tabpanel"] { animation: pa-rise .32s cubic-bezier(.22, 1, .36, 1) both; }
-.stagger > * { animation: pa-rise .42s cubic-bezier(.22, 1, .36, 1) both; }
-.stagger > *:nth-child(2) { animation-delay: 60ms; }
-.stagger > *:nth-child(3) { animation-delay: 120ms; }
-.stagger > *:nth-child(4) { animation-delay: 180ms; }
-.stagger > *:nth-child(5) { animation-delay: 240ms; }
-.stagger > *:nth-child(n+6) { animation-delay: 300ms; }
-.bar-fill { transform-origin: left; animation: pa-fill .9s cubic-bezier(.22, 1, .36, 1) .15s both; }
+/* Entrances fill backwards only, so hover lifts still work once they finish. */
+[role="tabpanel"] { animation: pa-rise .42s var(--ease-out-soft) backwards; }
+.swap-enter { animation: pa-rise .42s var(--ease-out-soft) backwards; }
+.page-stagger > * > *, .stagger > * { animation: pa-rise .55s var(--ease-out-soft) backwards; }
+.page-stagger > * > *:nth-child(2), .stagger > *:nth-child(2) { animation-delay: 45ms; }
+.page-stagger > * > *:nth-child(3), .stagger > *:nth-child(3) { animation-delay: 90ms; }
+.page-stagger > * > *:nth-child(4), .stagger > *:nth-child(4) { animation-delay: 135ms; }
+.page-stagger > * > *:nth-child(5), .stagger > *:nth-child(5) { animation-delay: 180ms; }
+.page-stagger > * > *:nth-child(n+6), .stagger > *:nth-child(n+6) { animation-delay: 225ms; }
+.bar-fill { transform-origin: left; animation: pa-fill 1.1s var(--ease-out-soft) .15s backwards; }
+.meter-fill { transition: width .7s var(--ease-out-soft); }
 
-.lift { transition: transform .25s cubic-bezier(.22, 1, .36, 1), box-shadow .25s ease; }
+/* Page changes: the old page fades away while the new one rises in; the frame holds still. */
+.app-page { view-transition-name: page; }
+::view-transition-old(root) { display: none; }
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-group(page) { animation: none; }
+::view-transition-old(page) { animation: pa-fade-out .16s ease-out both; mix-blend-mode: normal; width: 100%; height: auto; object-fit: none; object-position: top; }
+::view-transition-new(page) { animation: none; mix-blend-mode: normal; width: 100%; height: auto; object-fit: none; object-position: top; }
+
+.lift { transition: transform .32s var(--ease-out-soft), box-shadow .32s var(--ease-out-soft), background-color .22s ease; }
 .lift:hover { transform: translateY(-2px); }
 .lift:active { transform: scale(.985); }
-.brand-app .term-card { transition: transform .25s cubic-bezier(.22, 1, .36, 1), box-shadow .25s ease, border-color .2s ease; }
+.brand-app .term-card { transition: transform .32s var(--ease-out-soft), box-shadow .32s var(--ease-out-soft), border-color .22s ease; }
 .brand-app .term-card:hover { transform: translateY(-2px); }
 .brand-app .term-card:active { transform: scale(.99); }
-.brand-app button:not(:disabled):active, .brand-app a.nav-link:active { transform: scale(.97); }
+.brand-app button:not(:disabled):active, .brand-app a.nav-link:active { transform: scale(.97); transition-duration: 90ms; }
 
-/* Liquid glass: only reads over color, so the frame carries a soft aura behind it. */
-.app-aura { position: absolute; inset: 0 auto 0 0; width: 22rem; overflow: hidden; pointer-events: none; }
-.app-aura::before, .app-aura::after { content: ""; position: absolute; border-radius: 9999px; filter: blur(54px); opacity: .75; animation: pa-aura 14s ease-in-out infinite; }
-.app-aura::before { width: 15rem; height: 15rem; left: -3rem; top: 12%; background: #aef0e2; }
-.app-aura::after { width: 14rem; height: 14rem; left: 3rem; top: 52%; background: #a6d4f7; animation-delay: -6s; }
+/* One highlight glides between items. Until it is placed, items keep their own fill. */
+.sliding-pill { position: absolute; top: 0; left: 0; z-index: 0; border-radius: 9999px; pointer-events: none; opacity: 0; transition: transform .46s var(--ease-glide), width .46s var(--ease-glide), height .46s var(--ease-glide); }
+[data-pill-ready] > .sliding-pill { opacity: 1; }
+.tabs-pill { background: var(--primary); }
+[data-pill-ready] > [role="tab"][data-state="active"] { background: transparent; box-shadow: none; }
+.term-tabs:not([data-pill-ready]) > [aria-pressed="true"] { background: var(--accent); }
+
+/* Sidebar aura: large, soft, and clipped to the sidebar. Gradients stay smooth without an animated blur. */
+.app-aura { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; -webkit-mask-image: linear-gradient(90deg, #000 72%, transparent); mask-image: linear-gradient(90deg, #000 72%, transparent); }
+.app-aura::before, .app-aura::after { content: ""; position: absolute; border-radius: 9999px; will-change: transform; animation: pa-aura 24s ease-in-out infinite; }
+.app-aura::before { width: 36rem; height: 36rem; left: -19rem; top: -5rem; background: radial-gradient(closest-side, rgb(174 240 226 / .62), rgb(174 240 226 / .38) 35%, rgb(174 240 226 / .14) 66%, rgb(174 240 226 / 0)); }
+.app-aura::after { width: 34rem; height: 34rem; left: -14rem; top: 21rem; background: radial-gradient(closest-side, rgb(166 212 247 / .58), rgb(166 212 247 / .34) 35%, rgb(166 212 247 / .12) 66%, rgb(166 212 247 / 0)); animation-delay: -9s; }
+
+/* Sheer glass: barely any fill or blur; the light comes from a thin rim brighter at two corners. */
 .glass {
-  background: linear-gradient(135deg, rgb(255 255 255 / .72), rgb(255 255 255 / .34));
-  backdrop-filter: blur(18px) saturate(1.8);
-  -webkit-backdrop-filter: blur(18px) saturate(1.8);
-  border: 1px solid rgb(255 255 255 / .75);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .9), inset 0 -1px 0 rgb(17 17 17 / .04), 0 6px 20px -8px rgb(40 90 140 / .35);
+  background: linear-gradient(180deg, rgb(255 255 255 / .24), rgb(255 255 255 / .08));
+  backdrop-filter: blur(3px) saturate(1.5);
+  -webkit-backdrop-filter: blur(3px) saturate(1.5);
+  box-shadow: inset 0 1px 1px rgb(255 255 255 / .35), 0 1px 2px rgb(30 70 90 / .05), 0 6px 14px -8px rgb(30 70 90 / .14);
   color: var(--foreground);
 }
-.glass-dark {
-  background: linear-gradient(135deg, rgb(17 17 17 / .86), rgb(17 17 17 / .7));
-  backdrop-filter: blur(14px) saturate(1.6);
-  -webkit-backdrop-filter: blur(14px) saturate(1.6);
-  border: 1px solid rgb(255 255 255 / .18);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / .22), 0 8px 24px -10px rgb(17 17 17 / .5);
-  color: #fff;
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgb(255 255 255 / .98) 0%, rgb(255 255 255 / .4) 26%, rgb(30 70 90 / .12) 52%, rgb(255 255 255 / .35) 76%, rgb(255 255 255 / .9) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
 }
+/* On a white page the same glass borrows the aura's color so it still reads. */
+.glass-tinted { background: linear-gradient(135deg, rgb(174 240 226 / .3), rgb(166 212 247 / .26)); }
+.glass-tinted::before { background: linear-gradient(135deg, rgb(255 255 255 / .95) 0%, rgb(120 190 190 / .4) 30%, rgb(30 70 90 / .16) 55%, rgb(120 170 210 / .4) 78%, rgb(255 255 255 / .9) 100%); }
+
 @media (prefers-reduced-motion: reduce) {
-  .page-enter, [role="tabpanel"], .stagger > *, .bar-fill, .app-aura::before, .app-aura::after { animation: none !important; }
-  .lift, .brand-app .term-card { transition: none; }
+  [role="tabpanel"], .swap-enter, .page-stagger > * > *, .stagger > *, .bar-fill, .app-aura::before, .app-aura::after { animation: none !important; }
+  .lift, .brand-app .term-card, .sliding-pill, .meter-fill { transition: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
-.brand-app .nav-link.glass, .brand-app .nav-link.glass svg { color: var(--foreground) !important; }
-.app-aura::before, .app-aura::after { opacity: .6; }

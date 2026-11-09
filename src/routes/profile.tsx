@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/app/bits";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { progress, schools, student } from "@/data/scenario";
+import mayaPhoto from "@/assets/maya.jpg";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -30,7 +31,7 @@ function Profile() {
     <div className="max-w-3xl">
       <PageHeader title="Profile" sub="The agent uses this to rank options. Data comes from your school records." />
       <div className="flex items-center gap-4 rounded-2xl border p-5">
-        <div className="grid size-16 place-items-center rounded-full bg-lilac text-xl font-semibold text-accent-foreground">MT</div>
+        <img src={mayaPhoto} alt="" className="size-16 rounded-full object-cover" />
         <div>
           <div className="text-lg font-medium">{student.name}</div>
           <div className="text-sm text-muted-foreground">Student ID 000-SYN-4471 · synthetic record</div>

@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { sources, student } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { BrandLogo, AgentAvatar } from "./Brand";
+import mayaPhoto from "@/assets/maya.jpg";
 import { Button } from "@/components/ui/button";
 import { AgentPanel } from "./AgentPanel";
 import { useEvents } from "./activityBits";
@@ -114,7 +115,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               )}
             </Link>
             <Link to="/profile" className="flex items-center gap-3 rounded-2xl px-2 py-1.5 hover:bg-sidebar-accent/60">
-              <div className="grid size-9 place-items-center rounded-full bg-secondary text-sm font-semibold text-foreground">MT</div>
+              <img src={mayaPhoto} alt="" className="size-9 rounded-full object-cover" />
               <div className="text-sm leading-tight">
                 <div className="font-medium">{student.name}</div>
                 <div className="text-xs text-muted-foreground">Transfer student</div>

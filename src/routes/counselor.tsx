@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { options, student, DROP_DEADLINE, REQUIREMENT_LABEL } from "@/data/scenario";
 import { useJourney, fmtStamp } from "@/lib/journey";
 import { AgentAvatar, SubjectIcon } from "@/components/app/Brand";
+import priyaPhoto from "@/assets/priya.jpg";
 import { ConfidenceBadge, PageHeader, SimLabel, SourceChip } from "@/components/app/bits";
 
 export const Route = createFileRoute("/counselor")({
@@ -42,7 +43,7 @@ function Counselor() {
         <article className="rounded-2xl border bg-card p-6 shadow-soft">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-xs text-muted-foreground">From {student.name} · {fmtStamp(j.decisions.find((d) => d.what.startsWith("Approved"))!.when)}</div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground"><img src={priyaPhoto} alt="" className="size-7 rounded-full object-cover" />To {student.counselor} · From {student.name} · {fmtStamp(j.decisions.find((d) => d.what.startsWith("Approved"))!.when)}</div>
               <AgentAvatar agent="drafter" /><h2 className="mt-1 flex items-center gap-2 text-xl font-medium"><SubjectIcon course={o.course} />Does {o.course} count toward {REQUIREMENT_LABEL}?</h2>
               <p className="mt-1 text-sm text-muted-foreground">Seat already held. Student will drop by {DROP_DEADLINE} if you decline.</p>
             </div>

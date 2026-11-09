@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { CheckCircle2, ArrowRight, AlertTriangle, CalendarClock, CalendarDays, CalendarPlus, Sparkles } from "lucide-react";
-import { requirements, options, student, terms, progress, schools, DROP_DEADLINE, type ReqStatus, type Term } from "@/data/scenario";
+import { Fragment, useState } from "react";
+import { CheckCircle2, ArrowRight, AlertTriangle, CalendarClock, CalendarDays, CalendarPlus, Sparkles, ChevronDown } from "lucide-react";
+import { requirements, options, student, terms, progress, schools, outsideSchool, DROP_DEADLINE, type ReqStatus, type Term } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
 import { useJourney } from "@/lib/journey";
 import { ConfidenceBadge, SourceChip, StatusBadge } from "@/components/app/bits";
@@ -78,27 +78,73 @@ const termTone: Record<Term["status"], string> = {
 const termLabel: Record<Term["status"], string> = { done: "Completed", in_progress: "Current term", registering: "Registering now", planned: "Planned" };
 const termAction: Record<Term["status"], string> = { done: "See grades", in_progress: "See this term", registering: "Go to registration", planned: "Edit plan" };
 
+function TransferReadiness() {
+  const pre = requirements.filter((r) => r.detail.startsWith("BCC") || r.detail.startsWith("Planned: BCC"));
+  const done = pre.filter((r) => r.status === "done" || r.status === "transfer").length;
+  const ip = pre.filter((r) => r.status === "in_progress" || r.status === "pending").length;
+  const left = pre.length - done - ip;
+  return (
+    <div className="mb-3 rounded-2xl border bg-card p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+        <b className="font-medium">Ready to transfer: {done} of {pre.length} Bayview requirements</b>
+        <span className="text-xs text-muted-foreground">{ip} in progress · {left} still to take</span>
+      </div>
+      <div className="mt-2 flex h-2 gap-1" role="img" aria-label={`${done} of ${pre.length} requirements complete`}>
+        {pre.map((r) => <div key={r.id} title={`${r.code} ${r.name}`} className={cn("flex-1 rounded-full", r.status === "done" || r.status === "transfer" ? "aqua-chip" : r.status === "in_progress" || r.status === "pending" ? "bg-primary/40" : "bg-secondary")} />)}
+      </div>
+      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {pre.map((r) => <li key={r.id} className="flex items-center gap-1">{r.status === "done" || r.status === "transfer" ? <CheckCircle2 className="size-3" /> : <span className="size-3 rounded-full border" />}{r.name}</li>)}
+      </ul>
+    </div>
+  );
+}
+
+function OutsideClass() {
+  const o = outsideSchool;
+  return (
+    <section>
+      <div className="mb-3 flex items-center gap-3">
+        <div className="grid size-9 place-items-center rounded-xl border bg-card text-xs font-semibold">LCC</div>
+        <div>
+          <div className="font-medium">{o.name}</div>
+          <div className="text-xs text-muted-foreground">{o.note} · {o.system}</div>
+        </div>
+      </div>
+      <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
+        <div className="rounded-2xl border bg-card p-4">
+          <div className="text-xs text-muted-foreground">{o.course.term}</div>
+          <div className="mt-1 font-medium">{o.course.code} <span className="font-normal text-muted-foreground">{o.course.title}</span></div>
+          <div className="mt-2 text-xs text-muted-foreground">{o.course.units} · {o.course.reason}</div>
+        </div>
+        <ArrowRight className="hidden size-5 self-center text-muted-foreground md:block" aria-hidden="true" />
+        <div className="rounded-2xl border bg-card p-4">
+          <div className="flex items-center justify-between gap-2 text-xs"><span className="aqua-chip rounded-full px-2 py-0.5 font-medium">{o.transfer.verdict}</span><span className="text-muted-foreground">{Math.round(o.transfer.confidence * 100)}% confident</span></div>
+          <div className="mt-2 font-medium">{o.transfer.lands}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{o.transfer.units}</div>
+          <p className="mt-2 text-xs text-muted-foreground">{o.transfer.caution}</p>
+          <div className="mt-2 text-[11px] text-muted-foreground">Source: {o.transfer.source}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function PathTimeline() {
   const j = useJourney();
   const [selectedId, setSelectedId] = useState(defaultSelectedTermId);
   const chosen = options.find((o) => o.id === j.chosenId);
-  // Only the current and registering terms show their course lists by default.
-  // Completed and planned terms stay compact until the student selects them.
-  const isOpen = (t: Term) => t.status === "in_progress" || t.status === "registering" || selectedId === t.id;
+  const now = terms.filter((t) => t.status === "in_progress" || t.status === "registering");
+  const past = terms.filter((t) => t.status === "done").length;
+  const planned = terms.filter((t) => t.status === "planned").length;
+  const isOpen = (_t: Term) => true;
   return (
     <div className="space-y-8">
-      {(["bayview", "northgate"] as const).map((sch) => (
-        <section key={sch}>
-          <div className="mb-3 flex items-center gap-3">
-            <SchoolLogo school={sch} className="size-9" />
-            <div>
-              <div className="font-medium">{schools[sch].name}</div>
-              <div className="text-xs text-muted-foreground">{schools[sch].role} · {schools[sch].system}</div>
-            </div>
-          </div>
-          <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {terms.filter((t) => t.school === sch).map((t) => (
-              <article key={t.id} role="button" tabIndex={0} aria-label={t.name} aria-pressed={selectedId === t.id}
+      <TransferReadiness />
+      <section>
+        <h2 className="mb-3 text-sm font-medium">Happening now</h2>
+        <div className="grid items-start gap-3 sm:grid-cols-2">
+          {now.map((t) => (
+            <article key={t.id} role="button" tabIndex={0} aria-label={t.name} aria-pressed={selectedId === t.id}
                 onClick={() => setSelectedId((current) => selectTerm(current, t.id))}
                 onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setSelectedId((current) => selectTerm(current, t.id)); } }}
                 className={cn("term-card edge-term-card", `term-state-${t.status}`, selectedId === t.id && "term-selected", !isOpen(t) && "term-compact")}>
@@ -133,10 +179,13 @@ function PathTimeline() {
                 </ul>}
                 {selectedId === t.id && <div className="term-selected-footer"><span>Selected</span><Button size="sm" className="h-8 font-semibold" asChild onClick={(event) => event.stopPropagation()}><Link to={t.status === "registering" ? "/portal" : "/semester"} search={t.status === "registering" ? {} : { term: t.id }}>{termAction[t.status]}</Link></Button></div>}
               </article>
-            ))}
-          </div>
-        </section>
-      ))}
+          ))}
+        </div>
+        <Link to="/semester" className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+          See all terms: {past} completed, {planned} planned <ArrowRight className="size-3.5" />
+        </Link>
+      </section>
+      <OutsideClass />
     </div>
   );
 }

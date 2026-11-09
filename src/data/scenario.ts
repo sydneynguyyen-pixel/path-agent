@@ -439,6 +439,23 @@ export const schools = {
   northgate: { name: "Northgate State University", short: "Northgate State", system: "Semester system", role: "Transfer school · admitted Fall 2027" },
 } as const;
 
+// A third school: a class Maya can only take at another community college (synthetic).
+export const outsideSchool = {
+  name: "Lakeshore Community College",
+  short: "Lakeshore CC",
+  system: "Semester system",
+  note: "Not your school. Taken as a visiting student.",
+  course: { code: "LCC PSYC 20", title: "Abnormal Psychology", term: "Summer 2027 · online, 8 weeks", units: "3.0 su", reason: "Not offered at Bayview" },
+  transfer: {
+    lands: "Northgate PSYC 210 · Psychology major elective",
+    units: "3.0 semester units, no conversion needed (both semester schools)",
+    verdict: "Likely counts",
+    confidence: 0.82,
+    source: "Lakeshore to Northgate articulation file (synthetic), row 114",
+    caution: "Counts only with a C or better. Not yet listed for the major prep requirement, so ask your counselor to confirm.",
+  },
+} as const;
+
 // Skills ledger: fictional syllabus passages and role examples, not credentials.
 export type EvidenceLevel = "Taught" | "Practiced" | "Demonstrated";
 export type SkillConfidence = "High" | "Medium" | "Low";

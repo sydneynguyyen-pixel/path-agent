@@ -34,6 +34,7 @@ function Semester() {
   const j = useJourney();
   const search = Route.useSearch();
   const [localSel, setSel] = useState<string>();
+  const [showDone, setShowDone] = useState(false);
   const sel = localSel ?? search.term ?? "su27";
   const term = terms.find((t) => t.id === sel);
   if (!term) return null;
@@ -50,7 +51,7 @@ function Semester() {
     <div>
       <PageHeader title="Your terms" sub="Where you are now, what you're registering for, and what comes next." right={<SimLabel>Synthetic data</SimLabel>} />
       <div className="mb-6 flex gap-2 overflow-x-auto pb-1">
-        {terms.filter((t) => t.status !== "done" || t.id === sel).map((t) => (
+        {terms.filter((t) => t.status !== "done" || showDone || t.id === sel).map((t) => (
           <Button variant="outline" key={t.id} onClick={() => setSel(t.id)} className={cn("h-auto min-h-16 shrink-0 justify-start gap-3 px-5 py-3 text-left text-sm", sel === t.id ? "border-primary bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground" : "bg-card")}>
             <TermIcon term={t.name} />
             <span className="min-w-0">
@@ -61,6 +62,9 @@ function Semester() {
             </span>
           </Button>
         ))}
+        <Button variant="ghost" onClick={() => setShowDone((v) => !v)} className="h-auto min-h-16 shrink-0 px-4 text-xs text-muted-foreground">
+          {showDone ? "Hide" : "Show"} {terms.filter((t) => t.status === "done").length} completed terms
+        </Button>
       </div>
       {term.id !== "su27" ? (
         <div className="rounded-2xl border p-6">

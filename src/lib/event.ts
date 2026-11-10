@@ -1,4 +1,4 @@
-import type { Classmate } from "@/data/event";
+import { symposiumEvent, type Classmate } from "@/data/event";
 import { pastNotes, type PastNote, type Person } from "@/data/people";
 
 /** Her answer on each deck card. Nothing is shared with the person either way. */
@@ -6,6 +6,35 @@ export type DeckChoice = "meet" | "skip" | "save";
 export type Deck = Record<string, DeckChoice>;
 export type PersonNote = { personId: string; event: string; date: string; text: string; promise?: string | undefined };
 export type Promise_ = { id: string; personId: string; text: string; done: boolean };
+
+/** Maya's plan for the symposium: before, during and after. Drafts are hers to send. */
+export type EventPlan = {
+  goal: string;
+  deck: Deck;
+  invite: { to: string | null; draft: string; sent: string[] };
+  talked: string[];
+  /** Notes belong to the person, so they show again at the next event. */
+  notes: PersonNote[];
+  promises: Promise_[];
+  /** Promises she asked to be reminded about. Off unless she turns one on. */
+  reminders: string[];
+  followUp: { to: string | null; draft: string; copied: string[] };
+};
+/** Which demo the event flow opens with. */
+export type DemoFill = "filled" | "fresh";
+
+export const freshEventPlan: EventPlan = { goal: symposiumEvent.goals[0]!, deck: {}, invite: { to: null, draft: "", sent: [] }, talked: [], notes: [], promises: [], reminders: [], followUp: { to: null, draft: "", copied: [] } };
+
+const reyesNote = { personId: "reyes", event: symposiumEvent.title, date: symposiumEvent.date, text: "The lab takes new RAs in January.", promise: "Email Dr. Reyes my ANTH 2 poster" };
+/** Partway through: she talked to two people and wrote a note for only one, so both kinds of follow-up show. Nothing is sent yet. */
+export const filledEventPlan: EventPlan = {
+  ...freshEventPlan,
+  deck: { reyes: "meet", priya: "meet", sam: "skip", club: "save", marcus: "meet" },
+  talked: ["reyes", "priya"],
+  notes: [reyesNote],
+  promises: [{ id: `reyes-${symposiumEvent.date}`, personId: "reyes", text: reyesNote.promise, done: false }],
+};
+export const eventPlanFor = (fill: DemoFill) => (fill === "filled" ? filledEventPlan : freshEventPlan);
 
 /** The next card she hasn't answered, in the agent's suggested order. */
 export function nextCard(order: string[], deck: Deck): string | null {

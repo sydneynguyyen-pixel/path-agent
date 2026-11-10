@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { symposiumEvent } from "@/data/event";
 import { people } from "@/data/people";
 import { experiences, postings } from "@/data/scenario";
-import { followUp, inviteDraft, nextCard, nextStep, notesFor, recall, toMeet, visibleClassmates } from "@/lib/event";
+import { eventPlanFor, filledEventPlan, freshEventPlan, followUp, inviteDraft, promiseId, nextCard, nextStep, notesFor, recall, toMeet, visibleClassmates } from "@/lib/event";
 import { evidenceFor } from "@/lib/skills";
 import { ledgerSkills } from "@/data/scenario";
 
@@ -80,6 +80,31 @@ describe("people you've met", () => {
     expect(nextStep(["reyes"], [{ id: "a", personId: "priya", text: "Send Priya the poster", done: false }], people)).toBe("Send Priya the poster");
     expect(nextStep(["reyes"], [], people)).toBe("Send Dr. Reyes your follow-up");
     expect(nextStep([], [], people)).toBeNull();
+  });
+});
+
+describe("demo fill", () => {
+  it("starts fresh with nothing answered", () => {
+    expect(eventPlanFor("fresh")).toBe(freshEventPlan);
+    expect(nextCard(order, freshEventPlan.deck)).toBe("reyes");
+    expect(freshEventPlan.talked).toEqual([]);
+  });
+
+  it("fills in a finished deck and only people she chose to meet as talked", () => {
+    expect(eventPlanFor("filled")).toBe(filledEventPlan);
+    expect(nextCard(order, filledEventPlan.deck)).toBeNull();
+    for (const id of filledEventPlan.talked) expect(toMeet(order, filledEventPlan.deck)).toContain(id);
+  });
+
+  it("shows both a drafted follow-up and the ask for one line", () => {
+    const kinds = filledEventPlan.talked.map((id) => followUp(people.find((p) => p.id === id)!, filledEventPlan.notes.find((n) => n.personId === id)?.text, "symposium", "Maya Torres").kind);
+    expect(kinds).toEqual(["draft", "ask"]);
+  });
+
+  it("has nothing already sent, and its promise lines up with its note", () => {
+    expect(filledEventPlan.invite.sent).toEqual([]);
+    expect(filledEventPlan.followUp.copied).toEqual([]);
+    expect(filledEventPlan.promises[0]!.id).toBe(promiseId(filledEventPlan.notes[0]!));
   });
 });
 

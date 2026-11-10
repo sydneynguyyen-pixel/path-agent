@@ -10,11 +10,11 @@ import type { SkillReview } from "@/lib/skills";
 import { NO_CHANGE, type WhatIf } from "@/lib/whatif";
 import { symposiumEvent } from "@/data/event";
 import { people } from "@/data/people";
-import { callName, followUp, inviteDraft, type Deck, type DeckChoice, type PersonNote, type Promise_ } from "@/lib/event";
+import { callName, eventPlanFor, filledEventPlan, followUp, inviteDraft, type DeckChoice, type DemoFill, type EventPlan } from "@/lib/event";
 
 export type Stage = "idle" | "failed" | "chosen";
 
-export type Decision = { id: string; who: string; what: string; when: Date; evidence: string[]; suggested?: string | undefined; next?: string | undefined };
+export type Decision = { id: string; who: string; what: string; when: Date; evidence: string[]; suggested?: string | undefined; next?: string | undefined; /** Set on event-flow decisions so switching the event demo can clear them. */ area?: "event" | undefined };
 
 /** Scripted demo clock: the story starts at Nov 7, 2026 · 7:30:50 PM (Pacific). Every timestamp is
  *  SCRIPT_START + time since the demo (re)started, so all pages agree and Reset demo restores them. */
@@ -41,21 +41,6 @@ export type AccessKey = "registration" | "canvas" | "sis" | "audit" | "articulat
 /** Going together to the one Explore event. The agent can draft; only the student can send. */
 export type GoTogether = { showMe: boolean; shownAt: Date | null; draftTo: string | null; draft: string; draftedAt: Date | null; sentTo: string[]; sentAt: Date | null };
 const noGoTogether: GoTogether = { showMe: false, shownAt: null, draftTo: null, draft: "", draftedAt: null, sentTo: [], sentAt: null };
-
-/** Maya's plan for the symposium: before, during and after. Drafts are hers to send. */
-export type EventPlan = {
-  goal: string;
-  deck: Deck;
-  invite: { to: string | null; draft: string; sent: string[] };
-  talked: string[];
-  /** Notes belong to the person, so they show again at the next event. */
-  notes: PersonNote[];
-  promises: Promise_[];
-  /** Promises she asked to be reminded about. Off unless she turns one on. */
-  reminders: string[];
-  followUp: { to: string | null; draft: string; copied: string[] };
-};
-const noEventPlan: EventPlan = { goal: symposiumEvent.goals[0]!, deck: {}, invite: { to: null, draft: "", sent: [] }, talked: [], notes: [], promises: [], reminders: [], followUp: { to: null, draft: "", copied: [] } };
 
 type State = {
   savedOpportunities: string[];
@@ -115,7 +100,7 @@ const initial: State = {
   interestedRoles: [],
   dismissedRoles: [],
   careerInterests: [],
-  event: noEventPlan,
+  event: filledEventPlan,
   agentOn: { reader: true, planner: true, backup: true, drafter: true },
   access: { registration: true, canvas: true, sis: true, audit: true, articulation: true, handshake: true, email: true },
   uploads: [],
@@ -159,6 +144,9 @@ type Ctx = State & {
   toggleCareerInterest: (interest: string) => void;
   setRoleInterest: (id: string, interested: boolean) => void;
   dismissRole: (id: string, dismissed: boolean) => void;
+  /** Whether the event flow opens partway through or empty. */
+  demoFill: DemoFill;
+  setDemoFill: (fill: DemoFill) => void;
   setEventGoal: (goal: string) => void;
   answerCard: (personId: string, choice: DeckChoice | null) => void;
   startInvite: (classmateId: string) => void;
@@ -243,9 +231,14 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
   // null until hydrated, so SSR and first client render match.
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
   const [pathBuilt, setPathBuilt] = useState<boolean | null>(null);
+  const [demoFill, setDemoFillState] = useState<DemoFill>("filled");
   useEffect(() => {
     setOnboarded(window.localStorage.getItem("pa-onboarded") === "1");
     setPathBuilt(window.localStorage.getItem("pa-path-built") === "1");
+    if (window.localStorage.getItem("pa-demo-fill") === "fresh") {
+      setDemoFillState("fresh");
+      set((p) => ({ ...p, event: eventPlanFor("fresh") }));
+    }
   }, []);
 
   const latest = useRef(s);
@@ -337,6 +330,16 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       toggleCareerInterest: (interest) => set(p => ({ ...p, careerInterests: p.careerInterests.includes(interest) ? p.careerInterests.filter(i => i !== interest) : [...p.careerInterests, interest] })),
       setRoleInterest: (id, interested) => set(p => ({ ...p, interestedRoles: interested ? [...new Set([...p.interestedRoles, id])] : p.interestedRoles.filter(i => i !== id), dismissedRoles: p.dismissedRoles.filter(i => i !== id) })),
       dismissRole: (id, dismissed) => set(p => ({ ...p, dismissedRoles: dismissed ? [...new Set([...p.dismissedRoles, id])] : p.dismissedRoles.filter(i => i !== id) })),
+      demoFill,
+      setDemoFill: (fill) => {
+        window.localStorage.setItem("pa-demo-fill", fill);
+        setDemoFillState(fill);
+        // Only the event flow changes. Its skill update and logged decisions go with it.
+        set((p) => {
+          const { practiced: _practiced, ...review } = p.skillReviews[symposiumEvent.skillId] ?? {};
+          return { ...p, event: eventPlanFor(fill), skillReviews: { ...p.skillReviews, [symposiumEvent.skillId]: review }, decisions: p.decisions.filter((d) => d.area !== "event") };
+        });
+      },
       setEventGoal: (goal) => set((p) => ({ ...p, event: { ...p.event, goal } })),
       answerCard: (personId, choice) => set((p) => {
         const { [personId]: _old, ...deck } = p.event.deck;
@@ -355,7 +358,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         return {
           ...p,
           event: { ...p.event, invite: { to: null, draft: "", sent: [...p.event.invite.sent, c.id] } },
-          decisions: [...p.decisions, log(`Asked ${c.name} to go to the ${symposiumEvent.shortName} together`, [], p.agentOn.drafter ? "Drafter wrote it. You could edit anything first." : "You wrote this one yourself.", "You sent it yourself. Demo only: no message went out.")],
+          decisions: [...p.decisions, { ...log(`Asked ${c.name} to go to the ${symposiumEvent.shortName} together`, [], p.agentOn.drafter ? "Drafter wrote it. You could edit anything first." : "You wrote this one yourself.", "You sent it yourself. Demo only: no message went out."), area: "event" }],
         };
       }),
       markTalked: (id, on) => set((p) => ({ ...p, event: { ...p.event, talked: on ? [...new Set([...p.event.talked, id])] : p.event.talked.filter((x) => x !== id) } })),
@@ -385,7 +388,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
           ...p,
           event: { ...p.event, followUp: { to: null, draft: "", copied: [...new Set([...p.event.followUp.copied, person.id])] } },
           skillReviews: { ...p.skillReviews, [sk]: { ...p.skillReviews[sk], practiced: true } },
-          decisions: [...p.decisions, log(`Copied a follow-up to ${callName(person.name)} to send yourself`, [], "Drafted only from your own note.", "Interviewing basics now shows Practiced on Skills. Demo only: nothing was sent.")],
+          decisions: [...p.decisions, { ...log(`Copied a follow-up to ${callName(person.name)} to send yourself`, [], "Drafted only from your own note.", "Interviewing basics now shows Practiced on Skills. Demo only: nothing was sent."), area: "event" }],
         };
       }),
       atRisk: (s.stage !== "idle" && !s.seatHeld) || s.counselor === "declined",
@@ -445,7 +448,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       reset: () => {
         clockRef.startedAt = Date.now();
         runControl.current?.abort();
-        set((p) => ({ ...initial, startedAt: clockRef.startedAt, agentOn: p.agentOn, access: p.access, notify: p.notify, watchingRegistration: p.watchingRegistration }));
+        set((p) => ({ ...initial, event: eventPlanFor(demoFill), startedAt: clockRef.startedAt, agentOn: p.agentOn, access: p.access, notify: p.notify, watchingRegistration: p.watchingRegistration }));
       },
       scriptNow,
       onboarded,
@@ -476,7 +479,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       addUpload: (k) => set((p) => (p.uploads.includes(k) ? p : { ...p, uploads: [...p.uploads, k] })),
       setNotify: (k, on) => set((p) => ({ ...p, notify: { ...p.notify, [k]: on } })),
     };
-  }, [s, failAdd, choose, onboarded, pathBuilt]);
+  }, [s, failAdd, choose, onboarded, pathBuilt, demoFill]);
 
   return <JourneyCtx.Provider value={value}>{children}</JourneyCtx.Provider>;
 }

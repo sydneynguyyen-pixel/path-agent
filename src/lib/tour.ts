@@ -10,7 +10,7 @@ export type TourBeat = {
 };
 
 export type TourSlide = {
-  id: "home" | "terms" | "register" | "choose" | "skills";
+  id: "home" | "terms" | "register" | "choose" | "explore";
   agent: "reader" | "planner" | "backup";
   title: string;
   body: string;
@@ -47,11 +47,11 @@ export const tourSlides: TourSlide[] = [
     beats: [{ ms: 700 }, { ms: 1000, cursor: "pick" }, { ms: 1200, cursor: "pick", click: true }, { ms: 1000, cursor: "add" }, { ms: 2200, cursor: "add", click: true }],
   },
   {
-    id: "skills",
-    agent: "reader",
-    title: "Turn classes into skills",
-    body: "Your syllabi become a list of skills. Only the ones you confirm can go on your resume.",
-    beats: [{ ms: 700 }, { ms: 1000, cursor: "first" }, { ms: 900, cursor: "first", click: true }, { ms: 900, cursor: "second" }, { ms: 900, cursor: "second", click: true }, { ms: 1000, cursor: "resume" }, { ms: 1800, cursor: "resume", click: true }],
+    id: "explore",
+    agent: "planner",
+    title: "See what else fits",
+    body: "Your classes become skills. I show the clubs, internships and events that fill what's missing.",
+    beats: [{ ms: 800 }, { ms: 1100, cursor: "show" }, { ms: 1000, cursor: "show", click: true }, { ms: 1200, cursor: "hi" }, { ms: 2800, cursor: "hi", click: true }],
   },
 ];
 

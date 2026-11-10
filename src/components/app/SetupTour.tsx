@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowRight, Check, CalendarDays, Home, MousePointerClick, BookOpenCheck, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CalendarDays, Home, MousePointerClick, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ledgerSkills, options, progress, rankOptions, REQUIREMENT_LABEL, terms } from "@/data/scenario";
+import { freeTime, goTogetherEvent, opportunities, options, progress, rankOptions, REQUIREMENT_LABEL, terms } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
+import { reasonFor } from "@/lib/opportunities";
 import { nextBeat, tourSlides, type TourSlide } from "@/lib/tour";
 import { cn } from "@/lib/utils";
 import valleyHome from "@/assets/valley-home.jpg";
@@ -84,7 +85,7 @@ function Stage({ slide }: { slide: TourSlide }) {
   );
 }
 
-const NAV = [["Home", Home], ["Terms", CalendarDays], ["Registration", MousePointerClick], ["Skills", BookOpenCheck]] as const;
+const NAV = [["Home", Home], ["Terms", CalendarDays], ["Registration", MousePointerClick], ["Explore", Compass]] as const;
 
 function MiniApp({ active, children }: { active: (typeof NAV)[number][0]; children: ReactNode }) {
   return (
@@ -103,7 +104,7 @@ function MiniApp({ active, children }: { active: (typeof NAV)[number][0]; childr
 }
 
 const MiniButton = ({ name, outline, className, children }: { name?: string | undefined; outline?: boolean; className?: string; children: ReactNode }) => (
-  <span data-cursor={name} className={cn("tour-button", outline ? "border bg-card" : "bg-primary text-primary-foreground", className)}>{children}</span>
+  <span data-cursor={name} className={cn("tour-button", outline ? "glass-control" : "glass-cta", className)}>{children}</span>
 );
 
 function HomeScene({ b }: { b: number }) {
@@ -193,7 +194,7 @@ function ChooseScene({ b }: { b: number }) {
       <div className="text-[15px] font-semibold">Backups for STAT 2</div>
       <div className="mt-2 space-y-1.5">
         {list.map((o) => (
-          <div key={o.id} data-cursor={o === pick ? "pick" : undefined} className={cn("flex items-center justify-between rounded-xl border px-3 py-1.5 transition-colors duration-300", o === pick && b >= 2 && "border-primary bg-secondary")}>
+          <div key={o.id} data-cursor={o === pick ? "pick" : undefined} className={cn("flex items-center justify-between rounded-xl border px-3 py-1.5 transition-colors duration-300", o === pick && b >= 2 && "glass-active border-transparent")}>
             <span><span className="font-medium">{o.course.replace("BCC ", "")}</span> <span className="text-muted-foreground">{o.sectionTime.split(" · ")[0]}</span></span>
             <span className="text-muted-foreground">{o.seatsOpen} open</span>
           </div>
@@ -210,32 +211,40 @@ function ChooseScene({ b }: { b: number }) {
   );
 }
 
-function SkillsScene({ b }: { b: number }) {
-  const rows = ["descriptive", "sources", "persuasive"].map((id) => ledgerSkills.find((s) => s.id === id)!);
-  const confirmed = (b >= 2 ? 1 : 0) + (b >= 4 ? 1 : 0);
-  const ready = 1 + confirmed;
+function ExploreScene({ b }: { b: number }) {
+  const rows = ["design-club", "library-usability"].map((id) => opportunities.find((o) => o.id === id)!);
+  const event = opportunities.find((o) => o.id === goTogetherEvent.id)!;
+  const shown = b >= 2;
+  const drafted = b >= 4;
   return (
-    <MiniApp active="Skills">
-      <div className="rounded-xl bg-secondary p-3">
-        <div className="text-[13px] font-semibold">{ready} skills ready for your resume</div>
-        <div className="mt-2 flex items-center gap-3">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"><div className="aqua-chip h-full rounded-full transition-[width] duration-500" style={{ width: `${(ready / ledgerSkills.length) * 100 + 8}%` }} /></div>
-          <MiniButton name="resume" className="shrink-0"><FileText className="size-3" /> Resume text</MiniButton>
-        </div>
-      </div>
-      <div className="mt-3 divide-y rounded-xl border">
-        {rows.map((s, i) => (
-          <div key={s.id} className="flex items-center justify-between gap-2 px-3 py-2">
-            <div className="min-w-0"><div className="font-medium">{s.name}</div><div className="text-[10px] text-muted-foreground">From {s.course}</div></div>
-            {i < confirmed ? <span className="tour-swap flex items-center gap-1 py-1 font-medium text-mark-yes"><Check className="size-3.5" /> Confirmed</span> : <MiniButton name={i === 0 ? "first" : i === 1 ? "second" : undefined} outline>Confirm</MiniButton>}
+    <MiniApp active="Explore">
+      <div className="text-[10px] text-muted-foreground">Working toward</div>
+      <div className="text-[13px] font-semibold">UX researcher</div>
+      <div className="mt-2 font-medium">Usability testing</div>
+      <div className="mt-1.5 divide-y rounded-xl border">
+        {rows.map((o) => (
+          <div key={o.id} className="px-3 py-1.5">
+            <div className="truncate font-medium">{o.title}</div>
+            <div className="truncate text-[10px] text-muted-foreground">{reasonFor(o, "Usability testing", freeTime)}</div>
           </div>
         ))}
+        <div className="px-3 py-1.5">
+          <div className="truncate font-medium">{event.title}</div>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted-foreground">{goTogetherEvent.going} Bayview students going</span>
+            {shown ? <span className="tour-swap flex items-center gap-1 py-1 font-medium text-mark-yes"><Check className="size-3.5" /> Showing</span> : <MiniButton name="show" outline>Show me as going</MiniButton>}
+          </div>
+          <div className={cn("mt-1 flex items-center justify-between gap-2 transition-opacity duration-300", shown ? "opacity-100" : "opacity-0")}>
+            <span className="text-[10px]">{drafted ? "Draft ready. You send it." : `${goTogetherEvent.visiblePeers[0]!.name} chose to be seen`}</span>
+            <MiniButton name="hi">Say hi</MiniButton>
+          </div>
+        </div>
       </div>
     </MiniApp>
   );
 }
 
-const scenes = { home: HomeScene, terms: TermsScene, register: RegisterScene, choose: ChooseScene, skills: SkillsScene };
+const scenes = { home: HomeScene, terms: TermsScene, register: RegisterScene, choose: ChooseScene, explore: ExploreScene };
 
 export function SetupTour({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
   const [index, setIndex] = useState(0);

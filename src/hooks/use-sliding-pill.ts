@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
+import { useLiquidGlass } from "@/hooks/use-liquid-glass";
 
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -10,12 +11,15 @@ const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : us
 export function useSlidingPill<C extends HTMLElement>(activeSelector: string) {
   const containerRef = useRef<C>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
+  useLiquidGlass(pillRef, { bezel: 8, scale: 14 });
 
   useIsomorphicLayoutEffect(() => {
     const container = containerRef.current;
     const pill = pillRef.current;
     if (!container || !pill) return;
 
+    let last: { x: number; y: number } | undefined;
+    let glide: ReturnType<typeof setTimeout>;
     const place = () => {
       const active = container.querySelector<HTMLElement>(activeSelector);
       if (!active) {
@@ -25,6 +29,13 @@ export function useSlidingPill<C extends HTMLElement>(activeSelector: string) {
       pill.style.width = `${active.offsetWidth}px`;
       pill.style.height = `${active.offsetHeight}px`;
       pill.style.transform = `translate3d(${active.offsetLeft}px, ${active.offsetTop}px, 0)`;
+      // Labels only pass under the glass while it travels. At rest the active label sits on top, fully sharp.
+      if (last && (last.x !== active.offsetLeft || last.y !== active.offsetTop)) {
+        pill.dataset["gliding"] = "";
+        clearTimeout(glide);
+        glide = setTimeout(() => delete pill.dataset["gliding"], 420);
+      }
+      last = { x: active.offsetLeft, y: active.offsetTop };
       if (container.dataset["pillReady"] === undefined) {
         // First placement lands instantly; only later moves should glide.
         pill.style.transition = "none";
@@ -41,6 +52,7 @@ export function useSlidingPill<C extends HTMLElement>(activeSelector: string) {
     resizes.observe(container);
     void document.fonts?.ready.then(place);
     return () => {
+      clearTimeout(glide);
       mutations.disconnect();
       resizes.disconnect();
     };

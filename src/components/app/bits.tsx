@@ -1,4 +1,5 @@
-import { CheckCircle2, CircleDot, AlertTriangle, Circle, ArrowRightLeft, FileText, Hourglass } from "lucide-react";
+import { CheckCircle2, CircleDot, AlertTriangle, Circle, ArrowRightLeft, FileText, ShieldCheck, ShieldQuestion, Shield, Hourglass } from "lucide-react";
+import { confidenceLevel } from "@/lib/confidence";
 import { sources, type ReqStatus } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,27 @@ const statusMap: Record<ReqStatus, { label: string; icon: typeof Circle; cls: st
   remaining: { label: "Remaining", icon: Circle, cls: "bg-muted text-muted-foreground" },
   pending: { label: "Pending counselor", icon: Hourglass, cls: "bg-info-soft text-info" },
 };
+
+export function ConfidenceBadge({ score, conflict }: { score: number; conflict?: boolean }) {
+  const level = conflict ? "low" : confidenceLevel(score);
+  const Icon = level === "high" ? ShieldCheck : level === "medium" ? Shield : ShieldQuestion;
+  const label = level === "high" ? "Sure" : level === "medium" ? "Fairly sure" : "Check with your counselor";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+        `confidence-${level}`,
+        level === "high" && "border-success/30 bg-success-soft text-success",
+        level === "medium" && "border-info/30 bg-info-soft text-info",
+        level === "low" && "border-warning/40 bg-warning-soft text-warning",
+      )}
+      title={`How sure Path Agent is: ${Math.round(score * 100)}%`}
+    >
+      <Icon className="size-3.5" aria-hidden />
+      {label}
+    </span>
+  );
+}
 
 export function StatusBadge({ status }: { status: ReqStatus }) {
   const m = statusMap[status];

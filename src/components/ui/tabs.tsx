@@ -23,7 +23,7 @@ const TabsList = React.forwardRef<
       )}
       {...props}
     >
-      <span ref={pillRef} className="sliding-pill tabs-pill" aria-hidden="true" />
+      <span ref={pillRef} className="sliding-pill liquid" aria-hidden="true" />
       {children}
     </TabsPrimitive.List>
   );

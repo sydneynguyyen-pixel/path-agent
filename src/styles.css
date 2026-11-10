@@ -32,6 +32,8 @@
   --color-success-soft: var(--success-soft);
   --color-mark-yes: var(--mark-yes);
   --color-mark-no: var(--mark-no);
+  --color-alert: var(--alert);
+  --color-alert-soft: var(--alert-soft);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --color-info: var(--info);
@@ -88,6 +90,8 @@
   --success-soft: #E4F1E5;
   --mark-yes: #1F9D63;
   --mark-no: #DC4B3E;
+  --alert: #C2362B;
+  --alert-soft: #FDECE9;
   --warning: #78521A;
   --warning-soft: #FCF0D6;
   --info: #111111;
@@ -102,8 +106,10 @@
   --portal-gold: oklch(0.78 0.13 85);
   --portal-link: oklch(0.42 0.14 255);
   --portal-error: #B3261E;
-  --border: #EFEFEF;
-  --input: #E6E6E6;
+  --border: #E5E9EE;
+  --input: #E5E9EE;
+  /* The page behind the cards. Paintings multiply onto it so their white sky disappears. */
+  --canvas: #F3F6F9;
   --ring: #111111;
   --chart-1: oklch(0.6 0.12 285);
   --chart-2: oklch(0.52 0.12 155);
@@ -116,22 +122,24 @@
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #111111;
   --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #EFEFEF;
+  --sidebar-border: #E5E9EE;
   --sidebar-ring: #111111;
   --gradient-sidebar: linear-gradient(var(--card), var(--card));
   --shadow-soft: 0 10px 36px rgb(0 0 0 / 7%);
   --shadow-frame: 0 10px 36px rgb(0 0 0 / 7%);
   --shadow-widget: 0 2px 5px oklch(0.18 0 0 / 5%), 0 12px 24px -8px oklch(0.18 0 0 / 14%);
   --shadow-widget-hover: 0 3px 7px oklch(0.18 0 0 / 6%), 0 16px 30px -8px oklch(0.18 0 0 / 18%);
+  --shadow-card: 0 1px 2px rgb(24 39 58 / 4%), 0 10px 24px -14px rgb(24 39 58 / 16%);
+  --shadow-card-hover: 0 2px 4px rgb(24 39 58 / 5%), 0 16px 32px -14px rgb(24 39 58 / 22%);
   --term-band-background: #111111;
   --term-band-foreground: #FFFFFF;
   --term-band-icon-outline: oklch(1 0 0 / 85%);
   --term-band-chip-background: oklch(1 0 0 / 14%);
-  --term-border: #EAEAEA;
-  --term-current-border: #D0D0D0;
-  --term-planned-border: #D5D5D5;
+  --term-border: var(--border);
+  --term-current-border: var(--border);
+  --term-planned-border: #CDD3DA;
   --term-completed-text: #555555;
-  --term-footer-border: #F0F0F0;
+  --term-footer-border: var(--border);
   --shadow-term-selected: 0 14px 32px rgb(0 0 0 / 12%);
   --aqua-gradient: linear-gradient(100deg, #BDE8E1 0%, #BFE3F4 100%);
   --aqua-ring-start: #A8E0D8;
@@ -222,6 +230,17 @@
   box-shadow: var(--shadow-soft);
 }
 
+/* Every card in the app: one fill, one stroke, one radius, one shadow. */
+@utility surface {
+  background-color: var(--card);
+  border-width: 1px;
+  border-color: var(--border);
+  border-radius: 28px;
+  box-shadow: var(--shadow-card);
+}
+@utility surface-hover {
+  &:hover { box-shadow: var(--shadow-card-hover); }
+}
 @utility shadow-widget {
   box-shadow: var(--shadow-widget);
 }
@@ -251,6 +270,8 @@
 
 /* Path Agent brand. Institutional portal is explicitly scoped out. */
 @utility aqua-chip { background: var(--aqua-gradient); color: var(--foreground); }
+/* Count badges follow the chosen theme. */
+@utility count-badge { background: linear-gradient(135deg, var(--aqua-ring-start), var(--aqua-ring-end)); color: var(--foreground); font-weight: 600; }
 .mesh-tile, .term-band {
   background: radial-gradient(120% 90% at 50% 112%, var(--mesh-bottom) 0%, transparent 62%), radial-gradient(90% 80% at 85% 55%, var(--mesh-mid) 0%, transparent 70%), linear-gradient(180deg, var(--mesh-top) 0%, var(--mesh-mid) 135%);
 }
@@ -272,10 +293,48 @@
 @keyframes pa-settle { from { opacity: 0; transform: scale(1.035); } }
 @media (prefers-reduced-motion: reduce) { .welcome-art { animation: none; } }
 /* A page cover: the negative margins cancel main's padding so it fills the panel edge to edge. */
-.season-banner { position: relative; overflow: hidden; height: clamp(170px, 21vw, 290px); margin: -2rem -1.5rem 2rem; }
+.app-canvas { background: var(--canvas); }
+.season-banner { position: relative; isolation: isolate; overflow: hidden; background: var(--canvas); height: clamp(170px, 21vw, 290px); margin: -2rem -1.5rem 2rem; }
 @media (min-width: 768px) { .season-banner { margin-inline: -2.5rem; } }
-.season-banner img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 92%; opacity: 0; transition: opacity 700ms ease; }
+.season-banner img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 92%; opacity: 0; mix-blend-mode: multiply; transition: opacity 700ms ease; }
 .season-banner img[data-active="true"] { opacity: 1; }
+/* Registration's landing: one painting fills the panel and the card sits on its open sky. */
+.register-scene { position: relative; isolation: isolate; overflow: hidden; display: flex; justify-content: center; align-items: flex-start; min-height: calc(100vh - 3rem); margin: -2rem -1.5rem; padding: clamp(2rem, 7vh, 5rem) 1.5rem 34vh; }
+/* From this width the frame is fixed: 125px is its top bar and margins, so the painting ends at the fold. */
+@media (min-width: 768px) { .register-scene { margin-inline: -2.5rem; min-height: calc(100vh - 125px); } }
+.register-art { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 50% 100%; }
+/* Explore: each type of opportunity has its own soft color. */
+.kind-class { --kind: #D8ECFA; --kind-ombre: linear-gradient(165deg, #D3F6EC 0%, #AEDFF8 50%, #A5B9F6 100%); }
+.kind-event { --kind: #FFE0D6; --kind-ombre: linear-gradient(165deg, #FFEFC4 0%, #FFC7A6 50%, #FFA0B4 100%); }
+.kind-internship { --kind: #E6F2C2; --kind-ombre: linear-gradient(165deg, #FDF3B4 0%, #D0EC9C 50%, #8FDDAB 100%); }
+.kind-club { --kind: #E4DEFB; --kind-ombre: linear-gradient(165deg, #FDDDEF 0%, #DCC9FB 50%, #AFA3F6 100%); }
+.kind-tint { background: var(--kind-ombre); }
+.tile-photo { border-radius: 18px; }
+.flyer { position: relative; flex-shrink: 0; overflow: hidden; aspect-ratio: 1; container-type: inline-size; white-space: nowrap; }
+.flyer-grain::after { content: ""; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); opacity: .38; mix-blend-mode: overlay; pointer-events: none; }
+.timeline-day { position: relative; padding-left: 22px; }
+.timeline-day::before { content: ""; position: absolute; top: 14px; bottom: -20px; left: 3px; border-left: 1.5px dashed var(--border); }
+.timeline-day:last-child::before { bottom: 0; }
+.timeline-day::after { content: ""; position: absolute; top: 7px; left: 0; width: 8px; height: 8px; border-radius: 999px; background: #C5CDD6; }
+/* Every school and organization gets the same round profile picture. */
+.org-logo { display: inline-grid; flex-shrink: 0; place-items: center; overflow: hidden; border-radius: 999px; background: #fff; box-shadow: 0 0 0 1px rgb(24 39 58 / 8%); }
+.org-logo > * { width: 78%; height: 78%; object-fit: contain; }
+.org-logo-stack { position: relative; display: inline-block; flex-shrink: 0; margin-right: 3px; }
+.org-logo-stack > .org-logo:first-child > * { width: 100%; height: 100%; }
+.org-logo-badge.org-logo { position: absolute; right: -4px; bottom: -3px; width: 15px; height: 15px; box-shadow: 0 0 0 1.5px #fff; }
+.org-logo-badge.org-logo > * { width: 88%; height: 88%; }
+.explore-card { overflow: hidden; box-shadow: var(--shadow-soft); transition: transform 300ms var(--ease-out-soft), box-shadow 300ms var(--ease-out-soft); }
+.explore-card:hover, .explore-card:focus-within { transform: translateY(-3px); box-shadow: 0 16px 44px rgb(0 0 0 / 13%); }
+/* The padding leaves room for card shadows, which a scrolling row would otherwise clip; the negative margins keep the layout where it was. */
+.explore-row { display: grid; grid-auto-flow: column; grid-auto-columns: 84%; gap: 16px; overflow-x: auto; padding: 8px 16px 48px; margin: -8px -16px -48px; scroll-padding-inline: 16px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.explore-row::-webkit-scrollbar { display: none; }
+.explore-row > * { scroll-snap-align: start; }
+@media (min-width: 640px) { .explore-row { grid-auto-columns: calc((100% - 16px) / 2); } }
+@media (min-width: 1024px) { .explore-row { grid-auto-columns: calc((100% - 48px) / 4); } }
+.explore-photo { overflow: hidden; background: var(--kind); }
+.explore-photo img { width: 100%; height: 100%; max-width: none; object-fit: cover; transition: transform 500ms var(--ease-out-soft); }
+.explore-card:hover .explore-photo img { transform: scale(1.04); }
+@media (prefers-reduced-motion: reduce) { .explore-card, .explore-photo img { transition: none; } .explore-card:hover { transform: none; } .explore-card:hover .explore-photo img { transform: none; } }
 /* Small vignettes cut from the paintings, and the fade on the student card. */
 .spot-art { height: auto; flex-shrink: 0; }
 .profile-card-art { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 50% 72%; -webkit-mask-image: linear-gradient(90deg, transparent 48%, #000 92%); mask-image: linear-gradient(90deg, transparent 48%, #000 92%); }
@@ -304,9 +363,16 @@
 }
 @media (prefers-reduced-motion: reduce) { .path-loader-walker, .path-loader-walker img, .path-loader-cloud, .path-loader-birds { animation: none; } }
 
+/* Skill rows: the actions stay out of the way until you hover or tab to a row. Touch screens always show them. */
+.skill-actions { display: flex; flex-wrap: wrap; align-items: center; margin-top: 0.75rem; }
+@media (hover: hover) and (pointer: fine) {
+  .skill-actions { position: absolute; top: 0.75rem; right: 0; margin: 0; padding-left: 0.5rem; background: var(--card); opacity: 0; pointer-events: none; transition: opacity 150ms ease; }
+  .skill-row:hover .skill-actions, .skill-row:has(:focus-visible) .skill-actions { opacity: 1; pointer-events: auto; }
+}
+
 /* Home: a band above the greeting on narrow screens. On wide ones the greeting sits on the painted sky and the card overlaps the bottom edge. */
-.home-cover { display: flex; flex-direction: column; gap: 2rem; }
-.home-cover-art { display: block; width: calc(100% + 3rem); max-width: none; height: 190px; margin: -2rem -1.5rem 0; object-fit: cover; object-position: 72% 92%; }
+.home-cover { display: flex; flex-direction: column; gap: 2rem; isolation: isolate; background: var(--canvas); }
+.home-cover-art { display: block; width: calc(100% + 3rem); max-width: none; height: 190px; margin: -2rem -1.5rem 0; object-fit: cover; object-position: 72% 92%; mix-blend-mode: multiply; }
 @media (min-width: 768px) { .home-cover-art { width: calc(100% + 5rem); margin-inline: -2.5rem; } }
 @media (min-width: 1200px) {
   .brand-app .home-cover { position: relative; justify-content: space-between; width: calc(100% + 5rem); aspect-ratio: 1376 / 768; margin: -2rem -2.5rem calc(44px + 2rem); padding: 2rem 2.5rem 0; }
@@ -338,12 +404,12 @@
 .brand-app :is(.text-success,.text-info,.text-accent-foreground) { color: var(--foreground); }
 .brand-app :is(.bg-lilac,.bg-sky,.bg-butter,.bg-mint,.bg-accent,.bg-info-soft) { background-color: var(--secondary); }
 .brand-app :is(th,td) { padding: 18px 16px; }
-.brand-app :is(button,a,input,textarea,summary,[role=switch]):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.brand-app :is(button,a,input,textarea,summary,[role=switch],[role=tab]):focus-visible:not(.school-portal *) { outline: 2px solid var(--ring); outline-offset: 2px; box-shadow: none; }
 .brand-app .agent-panel :is(.text-warning,.text-success) { color: var(--foreground); }
 .brand-app .term-card { padding: 0; overflow: hidden; background: var(--card); }
 .brand-app .term-card ul { padding: 0 14px 16px; }
 .brand-app .term-course { align-items: center; padding: 6px 0; }
-.brand-app .edge-term-card { border: 1px solid var(--term-border); border-radius: 24px; cursor: pointer; transition: transform 320ms var(--ease-out-soft), box-shadow 320ms var(--ease-out-soft), border-color 220ms ease; }
+.brand-app .edge-term-card { border: 1px solid var(--term-border); border-radius: 28px; cursor: pointer; transition: transform 320ms var(--ease-out-soft), box-shadow 320ms var(--ease-out-soft), border-color 220ms ease; }
 .term-edge-stripe { height: 8px; background: radial-gradient(120% 90% at 50% 112%, var(--mesh-bottom) 0%, transparent 62%), radial-gradient(90% 80% at 85% 55%, var(--mesh-mid) 0%, transparent 70%), linear-gradient(180deg, var(--mesh-top) 0%, var(--mesh-mid) 135%); }
 .term-edge-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px 0; }
 .term-edge-name { font-size: 18px; font-weight: 600; line-height: 24px; }
@@ -351,7 +417,7 @@
 .term-status-chip { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; border-radius: 9999px; padding: 3px 8px; font-size: 11px; }
 .term-status-completed { background: var(--muted); color: var(--term-completed-text); }
 .term-status-planned { background: var(--muted); color: var(--muted-foreground); }
-.term-status-registering { background: var(--primary); color: var(--primary-foreground); }
+.term-status-registering { background: linear-gradient(135deg, color-mix(in oklab, var(--aqua-ring-start) 80%, white), color-mix(in oklab, var(--aqua-ring-end) 80%, white)); color: var(--foreground); font-weight: 600; box-shadow: inset 0 1px 1px rgb(255 255 255 / .85); }
 .term-current-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--aqua-ring-start); }
 .brand-app .term-state-done .term-edge-stripe { height: 6px; opacity: .55; }
 .brand-app .term-state-done .term-course, .brand-app .term-state-done .term-course .text-muted-foreground { color: var(--term-completed-text); }
@@ -361,8 +427,8 @@
 .brand-app .term-state-planned { border: 1px dashed var(--term-planned-border); }
 .brand-app .term-state-planned .term-edge-stripe { opacity: .35; }
 .brand-app .edge-term-card:hover { transform: none; }
-.brand-app .edge-term-card.term-selected { border: 2px solid var(--primary); transform: translateY(-4px); box-shadow: var(--shadow-term-selected); }
-.brand-app .edge-term-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.brand-app .edge-term-card.term-selected { border: 1px solid var(--ring); transform: translateY(-4px); box-shadow: var(--shadow-term-selected); }
+.brand-app .edge-term-card:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
 .term-compact-meta { padding: 4px 16px 14px; color: var(--muted-foreground); font-size: 12px; }
 .brand-app .term-compact .term-edge-stripe { height: 4px; }
 .brand-app .term-compact .term-edge-header { flex-wrap: nowrap; }
@@ -410,7 +476,7 @@
   .brand-app header nav { order: 4; width: 100%; margin-left: 0; }
   .brand-app header nav a { flex-shrink: 0; }
   .brand-app [data-slot="tabs-list"] { max-width: 100%; }
-  .brand-app [role="tablist"] { display: flex; flex-wrap: wrap; height: auto; max-width: 100%; }
+  .brand-app [role="tablist"]:not(.segmented) { display: flex; flex-wrap: wrap; height: auto; max-width: 100%; }
   .brand-app [role="tab"] { white-space: normal; }
 }
 
@@ -455,7 +521,6 @@
 /* One highlight glides between items. Until it is placed, items keep their own fill. */
 .sliding-pill { position: absolute; top: 0; left: 0; z-index: 0; border-radius: 9999px; pointer-events: none; opacity: 0; transition: transform .46s var(--ease-glide), width .46s var(--ease-glide), height .46s var(--ease-glide); }
 [data-pill-ready] > .sliding-pill { opacity: 1; }
-.tabs-pill { background: var(--primary); }
 [data-pill-ready] > [role="tab"][data-state="active"] { background: transparent; box-shadow: none; }
 .term-tabs:not([data-pill-ready]) > [aria-pressed="true"] { background: var(--accent); }
 
@@ -496,7 +561,7 @@
 .tour-scene { position: absolute; inset: 0; animation: tour-fade .35s ease both; }
 .tour-swap { animation: tour-fade .3s ease both; }
 .tour-pointer { position: absolute; top: 0; left: 0; z-index: 30; transition: transform .7s cubic-bezier(.45, .05, .25, 1); pointer-events: none; }
-.tour-ripple { position: absolute; top: -12px; left: -12px; width: 28px; height: 28px; border-radius: 999px; background: color-mix(in oklab, var(--primary) 30%, transparent); animation: tour-ripple .55s ease-out both; }
+.tour-ripple { position: absolute; top: -12px; left: -12px; width: 28px; height: 28px; border-radius: 999px; background: color-mix(in oklab, var(--ink-b) 35%, transparent); animation: tour-ripple .55s ease-out both; }
 .tour-button { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-weight: 500; transition: transform .15s ease; }
 .brand-app .school-portal .tour-button { border-radius: 999px; }
 .tour-portal-button { display: inline-block; padding: 2px 8px; border: 1px solid var(--portal-navy); border-radius: 3px; background: var(--portal-navy); color: var(--portal-navy-foreground); transition: transform .15s ease; }
@@ -506,6 +571,195 @@
 .tour-reveal { opacity: 0; transform: translateY(10px); transition: opacity .35s ease, transform .35s ease; }
 .tour-reveal-in { opacity: 1; transform: none; }
 .tour-dot { width: 6px; height: 6px; border-radius: 999px; background: var(--border); transition: width .2s ease, background-color .2s ease; }
-.tour-dot-on { width: 18px; background: var(--primary); }
+.tour-dot-on { width: 18px; background: linear-gradient(90deg, var(--ink-a), var(--ink-b)); }
 @keyframes tour-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes tour-ripple { from { opacity: 1; transform: scale(.3); } to { opacity: 0; transform: scale(1.5); } }
+
+/* ---------- Brand values: springs and theme colors. Everything below draws from these. ---------- */
+@property --spin { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@property --reveal { syntax: "<percentage>"; inherits: false; initial-value: 116%; }
+:root {
+  --settle: cubic-bezier(.22, .8, .2, 1);
+  --pop: cubic-bezier(.3, 1.2, .5, 1);
+  --aura-a: #BFE9E2; --aura-b: #BFDDF7; --aura-c: #E7E3FB;
+  --ink-a: #4FC6B6; --ink-b: #56A8F0; --ink-c: #A393F2;
+  --aura-page: #E9EEF2;
+  --aura-strength: .6;
+  --top: 0px;
+}
+:root[data-theme="dawn"] { --aura-a: #FFD9A8; --aura-b: #FFB9A0; --aura-c: #FFE9A8; --ink-a: #FFA94D; --ink-b: #FF7F6B; --ink-c: #FFC94D; --aura-page: #F8EFE6; --canvas: #FBF7F1; --aura-strength: .9; --aqua-gradient: linear-gradient(100deg, #FFE3B5, #FFC9B5); --aqua-ring-start: #FFC48A; --aqua-ring-end: #FF9E86; }
+:root[data-theme="orchid"] { --aura-a: #E6C6F7; --aura-b: #F7B6D2; --aura-c: #B9BFF7; --ink-a: #BE8AF0; --ink-b: #F27DAF; --ink-c: #7C87F2; --aura-page: #F1ECF6; --canvas: #F8F5FB; --aura-strength: .72; --aqua-gradient: linear-gradient(100deg, #EBD3FA, #F9CFE1); --aqua-ring-start: #D3A8F4; --aqua-ring-end: #F39CC2; }
+:root[data-theme="lagoon"] { --aura-a: #9FE0DA; --aura-b: #8FC4F2; --aura-c: #BFD0FF; --ink-a: #2FBFB3; --ink-b: #3B94E6; --ink-c: #7E97FF; --aura-page: #E8F2F5; --canvas: #F1F8F9; --aura-strength: .9; --aqua-gradient: linear-gradient(100deg, #A9E6DF, #A4D1F6); --aqua-ring-start: #63D0C5; --aqua-ring-end: #62ACEC; }
+:root[data-theme="meadow"] { --aura-a: #CDEBA6; --aura-b: #A4E3C4; --aura-c: #F1EDA8; --ink-a: #96CC5A; --ink-b: #4FC98F; --ink-c: #D9C93F; --aura-page: #EFF3E6; --canvas: #F6F9F0; --aura-strength: .9; --aqua-gradient: linear-gradient(100deg, #D9F0B9, #B9EAD2); --aqua-ring-start: #B3DF7E; --aqua-ring-end: #76D7A8; }
+
+/* The color field stays in the frame. The working panel stays crisp and white. */
+.app-shell { background: var(--aura-page); }
+.shell-aura { position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: var(--aura-strength); background: linear-gradient(in oklab 172deg, var(--aura-a) 0%, var(--aura-b) 52%, var(--aura-c) 100%); }
+
+/* The glass header floats, so page art runs up behind it and content scrolls beneath it. */
+.glass-bar { display: inline-flex; align-items: center; gap: .75rem; }
+@media (min-width: 768px) {
+  :root { --top: 61px; }
+  .app-header { position: absolute; top: 0; right: 0; left: 0; z-index: 20; padding: 10px 12px; border: 0; background: none; pointer-events: none; view-transition-name: app-header; }
+  .glass-bar { position: relative; min-height: 42px; padding: 0 16px; border-radius: 9999px; pointer-events: auto; background: linear-gradient(180deg, rgb(255 255 255 / .74), rgb(255 255 255 / .58)); }
+  .glass-bar:has(> button:only-child) { padding: 0 4px; }
+  ::view-transition-group(app-header) { z-index: 10; animation: none; }
+}
+@media (max-width: 767px) { .glass-bar { gap: .4rem; } .glass-bar .reset-spin { padding-inline: 4px; } .glass-bar.glass { background: none; box-shadow: none; backdrop-filter: none !important; } .glass-bar.glass::before { display: none; } }
+/* Phone bottom tabs keep a solid glass surface so they read over page content. */
+.bottom-tabs .glass-bar.glass { display: grid; position: relative; border-radius: 9999px; background: linear-gradient(180deg, rgb(255 255 255 / .86), rgb(255 255 255 / .72)); box-shadow: 0 8px 28px -10px rgb(20 30 60 / .3), inset 0 0 0 1px rgb(255 255 255 / .7); backdrop-filter: blur(14px) saturate(1.6) !important; }
+.dark .bottom-tabs .glass-bar.glass { background: linear-gradient(180deg, rgb(40 44 60 / .86), rgb(30 33 46 / .78)); box-shadow: 0 8px 28px -10px rgb(0 0 0 / .6), inset 0 0 0 1px rgb(255 255 255 / .1); }
+.app-page { padding-top: calc(2rem + var(--top)); }
+.season-banner { height: calc(clamp(170px, 21vw, 290px) + var(--top)); margin-top: calc(-2rem - var(--top)); }
+.register-scene { margin-top: calc(-2rem - var(--top)); padding-top: calc(clamp(2rem, 7vh, 5rem) + var(--top)); }
+@media (min-width: 768px) { .register-scene { min-height: calc(100vh - 64px); } }
+.home-cover-art { height: calc(190px + var(--top)); margin-top: calc(-2rem - var(--top)); }
+@media (min-width: 1200px) {
+  .brand-app .home-cover { margin-top: calc(-2rem - var(--top)); padding-top: calc(2rem + var(--top)); }
+  .home-cover-art { height: 100%; margin: 0; }
+}
+@media (min-width: 1440px) { .brand-app .home-cover { height: calc((100vw - 320px) * .335 + 170px + var(--top)); } }
+/* Below full-bleed width the cover's own canvas must reach the panel edges, or the painting's white sky shows as a box. */
+@media (max-width: 1199px) {
+  .brand-app .home-cover { margin: calc(-2rem - var(--top)) -1.5rem 0; padding: 0 1.5rem; }
+  .home-cover-art { margin: 0 -1.5rem; }
+}
+@media (min-width: 768px) and (max-width: 1199px) {
+  .brand-app .home-cover { margin-inline: -2.5rem; padding-inline: 2.5rem; }
+  .home-cover-art { margin-inline: -2.5rem; }
+}
+.brand-app header nav { scrollbar-width: none; }
+
+/* The sliding pill sits under its label at rest, so text stays sharp, and passes over labels only while it moves. */
+[data-pill-ready] > :is(a, button) { position: relative; z-index: 1; }
+.sliding-pill.liquid[data-gliding] { z-index: 3; }
+.sliding-pill.liquid {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--aura-a) 34%, transparent), color-mix(in oklab, var(--aura-b) 30%, transparent));
+  backdrop-filter: blur(.5px) saturate(1.5);
+  -webkit-backdrop-filter: blur(.5px) saturate(1.5);
+  box-shadow: inset 0 0 0 .5px rgb(255 255 255 / .9), inset 0 1.5px 1px rgb(255 255 255 / .85), inset 0 -1px 2px rgb(30 70 90 / .08), 0 1px 2px rgb(30 70 90 / .1), 0 7px 16px -7px rgb(30 70 90 / .26);
+  transition: transform .38s var(--ease-glide), width .38s var(--ease-glide), height .38s var(--ease-glide), opacity .2s ease;
+}
+.has-pill[data-pill-ready] > [aria-pressed="true"], .week-strip[data-pill-ready] > [aria-pressed="true"]:not(.week-pileup), [data-pill-ready] > [role="tab"][data-state="active"] { background: transparent; box-shadow: none; color: var(--foreground); }
+
+/* Small replies to a click. */
+.brand-app button:not(.school-portal *) { transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease, opacity 220ms ease, transform 260ms var(--settle), box-shadow 320ms var(--ease-out-soft); }
+[role="switch"] > span { transition: transform .3s var(--settle), width .2s ease, margin .2s ease; }
+[role="switch"]:active > span { width: 24px; }
+[role="switch"][data-state="checked"]:active > span { margin-left: -4px; }
+.save-btn[aria-pressed="true"] svg, .check-pop { animation: pa-pop .55s var(--pop) backwards; }
+@keyframes pa-pop { from { transform: scale(.35); opacity: 0; } }
+.reset-spin svg { transition: transform .7s var(--settle); }
+.reset-spin:hover svg { transform: rotate(-180deg); }
+.step-in { animation: pa-rise .42s var(--ease-out-soft) backwards; }
+
+/* Glass toasts and the round close button. */
+[data-sonner-toast][data-styled="true"] { background: rgb(255 255 255 / .66) !important; border-color: rgb(255 255 255 / .85) !important; border-radius: 22px !important; box-shadow: 0 16px 40px -14px rgb(30 70 90 / .3), inset 0 1px 1px rgb(255 255 255 / .9) !important; backdrop-filter: blur(14px) saturate(1.7); -webkit-backdrop-filter: blur(14px) saturate(1.7); }
+.dialog-close { z-index: 5; display: grid; place-items: center; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 9999px !important; opacity: 1; background: rgb(255 255 255 / .62); backdrop-filter: blur(8px) saturate(1.6); -webkit-backdrop-filter: blur(8px) saturate(1.6); box-shadow: inset 0 1px 1px rgb(255 255 255 / .9), 0 4px 12px -5px rgb(30 70 90 / .4); }
+
+/* The details panel animates itself in JavaScript, so its stock zoom must stay off for good. */
+.card-details { animation: none !important; }
+html[data-vt] .app-page, html[data-vt] .app-header { view-transition-name: none; }
+html[data-vt="theme"]::view-transition-old(root) { display: block; animation: none; }
+html[data-vt="theme"]::view-transition-new(root) { animation: none; }
+
+/* The picture that arcs into a tab, and paint blooming on wet paper. */
+.flight { position: fixed; top: 0; left: 0; z-index: 9999; margin: 0; overflow: hidden; border-radius: 18px; offset-anchor: center; offset-rotate: 0deg; pointer-events: none; box-shadow: 0 16px 34px -12px rgb(30 70 90 / .45); }
+.bloom { position: fixed; z-index: 9998; pointer-events: none; mix-blend-mode: multiply; filter: url(#pa-watercolor); animation: pa-bloom 1.6s var(--ease-out-soft) both; }
+.bloom i { position: absolute; border-radius: 50%; }
+.bloom i:nth-child(1) { inset: 16%; background: radial-gradient(circle, var(--ink-a), transparent 70%); }
+.bloom i:nth-child(2) { left: 0; top: 24%; width: 56%; height: 56%; background: radial-gradient(circle, var(--ink-b), transparent 70%); }
+.bloom i:nth-child(3) { right: 0; top: 10%; width: 50%; height: 50%; background: radial-gradient(circle, var(--ink-c), transparent 70%); }
+@keyframes pa-bloom { 0% { transform: scale(.25); opacity: 0; } 16% { opacity: .85; } 58% { opacity: .62; } 100% { transform: scale(1.14); opacity: 0; } }
+
+/* The agent working: replaces every spinner in Path Agent's own interface. */
+.ink { position: relative; display: inline-block; border-radius: 46% 54% 58% 42% / 48% 44% 56% 52%; background: conic-gradient(from 20deg, var(--ink-a), var(--ink-b), var(--ink-c), var(--ink-a)); animation: pa-ink-turn 2.4s linear infinite, pa-ink-shape 3.2s ease-in-out infinite alternate; }
+.ink::after { content: ""; position: absolute; inset: 16% 34% 48% 16%; border-radius: 50%; background: rgb(255 255 255 / .72); filter: blur(1px); }
+@keyframes pa-ink-turn { to { rotate: 360deg; } }
+@keyframes pa-ink-shape { to { border-radius: 58% 42% 44% 56% / 42% 58% 44% 56%; scale: 1.08; } }
+.scan-orb { position: relative; display: inline-grid; width: 76px; height: 76px; place-items: center; }
+.scan-orb .ink { position: absolute; inset: 0; opacity: .75; filter: blur(3px); }
+.scan-orb .ink::after { display: none; }
+.scan-orb > :not(.ink) { position: relative; }
+.wash { background: linear-gradient(110deg, var(--secondary) 30%, color-mix(in oklab, var(--aura-b) 45%, white) 50%, var(--secondary) 70%) 0 0 / 220% 100%; animation: pa-wash 1.7s linear infinite; }
+@keyframes pa-wash { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+
+/* The recovery moment. */
+.nudge { animation: pa-rise .4s var(--ease-out-soft) backwards, pa-nudge .5s ease-in-out .28s; }
+@keyframes pa-nudge { 20% { transform: translateX(-4px); } 45% { transform: translateX(3.5px); } 70% { transform: translateX(-2px); } }
+.deal > * { animation: pa-deal .42s var(--settle) backwards; }
+.deal > *:nth-child(2) { animation-delay: 50ms; }
+.deal > *:nth-child(3) { animation-delay: 100ms; }
+.deal > *:nth-child(n+4) { animation-delay: 150ms; }
+@keyframes pa-deal { from { opacity: 0; transform: translate3d(0, 10px, 0); } }
+.best-option { border: 1.5px solid transparent; background: linear-gradient(var(--card), var(--card)) padding-box, conic-gradient(from var(--spin), var(--ink-a), var(--ink-b), var(--ink-c), var(--ink-a)) border-box; animation: pa-spin 7s linear infinite; }
+@keyframes pa-spin { to { --spin: 360deg; } }
+.deal > .best-option { animation: pa-deal .42s var(--settle) backwards, pa-spin 7s linear infinite; }
+.dock-enter { animation: pa-dock .72s var(--settle) .06s backwards; }
+@keyframes pa-dock { from { opacity: 0; transform: translate3d(38px, 0, 0); } }
+.success-in { animation: pa-success .62s var(--pop) backwards; }
+@keyframes pa-success { from { opacity: 0; transform: scale(.94); } }
+
+/* First run. */
+.welcome-art { -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12%), linear-gradient(100deg, #000 calc(var(--reveal) - 16%), transparent var(--reveal)); mask-image: linear-gradient(to bottom, transparent, #000 12%), linear-gradient(100deg, #000 calc(var(--reveal) - 16%), transparent var(--reveal)); -webkit-mask-composite: source-in; mask-composite: intersect; animation: pa-reveal 2.2s var(--ease-glide) backwards; }
+@keyframes pa-reveal { from { --reveal: 0%; } to { --reveal: 116%; } }
+.welcome-card { animation: pa-card-up .95s var(--settle) .3s backwards; }
+@keyframes pa-card-up { from { opacity: 0; transform: translate3d(0, 38px, 0) scale(.97); } }
+.step-swap { animation: pa-step-in .56s var(--settle) backwards; }
+@keyframes pa-step-in { from { opacity: 0; transform: translate3d(18px, 0, 0); } }
+.path-progress { position: relative; width: 96px; height: 4px; border-radius: 999px; background: var(--secondary); }
+.path-progress::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: var(--p); border-radius: inherit; background: linear-gradient(90deg, var(--ink-a), var(--ink-b)); transition: width .7s var(--settle); }
+.path-progress span { position: absolute; top: 50%; left: var(--p); width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--card); box-shadow: 0 0 0 2px var(--ink-b), 0 2px 5px rgb(30 70 90 / .25); transition: left .7s var(--settle); }
+
+/* Theme picker. */
+.theme-orb { display: block; width: 44px; height: 44px; border-radius: 50%; box-shadow: inset 0 1px 2px rgb(255 255 255 / .8), inset 0 -3px 6px rgb(30 70 90 / .12), 0 5px 11px -5px rgb(30 70 90 / .3); transition: transform .5s var(--pop); }
+.theme-swatch:hover .theme-orb, .theme-swatch[aria-pressed="true"] .theme-orb { transform: scale(1.1); }
+
+/* What if: units per term, with the current plan as a dashed outline behind any change. */
+.plan-bar { position: relative; width: 100%; max-width: 44px; border-radius: 9px 9px 3px 3px; background: color-mix(in oklab, var(--aura-b) 60%, var(--secondary)); transition: height .4s var(--settle), background-color .25s ease; }
+.plan-bar[data-state="heavier"] { background: color-mix(in oklab, var(--aura-b) 62%, var(--foreground) 22%); }
+.plan-bar[data-state="lighter"] { background: color-mix(in oklab, var(--aura-a) 70%, var(--secondary)); }
+.plan-bar[data-state="new"] { background: var(--alert); }
+.plan-ghost { position: absolute; bottom: 0; left: 50%; width: 100%; max-width: 44px; translate: -50% 0; border: 1px dashed color-mix(in oklab, var(--foreground) 32%, transparent); border-radius: 9px 9px 3px 3px; transition: height .4s var(--settle); }
+.plan-tick { flex: 1; max-width: 8px; border-radius: 2px; background: color-mix(in oklab, var(--foreground) 16%, transparent); transition: height .3s var(--settle), background-color .2s ease; }
+.plan-tick[data-peak] { background: var(--alert); }
+.plan-ribbon { scrollbar-width: none; }
+.what-if-ask:focus-within { border-color: color-mix(in oklab, var(--foreground) 35%, transparent); }
+@media (prefers-reduced-motion: reduce) { .plan-bar, .plan-ghost, .plan-tick { transition: none; } }
+
+/* Event account marks: a letter on a soft tint, never the service's own logo or colors. */
+
+
+/* ---------- Controls: one glass family for buttons, pills, toggles and callouts ----------
+   glass-cta     the main action on a screen, tinted by the chosen theme
+   glass-control secondary actions: clear glass with a rim
+   glass-active  the selected item in any pill group, the same glass as the nav pill
+   glass-on      a switch or checkbox that is on */
+:root { --ring: color-mix(in oklab, var(--ink-b) 70%, var(--foreground)); }
+@utility glass-cta {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--aqua-ring-start) 72%, white), color-mix(in oklab, var(--aqua-ring-end) 72%, white));
+  color: var(--foreground);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 .5px rgb(255 255 255 / .9), inset 0 1.5px 1px rgb(255 255 255 / .85), inset 0 -1px 2px rgb(30 70 90 / .1), 0 1px 2px rgb(30 70 90 / .1), 0 8px 18px -9px color-mix(in oklab, var(--ink-b) 60%, transparent);
+  &:hover { background: linear-gradient(135deg, color-mix(in oklab, var(--aqua-ring-start) 88%, white), color-mix(in oklab, var(--aqua-ring-end) 88%, white)); }
+}
+@utility glass-control {
+  background: rgb(255 255 255 / .64);
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px rgb(30 70 90 / .1), inset 0 1px 1px rgb(255 255 255 / .95), 0 1px 2px rgb(30 70 90 / .06), 0 6px 14px -9px rgb(30 70 90 / .22);
+  &:hover { background: rgb(255 255 255 / .92); }
+}
+@utility glass-active {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--aura-a) 55%, white), color-mix(in oklab, var(--aura-b) 50%, white));
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 .5px rgb(255 255 255 / .9), inset 0 1.5px 1px rgb(255 255 255 / .85), inset 0 -1px 2px rgb(30 70 90 / .08), 0 1px 2px rgb(30 70 90 / .1), 0 6px 14px -7px rgb(30 70 90 / .22);
+}
+@utility glass-on {
+  background: linear-gradient(135deg, var(--ink-a), var(--ink-b));
+  color: white;
+  box-shadow: inset 0 1px 1px rgb(255 255 255 / .45), inset 0 -1px 2px rgb(30 70 90 / .15);
+}
+/* Callouts get the same bright rim, so they read as glass rather than flat paint. */
+.brand-app :is(.bg-warning-soft, .bg-success-soft):not(.school-portal *) { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .7), inset 0 1px 1px rgb(255 255 255 / .9); }
+/* A heavy week is flagged with a rose glass and red text, not a solid block. */
+.week-pileup { background: linear-gradient(135deg, color-mix(in oklab, var(--alert) 14%, white), color-mix(in oklab, var(--alert) 8%, white)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--alert) 22%, transparent), inset 0 1px 1px rgb(255 255 255 / .9); }

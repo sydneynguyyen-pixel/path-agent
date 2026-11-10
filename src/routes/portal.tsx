@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { Check, GraduationCap, Eye, Lock, ArrowLeft, ArrowRight, RotateCw, Loader2, X, Play, CalendarDays, ListChecks, Sparkles, Timer, CheckCircle2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, GraduationCap, Eye, Lock, ArrowLeft, ArrowRight, RotateCw, Loader2, X, Play, CalendarDays, ListChecks, Sparkles, Timer, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AgentPanel } from "@/components/app/AgentPanel";
 import { useJourney } from "@/lib/journey";
@@ -8,15 +8,18 @@ import { options } from "@/data/scenario";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { BrandLogo, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
-import { PathLoader, Spot } from "@/components/app/Illustrations";
+import { PathLoader } from "@/components/app/Illustrations";
+import { Ink } from "@/components/app/Ink";
+import sceneRegistration from "@/assets/scene-registration.jpg";
 
 export const Route = createFileRoute("/portal")({
+  validateSearch: (s: Record<string, unknown>): { start?: true } => (s["start"] ? { start: true } : {}),
   head: () => ({
     meta: [
-      { title: "Registration (simulated Bayview portal) — Academic Path Agent" },
+      { title: "Registration — Path Agent" },
       { name: "description", content: "A simulated Bayview class search and schedule with the path agent guiding alongside." },
-      { property: "og:title", content: "Registration — Academic Path Agent" },
-      { property: "og:description", content: "Search, pick a section, check your week and register — with the agent pointing the way." },
+      { property: "og:title", content: "Registration — Path Agent" },
+      { property: "og:description", content: "Search, pick a section, check your week and register — with Path Agent pointing the way." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -62,10 +65,30 @@ const conflictWith = (s: Section, list: Section[]) => list.find((r) => r !== s &
 type Phase = "idle" | "connecting" | "watching";
 type CartItem = { crn: string; status: "pending" | "error" | "registered" };
 
+// The full section the demo walks through, before anything has gone wrong.
+const FULL_CRN = "40112";
+
+/** Below this width the agent dock sits under the portal, so moving between them needs a scroll. */
+function reveal(el: HTMLElement | null) {
+  if (!el || window.matchMedia("(min-width: 96rem)").matches) return;
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" });
+}
+
+/** Reset demo changes startedAt, which clears the local cart and timers along with the journey. */
 function Portal() {
+  const { startedAt } = useJourney();
+  return <PortalPage key={startedAt} />;
+}
+
+function PortalPage() {
   const j = useJourney();
+  const { start } = Route.useSearch();
+  const canWatch = !j.paused && j.access.registration;
+  const portalRef = useRef<HTMLDivElement>(null);
+  const dockRef = useRef<HTMLElement>(null);
   const chosen = options.find((o) => o.id === j.chosenId);
-  const [phase, setPhase] = useState<Phase>(j.stage !== "idle" ? "watching" : "idle");
+  const [phase, setPhase] = useState<Phase>(j.stage !== "idle" ? "watching" : start && canWatch ? "connecting" : "idle");
   const [subj, setSubj] = useState("STAT");
   const [num, setNum] = useState("2");
   const [query, setQuery] = useState({ subj: "STAT", num: "2" });
@@ -77,8 +100,16 @@ function Portal() {
   const [errorAt, setErrorAt] = useState<number | null>(null);
   const [doneAt, setDoneAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
-  const watching = phase === "watching" && !j.paused && j.access.registration;
+  const watching = phase === "watching" && canWatch;
   const guiding = watching && j.guide && !!chosen && !j.seatHeld;
+
+  // The sidebar says "Watching" only for as long as this is true.
+  const { setWatchingRegistration } = j;
+  useEffect(() => {
+    setWatchingRegistration(watching);
+    return () => setWatchingRegistration(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the setter only wraps a stable state update
+  }, [watching]);
 
   const target = useMemo(() => {
     if (!chosen) return undefined;
@@ -103,12 +134,17 @@ function Portal() {
     return () => ts.forEach(clearTimeout);
   }, [guiding, target]);
   useEffect(() => { if (!j.guide) typedFor.current = null; }, [j.guide]);
+  useEffect(() => { if (guiding) reveal(portalRef.current); }, [guiding]);
 
   const results = catalog.filter((c) => c.subj === query.subj.toUpperCase() && c.num === query.num);
   const regSections = registered.concat(cart.filter((c) => c.status === "registered").map((c) => catalog.find((x) => x.crn === c.crn)!));
   const cartSections = cart.filter((c) => c.status !== "registered").map((c) => ({ ...c, s: catalog.find((x) => x.crn === c.crn)! }));
   const preview = guiding && target && !cart.some((c) => c.crn === target.crn) ? target : undefined;
   const pendingTarget = guiding && target && cart.some((c) => c.crn === target.crn && c.status === "pending");
+
+  const cue = watching && j.stage === "idle" && !errorAt && !submitting;
+  const addCue = cue && !cart.some((c) => c.crn === FULL_CRN);
+  const submitCue = cue && cart.some((c) => c.crn === FULL_CRN && c.status === "pending");
 
   const add = (crn: string) => setCart((c) => (c.some((x) => x.crn === crn) ? c : [...c, { crn, status: "pending" }]));
 
@@ -133,7 +169,7 @@ function Portal() {
           setErrorAt(Date.now());
           if (watching) {
             setDetecting(true);
-            setTimeout(() => { setDetecting(false); setDockOpen(true); j.failAdd(false); }, 1800);
+            setTimeout(() => { setDetecting(false); setDockOpen(true); j.failAdd(false); reveal(dockRef.current); }, 1800);
           }
         }
       }, 0);
@@ -142,42 +178,47 @@ function Portal() {
 
   if (phase === "idle") {
     return (
-      <div className="mx-auto max-w-lg rounded-2xl border bg-card p-8 text-center shadow-soft">
-        <Spot name="signpost" className="mx-auto w-32" />
-        <h1 className="mt-4 font-serif text-2xl">Register with Path Agent</h1>
+      <div className="register-scene">
+      <img src={sceneRegistration} alt="" className="register-art" width={1376} height={768} />
+      <div className="w-full max-w-lg rounded-2xl border bg-card p-8 text-center shadow-frame">
+        <h1 className="font-serif text-2xl">Register with Path Agent</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Open Bayview's class search. Path Agent watches quietly while you shop and check out, and only steps in if something goes wrong.
+          Search classes and check out as usual. If something goes wrong, I'll help.
         </p>
         <ul className="mx-auto mt-4 w-fit space-y-1.5 text-left text-xs text-muted-foreground">
           <li className="flex items-center gap-1.5"><Check className="size-3.5 shrink-0 text-mark-yes" /> Reads the page, your schedule and any errors</li>
           <li className="flex items-center gap-1.5"><Check className="size-3.5 shrink-0 text-mark-yes" /> Finds backups and points to the right section</li>
-          <li className="flex items-center gap-1.5"><X className="size-3.5 shrink-0 text-mark-no" /> Never clicks Add or Submit for you</li>
+          <li className="flex items-center gap-1.5"><X className="size-3.5 shrink-0 text-mark-no" /> You click Add and Submit yourself</li>
         </ul>
         <Button className="mt-6" onClick={() => setPhase("connecting")} disabled={j.paused || !j.access.registration}>
           <Play className="size-4" /> Open class search
         </Button>
-        {(j.paused || !j.access.registration) && <p className="mt-2 text-xs text-muted-foreground">The agent is paused or not allowed to read registration. Change this in Agent controls.</p>}
+        {(j.paused || !j.access.registration) && <p className="mt-2 text-xs text-muted-foreground">Turn on registration access in Controls.</p>}
+      </div>
       </div>
     );
   }
   if (phase === "connecting") {
     return (
-      <div className="mx-auto flex max-w-lg flex-col items-center rounded-2xl border bg-card p-10 text-center shadow-soft">
+      <div className="register-scene">
+      <img src={sceneRegistration} alt="" className="register-art" width={1376} height={768} />
+      <div className="flex w-full max-w-lg flex-col items-center rounded-2xl border bg-card p-10 text-center shadow-frame">
         <PathLoader />
         <p className="mt-4 font-medium">Opening Bayview Student Self-Service…</p>
-        <p className="mt-1 text-sm text-muted-foreground">Path Agent is attaching to the page (read-only).</p>
+        <p className="mt-1 text-sm text-muted-foreground">Connecting Path Agent…</p>
+      </div>
       </div>
     );
   }
 
   const showDock = watching && (detecting || dockOpen);
-  const elapsed = errorAt ? Math.round(((doneAt ?? now) - errorAt) / 1000) : null;
+  const elapsed = errorAt ? Math.max(0, Math.round(((doneAt ?? now) - errorAt) / 1000)) : null;
 
   return (
-    <div className={cn("grid gap-4", showDock && "xl:grid-cols-[minmax(0,1fr)_380px]")}>
-      <div className="min-w-0">
+    <div className={cn("grid gap-4", showDock && "2xl:grid-cols-[minmax(0,1fr)_400px]")}>
+      <div ref={portalRef} className="min-w-0 scroll-mt-4">
         {elapsed !== null && (
-          <div className={cn("mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs", doneAt ? "bg-success-soft text-success" : "bg-secondary text-muted-foreground")}>
+          <div key={doneAt ? "done" : "live"} className={cn("swap-enter mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs tabular-nums", doneAt ? "bg-success-soft text-success" : "bg-secondary text-muted-foreground")}>
             <Timer className="size-3.5" /> {doneAt ? `Seat secured ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")} after the error` : `Since the error: ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")} — seats go fast`}
           </div>
         )}
@@ -189,7 +230,7 @@ function Portal() {
               <Lock className="size-3 shrink-0" /> ssb.bayview.example.edu/StudentRegistrationSsb/ssb/classRegistration
             </div>
             <span className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]", watching ? "aqua-chip" : "bg-card text-muted-foreground")}>
-              <Eye className="size-3" /> {watching ? "Path Agent watching" : "Agent not watching"}
+              <Eye className="size-3" /> {watching ? "Path Agent watching" : "Path Agent not watching"}
             </span>
           </div>
 
@@ -225,6 +266,7 @@ function Portal() {
                 {typing && <span className="flex items-center gap-1 text-primary"><Sparkles className="size-3" /> Path Agent is filling in the search…</span>}
               </form>
               <div className="px-3 py-1.5"><b>Search Results</b> — {results.length} Classes · Subject: {query.subj} · Course Number: {query.num}</div>
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-secondary text-left text-[11px] text-muted-foreground">
                   <tr>{["Title", "Subj", "Crs", "Sec", "CRN", "Meeting Times", "Instructor", "Method", "Status", ""].map((x) => <th key={x} className="border-b px-2 py-1.5 font-semibold">{x}</th>)}</tr>
@@ -236,6 +278,7 @@ function Portal() {
                     const conf = conflictWith(r, regSections);
                     const inCart = cart.some((c) => c.crn === r.crn);
                     const isTarget = guiding && target?.crn === r.crn;
+                    const cued = addCue && r.crn === FULL_CRN;
                     return (
                       <Fragment key={r.crn}>
                         <tr className={cn("border-b", isTarget && "bg-primary/5 outline outline-2 -outline-offset-2 outline-primary")}>
@@ -248,17 +291,26 @@ function Portal() {
                           <td className="px-2 py-1.5">{r.instructor}</td>
                           <td className="px-2 py-1.5">{r.mode}</td>
                           <td className="px-2 py-1.5">{full ? <b className="text-warning">FULL · WL {r.wl}</b> : <span><b>{seats(r)}</b> of {r.cap} seats remain</span>}</td>
-                          <td className="px-2 py-1.5 text-right">
-                            <button disabled={inCart} onClick={() => add(r.crn)} className={cn("rounded border px-3 py-0.5", isTarget ? "border-primary bg-primary text-primary-foreground" : "bg-card", inCart && "opacity-50")}>{inCart ? "Added" : "Add"}</button>
+                          <td className="sticky right-0 bg-card px-2 py-1.5 text-right">
+                            <button disabled={inCart} onClick={() => add(r.crn)} className={cn("rounded border px-3 py-0.5", isTarget || cued ? "border-primary bg-primary text-primary-foreground" : "bg-card", inCart && "opacity-50")}>{inCart ? "Added" : "Add"}</button>
                           </td>
                         </tr>
+                        {cued && (
+                          <tr className="border-b">
+                            <td colSpan={10} className="px-2 pb-1.5 pt-0 text-[11px] sm:text-right">
+                              <span className="sticky left-2 inline-flex items-center gap-1 rounded bg-primary px-2 py-0.5 font-[system-ui] font-medium text-primary-foreground">
+                                <ArrowUp className="size-3" /> Try it: this section is full. Click Add.
+                              </span>
+                            </td>
+                          </tr>
+                        )}
                         {guiding && (
                           <tr className="border-b">
                             <td colSpan={10} className="px-2 pb-1.5 pt-0 text-[11px]">
                               <span className="inline-flex items-center gap-1 rounded bg-card px-1.5 py-0.5 font-[system-ui] shadow-soft">
                                 <GraduationCap className="size-3 text-primary" />
                                 {isTarget ? <b className="text-primary">Path Agent: pick this one — open seats, fits your week, counts toward QR-1.</b>
-                                  : full ? "Full — skip." : conf ? `Clashes with your ${conf.subj} ${conf.num} (${conf.days.join("")} ${fmt(conf.start)}).` : "Works, but not the section I checked against your deadlines."}
+                                  : full ? "Full — skip." : conf ? `Clashes with your ${conf.subj} ${conf.num} (${conf.days.join("")} ${fmt(conf.start)}).` : "Open, but not the section I recommended."}
                               </span>
                             </td>
                           </tr>
@@ -268,6 +320,7 @@ function Portal() {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {/* Schedule + Summary */}
@@ -301,14 +354,16 @@ function Portal() {
                     <b>Registration Add Errors:</b> STAT 2 01 (CRN 40112) — Closed Section. Waitlist available (6/10).
                   </div>
                 )}
+                {detecting && <div className="mx-2 mb-2 flex items-center gap-1 font-[system-ui] text-[11px] text-primary"><Ink className="size-3" /> Path Agent: checking what else counts…</div>}
                 {pendingTarget && <div className="mx-2 mb-2 flex items-center gap-1 font-[system-ui] text-[11px] text-primary"><GraduationCap className="size-3" /> Path Agent: looks good — no time conflicts. Click Submit when you're ready.</div>}
-                <div className="mt-auto flex items-center justify-end gap-3 border-t px-2 py-2">
+                <div className="relative mt-auto flex items-center justify-end gap-3 border-t px-2 py-2">
+                  {submitCue && <span className="absolute bottom-full right-2 mb-1 inline-flex items-center gap-1 rounded bg-primary px-2 py-0.5 font-[system-ui] text-[11px] font-medium text-primary-foreground"><ArrowDown className="size-3" /> Now click Submit.</span>}
                   <span className="text-muted-foreground">Total hours: {regSections.length * 4}</span>
                   <label className="flex items-center gap-1"><input type="checkbox" defaultChecked readOnly /> Conditional Add and Drop</label>
                   <button
                     disabled={!cart.some((c) => c.status === "pending") || submitting}
                     onClick={submit}
-                    className={cn("inline-flex items-center gap-1 rounded border border-portal-navy bg-portal-navy px-3 py-1 text-portal-navy-foreground disabled:opacity-50", pendingTarget && "ring-2 ring-primary ring-offset-1")}
+                    className={cn("inline-flex items-center gap-1 rounded border border-portal-navy bg-portal-navy px-3 py-1 text-portal-navy-foreground disabled:opacity-50", (pendingTarget || submitCue) && "ring-2 ring-primary ring-offset-1")}
                   >
                     {submitting && <Loader2 className="size-3 animate-spin" />} Submit
                   </button>
@@ -317,15 +372,15 @@ function Portal() {
             </div>
           </div>
         </div>
-        {errorAt && !watching && <p className="mt-3 text-sm text-muted-foreground">The agent is paused or not allowed to watch this page, so it didn't respond.</p>}
+        {errorAt && !watching && <p className="mt-3 text-sm text-muted-foreground">Path Agent is paused, so it can't help here.</p>}
         {j.stage !== "idle" && watching && !showDock && (
           <button onClick={() => setDockOpen(true)} className="mt-3 inline-flex items-center gap-2 text-sm text-primary underline"><GraduationCap className="size-4" /> Show Path Agent</button>
         )}
-        {doneAt && <p className="mt-3 flex items-center gap-1.5 text-sm text-success"><CheckCircle2 className="size-4 text-mark-yes" /> You registered yourself. The agent only searched and pointed.</p>}
+        {doneAt && <p className="mt-3 flex items-center gap-1.5 text-sm text-success"><CheckCircle2 className="size-4 text-mark-yes" /> You're registered. <Link to="/activity" className="text-primary underline">See what Path Agent did</Link></p>}
       </div>
 
       {showDock && (
-        <aside className="h-fit overflow-hidden rounded-xl border bg-card shadow-soft xl:sticky xl:top-0 xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto">
+        <aside ref={dockRef} className="dock-enter h-fit scroll-mt-4 overflow-hidden rounded-xl border bg-card shadow-soft 2xl:sticky 2xl:top-[68px] 2xl:max-h-[calc(100vh-96px)] 2xl:overflow-y-auto">
           <div className="flex items-center gap-2 border-b px-4 py-2.5 text-sm">
             <BrandLogo className="size-7" />
             <b>Path Agent</b>
@@ -333,8 +388,8 @@ function Portal() {
           </div>
           {detecting ? (
             <div className="flex flex-col items-center px-6 py-12 text-center">
-              <AgentAvatar agent="reader" /> <Loader2 className="size-5 animate-spin text-primary" />
-              <p className="mt-3 font-medium">I noticed a registration error</p>
+              <span className="scan-orb"><Ink className="size-full" /><AgentAvatar agent="reader" /></span>
+              <p className="mt-5 font-medium">I noticed a registration error</p>
               <p className="mt-1 text-sm text-muted-foreground">Reading "Closed Section" for STAT 2 and checking what else counts…</p>
             </div>
           ) : (

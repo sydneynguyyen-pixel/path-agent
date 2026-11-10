@@ -13,9 +13,9 @@ export const Route = createFileRoute("/counselor")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { title: "Counselor review — Academic Path Agent" },
+      { title: "Counselor's side — Path Agent" },
       { name: "description", content: "The counselor's side: review the student's evidence and confirm or decline in one read." },
-      { property: "og:title", content: "Counselor review — Academic Path Agent" },
+      { property: "og:title", content: "Counselor's side — Path Agent" },
       { property: "og:description", content: "Counselor-in-the-loop: one-read decisions with both source readings side by side." },
     ],
   }),
@@ -31,7 +31,7 @@ function Counselor() {
     <div>
       <PageHeader
         title="The counselor's side"
-        sub={`A preview of what ${student.counselor} sees in her school's advising tool when you ask for confirmation. You don't use this screen; it's here so you can see the whole loop.`}
+        sub={`What ${student.counselor} sees when a student asks them to confirm a course.`}
         right={<SimLabel>Preview · not Maya's view</SimLabel>}
       />
       {!sent ? (
@@ -41,7 +41,7 @@ function Counselor() {
           <Link to="/portal" className="mt-3 inline-block text-sm text-foreground underline">Start from registration</Link>
         </div>
       ) : (
-        <article className="rounded-2xl border bg-card p-6 shadow-soft">
+        <article className="surface p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground"><img src={jennaPhoto} alt="" className="size-7 rounded-full object-cover" />To {student.counselor} · From {student.name} · {fmtStamp(j.decisions.find((d) => d.what.startsWith("Approved"))!.when)}</div>
@@ -85,7 +85,7 @@ function Counselor() {
               <Button variant="outline" onClick={() => j.counselorDecide("declined")}><X className="size-4" /> Decline · advise drop</Button>
             </div>
           )}
-          <p className="mt-3 text-xs text-muted-foreground">The counselor's decision is logged with their name. Updating the official degree audit stays a counselor action in the student system.</p>
+          <p className="mt-3 text-xs text-muted-foreground">Decisions are logged with your name.</p>
         </article>
       )}
     </div>

@@ -11,10 +11,10 @@ export const Route = createFileRoute("/profile")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { title: "Profile — Academic Path Agent" },
+      { title: "Profile — Path Agent" },
       { name: "description", content: "Maya's student profile: schools, program, counselor and goals." },
-      { property: "og:title", content: "Profile — Academic Path Agent" },
-      { property: "og:description", content: "The student profile the agent plans around." },
+      { property: "og:title", content: "Profile — Path Agent" },
+      { property: "og:description", content: "The student profile Path Agent plans around." },
     ],
   }),
   component: Profile,
@@ -31,8 +31,8 @@ function Profile() {
   ];
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Profile" sub="The agent uses this to rank options. Data comes from your school records." right={<Spot name="backpack" className="hidden w-32 sm:block" />} />
-      <div className="relative flex items-center gap-4 overflow-hidden rounded-2xl border p-6 pr-20 sm:pr-6">
+      <PageHeader title="Profile" sub="From your school records." right={<Spot name="backpack" className="hidden w-32 sm:block" />} />
+      <div className="surface relative flex items-center gap-4 overflow-hidden p-6 pr-20 sm:pr-6">
         <img src={valleyHome} alt="" className="profile-card-art" />
         <img src={mayaPhoto} alt="" className="relative size-16 rounded-full object-cover" />
         <div className="relative">
@@ -43,7 +43,7 @@ function Profile() {
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         {(["bayview", "northgate"] as const).map((k) => (
-          <div key={k} className="flex items-center gap-4 rounded-2xl border p-5">
+          <div key={k} className="surface flex items-center gap-4 p-5">
             <SchoolLogo school={k} className="size-12" />
             <div>
               <div className="font-medium">{schools[k].name}</div>
@@ -54,7 +54,7 @@ function Profile() {
         ))}
       </div>
 
-      <dl className="mt-6 divide-y rounded-2xl border">
+      <dl className="surface mt-6 divide-y">
         {fields.map(([k, v]) => (
           <div key={k} className="grid grid-cols-[180px_1fr] gap-4 p-4 text-sm">
             <dt className="text-muted-foreground">{k}</dt>

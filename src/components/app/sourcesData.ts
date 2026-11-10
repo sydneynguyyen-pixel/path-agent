@@ -11,12 +11,12 @@ export type ConnectedSource = { id: AccessKey; name: string; vendor: string; wha
 
 /** Representative vendors a school might use. Connections are simulated in this prototype. */
 export const connectedSources: ConnectedSource[] = [
-  { id: "canvas", name: "Canvas", vendor: "Instructure", what: "Syllabi and assignment deadlines", logo: canvas.url, usedBy: ["Reader", "Backup finder"] },
-  { id: "sis", name: "Student system (Banner)", vendor: "Ellucian Banner", what: "Transcript, enrollment, open seats", logo: banner.url, usedBy: ["Reader", "Backup finder"] },
-  { id: "audit", name: "Degree audit (DegreeWorks)", vendor: "Ellucian DegreeWorks", what: "Northgate requirements and progress", logo: degreeworks, usedBy: ["Reader", "Planner"] },
-  { id: "articulation", name: "Articulation data (ASSIST)", vendor: "ASSIST", what: "Course-to-course transfer rules", logo: assist, usedBy: ["Planner"] },
-  { id: "handshake", name: "Career center (Handshake)", vendor: "Handshake", what: "Jobs, internships and career-center appointments", logo: handshake, usedBy: ["Reader"] },
-  { id: "email", name: "School email (drafts only)", vendor: "Google Workspace", what: "Save drafts you approve and send", logo: gmail.url, usedBy: ["Drafter"] },
+  { id: "canvas", name: "Canvas", vendor: "Instructure", what: "Syllabi and assignment deadlines", logo: canvas.url, usedBy: ["reading records", "finding open classes"] },
+  { id: "sis", name: "Student system (Banner)", vendor: "Ellucian Banner", what: "Transcript, enrollment, open seats", logo: banner.url, usedBy: ["reading records", "finding open classes"] },
+  { id: "audit", name: "Degree audit (DegreeWorks)", vendor: "Ellucian DegreeWorks", what: "Northgate requirements and progress", logo: degreeworks, usedBy: ["reading records", "checking your degree"] },
+  { id: "articulation", name: "Articulation data (ASSIST)", vendor: "ASSIST", what: "Course-to-course transfer rules", logo: assist, usedBy: ["checking your degree"] },
+  { id: "handshake", name: "Career center (Handshake)", vendor: "Handshake", what: "Jobs, internships and career-center appointments", logo: handshake, usedBy: ["reading records"] },
+  { id: "email", name: "School email (drafts only)", vendor: "Google Workspace", what: "Save drafts you approve and send", logo: gmail.url, usedBy: ["drafting emails"] },
 ];
 
 export type SchoolSignIn = { id: "bayview" | "northgate"; name: string; url: string; studentId: string; sources: AccessKey[] };

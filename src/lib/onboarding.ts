@@ -1,4 +1,4 @@
-import { DEMO_SIGNUP_CODE, type DirectoryEntry } from "@/data/scenario";
+import { DEMO_SIGNUP_CODE, type DirectoryEntry, type UploadRow } from "@/data/scenario";
 
 /** Entries matching the query, with the ones a student can actually pick listed first. */
 export function searchDirectory(entries: DirectoryEntry[], query: string) {
@@ -9,4 +9,9 @@ export function searchDirectory(entries: DirectoryEntry[], query: string) {
 
 export function isSignupCode(value: string) {
   return value.trim() === DEMO_SIGNUP_CODE;
+}
+
+/** An upload can be accepted once the student has checked every line that wasn't read clearly. */
+export function canConfirmUpload(rows: UploadRow[], checked: string[]) {
+  return rows.every((r) => !r.unclear || checked.includes(r.id));
 }

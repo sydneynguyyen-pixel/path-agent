@@ -4,7 +4,11 @@
 - [ ] Rebuild Path around the watercolor road, one attention card and current/next terms; collapse completed terms.
 - [ ] Focus registration recovery on three options, BUS 21 source conflict and ruled-out details; remove confidence percentages and ranking labels.
 - [ ] Replace Skills with Grow: concise skill review, role gaps and mixed class/club/event actions.
-- [ ] Add the three-step Before/During/After event flow with student-controlled messages and Demonstrated skill update.
+- [x] Add the three-step Before/During/After event flow with student-controlled messages and a skill update (Taught → Practiced, since one conversation isn't a demonstration).
+- [x] Meet deck (swipe or buttons, no scores), notes that stay with the person, "People" in Experiences, opt-in reminders.
+- [x] Phone bottom tab bar: Path · Grow · Agents.
+- [x] "Found N options that still count" wording and a "2 ruled out · why" line in recovery.
+- [ ] Edge cases from "Try another path": registration closed, C− in PSYC 5, no classmates opted in, seat fills while deciding, event in heaviest week, narrow-laptop bottom sheet.
 - [ ] Merge Activity and Agent controls into Agents.
 - [ ] Remove confidence percentages and Sure/Fairly sure labels everywhere.
 - [ ] Test trust rules and verify Path, Grow, event, registration and Agents flows on desktop and phone.

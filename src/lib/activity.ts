@@ -147,7 +147,7 @@ export function buildEvents(j: JourneyView): ActivityEvent[] {
     { at: c0, helper: "reader", perm: "read", text: "Read the error on the registration page", skipped: !j.agentOn.reader },
     { at: plus(c0, 1), helper: "planner", perm: "read", text: "Checked which other classes count for the statistics requirement", skipped: !j.agentOn.planner },
     { at: plus(c0, 2), helper: "backup", perm: "read", text: "Looked for open seats and section times that fit your week", skipped: !j.agentOn.backup },
-    { at: plus(c0, 3), helper: "planner", perm: "suggested", text: `Ranked ${ranked.length} options: open seats first, then best fit`, skipped: plannerOff },
+    { at: plus(c0, 3), helper: "planner", perm: "suggested", text: `Found ${ranked.length} options that still count`, skipped: plannerOff },
   ];
   // A real run replaces the script with what actually happened. Helpers that were off still show as skipped.
   const run = j.agentRun?.steps.length ? j.agentRun : null;

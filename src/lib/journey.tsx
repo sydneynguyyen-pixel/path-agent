@@ -8,6 +8,9 @@ import { recoveryPath } from "@/lib/confidence";
 import { helloDraft } from "@/lib/opportunities";
 import type { SkillReview } from "@/lib/skills";
 import { NO_CHANGE, type WhatIf } from "@/lib/whatif";
+import { symposiumEvent } from "@/data/event";
+import { people } from "@/data/people";
+import { callName, followUp, inviteDraft, type Deck, type DeckChoice, type PersonNote, type Promise_ } from "@/lib/event";
 
 export type Stage = "idle" | "failed" | "chosen";
 
@@ -39,6 +42,21 @@ export type AccessKey = "registration" | "canvas" | "sis" | "audit" | "articulat
 export type GoTogether = { showMe: boolean; shownAt: Date | null; draftTo: string | null; draft: string; draftedAt: Date | null; sentTo: string[]; sentAt: Date | null };
 const noGoTogether: GoTogether = { showMe: false, shownAt: null, draftTo: null, draft: "", draftedAt: null, sentTo: [], sentAt: null };
 
+/** Maya's plan for the symposium: before, during and after. Drafts are hers to send. */
+export type EventPlan = {
+  goal: string;
+  deck: Deck;
+  invite: { to: string | null; draft: string; sent: string[] };
+  talked: string[];
+  /** Notes belong to the person, so they show again at the next event. */
+  notes: PersonNote[];
+  promises: Promise_[];
+  /** Promises she asked to be reminded about. Off unless she turns one on. */
+  reminders: string[];
+  followUp: { to: string | null; draft: string; copied: string[] };
+};
+const noEventPlan: EventPlan = { goal: symposiumEvent.goals[0]!, deck: {}, invite: { to: null, draft: "", sent: [] }, talked: [], notes: [], promises: [], reminders: [], followUp: { to: null, draft: "", copied: [] } };
+
 type State = {
   savedOpportunities: string[];
   savedAt: Record<string, Date>;
@@ -60,9 +78,7 @@ type State = {
   interestedRoles: string[];
   dismissedRoles: string[];
   careerInterests: string[];
-  eventNote: string;
-  eventInviteSent: boolean;
-  eventFollowUpSent: boolean;
+  event: EventPlan;
   agentOn: Record<AgentId, boolean>;
   access: Record<AccessKey, boolean>;
   uploads: UploadKey[];
@@ -99,9 +115,7 @@ const initial: State = {
   interestedRoles: [],
   dismissedRoles: [],
   careerInterests: [],
-  eventNote: "",
-  eventInviteSent: false,
-  eventFollowUpSent: false,
+  event: noEventPlan,
   agentOn: { reader: true, planner: true, backup: true, drafter: true },
   access: { registration: true, canvas: true, sis: true, audit: true, articulation: true, handshake: true, email: true },
   uploads: [],
@@ -145,9 +159,19 @@ type Ctx = State & {
   toggleCareerInterest: (interest: string) => void;
   setRoleInterest: (id: string, interested: boolean) => void;
   dismissRole: (id: string, dismissed: boolean) => void;
-  setEventNote: (note: string) => void;
-  sendEventInvite: () => void;
-  sendEventFollowUp: () => void;
+  setEventGoal: (goal: string) => void;
+  answerCard: (personId: string, choice: DeckChoice | null) => void;
+  startInvite: (classmateId: string) => void;
+  setInviteDraft: (text: string) => void;
+  cancelInvite: () => void;
+  sendInvite: () => void;
+  markTalked: (personId: string, talked: boolean) => void;
+  setPersonNote: (personId: string, text: string, promise: string) => void;
+  toggleReminder: (promiseId: string) => void;
+  finishPromise: (promiseId: string, text: string, personId: string) => void;
+  startFollowUp: (personId: string) => void;
+  setFollowUpDraft: (text: string) => void;
+  copyFollowUp: () => void;
   failAdd: (openSheet?: boolean) => void;
   choose: (id: string) => void;
   backToOptions: () => void;
@@ -313,9 +337,57 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       toggleCareerInterest: (interest) => set(p => ({ ...p, careerInterests: p.careerInterests.includes(interest) ? p.careerInterests.filter(i => i !== interest) : [...p.careerInterests, interest] })),
       setRoleInterest: (id, interested) => set(p => ({ ...p, interestedRoles: interested ? [...new Set([...p.interestedRoles, id])] : p.interestedRoles.filter(i => i !== id), dismissedRoles: p.dismissedRoles.filter(i => i !== id) })),
       dismissRole: (id, dismissed) => set(p => ({ ...p, dismissedRoles: dismissed ? [...new Set([...p.dismissedRoles, id])] : p.dismissedRoles.filter(i => i !== id) })),
-      setEventNote: (eventNote) => set(p => ({ ...p, eventNote })),
-      sendEventInvite: () => set(p => ({ ...p, eventInviteSent: true, decisions: [...p.decisions, log("Sent the event invitation yourself", [], "Drafter wrote the invitation; you chose to send it.", "Demo only: no message was actually sent.")] })),
-      sendEventFollowUp: () => set(p => ({ ...p, eventFollowUpSent: true, skillReviews: { ...p.skillReviews, interviewing: { ...p.skillReviews["interviewing"], demonstrated: true, confirmed: true } }, decisions: [...p.decisions, log("Copied and sent the event follow-up yourself", [], "The draft used only your event note.", "Interviewing is now marked Demonstrated in Grow. Demo only: no message was actually sent.")] })),
+      setEventGoal: (goal) => set((p) => ({ ...p, event: { ...p.event, goal } })),
+      answerCard: (personId, choice) => set((p) => {
+        const { [personId]: _old, ...deck } = p.event.deck;
+        return { ...p, event: { ...p.event, deck: choice ? { ...deck, [personId]: choice } : deck } };
+      }),
+      startInvite: (id) => set((p) => {
+        const c = symposiumEvent.classmates.find((x) => x.id === id && x.optedIn);
+        if (!c) return p;
+        return { ...p, event: { ...p.event, invite: { ...p.event.invite, to: id, draft: p.agentOn.drafter ? inviteDraft(c.name, symposiumEvent.shortName, symposiumEvent.day, student.name) : "" } } };
+      }),
+      setInviteDraft: (draft) => set((p) => ({ ...p, event: { ...p.event, invite: { ...p.event.invite, draft } } })),
+      cancelInvite: () => set((p) => ({ ...p, event: { ...p.event, invite: { ...p.event.invite, to: null, draft: "" } } })),
+      sendInvite: () => set((p) => {
+        const c = symposiumEvent.classmates.find((x) => x.id === p.event.invite.to);
+        if (!c || !p.event.invite.draft.trim()) return p;
+        return {
+          ...p,
+          event: { ...p.event, invite: { to: null, draft: "", sent: [...p.event.invite.sent, c.id] } },
+          decisions: [...p.decisions, log(`Asked ${c.name} to go to the ${symposiumEvent.shortName} together`, [], p.agentOn.drafter ? "Drafter wrote it. You could edit anything first." : "You wrote this one yourself.", "You sent it yourself. Demo only: no message went out.")],
+        };
+      }),
+      markTalked: (id, on) => set((p) => ({ ...p, event: { ...p.event, talked: on ? [...new Set([...p.event.talked, id])] : p.event.talked.filter((x) => x !== id) } })),
+      setPersonNote: (personId, text, promise) => set((p) => {
+        const pid = `${personId}-${symposiumEvent.date}`;
+        const notes = [...p.event.notes.filter((n) => n.personId !== personId), ...(text.trim() || promise.trim() ? [{ personId, event: symposiumEvent.title, date: symposiumEvent.date, text: text.trim(), promise: promise.trim() || undefined }] : [])];
+        const promises = [...p.event.promises.filter((x) => x.id !== pid), ...(promise.trim() ? [{ id: pid, personId, text: promise.trim(), done: false }] : [])];
+        return { ...p, event: { ...p.event, notes, promises } };
+      }),
+      toggleReminder: (id) => set((p) => ({ ...p, event: { ...p.event, reminders: p.event.reminders.includes(id) ? p.event.reminders.filter((x) => x !== id) : [...p.event.reminders, id] } })),
+      finishPromise: (id, text, personId) => set((p) => ({
+        ...p,
+        event: { ...p.event, promises: [...p.event.promises.filter((x) => x.id !== id), { id, personId, text, done: true }], reminders: p.event.reminders.filter((x) => x !== id) },
+      })),
+      startFollowUp: (personId) => set((p) => {
+        const person = people.find((x) => x.id === personId)!;
+        const note = p.event.notes.find((n) => n.personId === personId)?.text;
+        const r = followUp(person, note, symposiumEvent.shortName, student.name);
+        return { ...p, event: { ...p.event, followUp: { ...p.event.followUp, to: personId, draft: r.kind === "draft" && p.agentOn.drafter ? r.text : "" } } };
+      }),
+      setFollowUpDraft: (draft) => set((p) => ({ ...p, event: { ...p.event, followUp: { ...p.event.followUp, draft } } })),
+      copyFollowUp: () => set((p) => {
+        const person = people.find((x) => x.id === p.event.followUp.to);
+        if (!person || !p.event.followUp.draft.trim()) return p;
+        const sk = symposiumEvent.skillId;
+        return {
+          ...p,
+          event: { ...p.event, followUp: { to: null, draft: "", copied: [...new Set([...p.event.followUp.copied, person.id])] } },
+          skillReviews: { ...p.skillReviews, [sk]: { ...p.skillReviews[sk], practiced: true } },
+          decisions: [...p.decisions, log(`Copied a follow-up to ${callName(person.name)} to send yourself`, [], "Drafted only from your own note.", "Interviewing basics now shows Practiced on Skills. Demo only: nothing was sent.")],
+        };
+      }),
       atRisk: (s.stage !== "idle" && !s.seatHeld) || s.counselor === "declined",
       failAdd,
       choose,

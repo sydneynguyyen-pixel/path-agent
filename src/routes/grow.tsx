@@ -23,8 +23,11 @@ import { Spot } from "@/components/app/Illustrations";
 import { CourseLink, EvidenceIndicator } from "@/components/app/SkillsBits";
 import { cn } from "@/lib/utils";
 import mayaPhoto from "@/assets/maya.jpg";
+import { symposiumEvent } from "@/data/event";
+import { people } from "@/data/people";
+import { lowerFirst, notesFor } from "@/lib/event";
 
-const TABS = ["timeline", "skills", "profile"] as const;
+const TABS = ["timeline", "skills", "people", "profile"] as const;
 type Tab = (typeof TABS)[number];
 
 export const Route = createFileRoute("/grow")({
@@ -75,10 +78,12 @@ function Grow() {
           <TabsList className="rounded-full">
             <TabsTrigger value="timeline" className="rounded-full">Timeline{waiting > 0 && <span className="ml-1.5 grid size-5 place-items-center rounded-full count-badge text-[10px]" aria-label={`${waiting} waiting for you`}>{waiting}</span>}</TabsTrigger>
             <TabsTrigger value="skills" className="rounded-full">Skills</TabsTrigger>
+            <TabsTrigger value="people" className="rounded-full">People</TabsTrigger>
             <TabsTrigger value="profile" className="rounded-full">Profile</TabsTrigger>
           </TabsList>
           <TabsContent value="timeline" className="mt-6"><Timeline found={found} /></TabsContent>
           <TabsContent value="skills" className="mt-6"><EventSkills found={found} /></TabsContent>
+          <TabsContent value="people" className="mt-6"><People /></TabsContent>
           <TabsContent value="profile" className="mt-6"><Profile found={found} /></TabsContent>
         </Tabs>
       )}
@@ -194,6 +199,37 @@ function Via({ e }: { e: Found }) {
   return <span>{e.via.map((p) => eventPlatforms[p].name).join(" and ")}</span>;
 }
 
+/** Everyone she's written a note about, with every note, newest event last. Private. */
+function People() {
+  const j = useJourney();
+  const met = people.filter((p) => notesFor(p.id, j.event.notes).length > 0);
+  return (
+    <section>
+      <p className="mb-3 text-sm text-muted-foreground">Notes you wrote after talking to someone. They come back when you'll see that person again.</p>
+      <ul className="surface divide-y">
+        {met.map((p) => {
+          const notes = notesFor(p.id, j.event.notes);
+          return (
+            <li key={p.id} className="p-4">
+              <div className="font-medium">{p.name}</div>
+              <div className="text-xs text-muted-foreground">{p.role}</div>
+              <ul className="mt-2 space-y-1.5 text-sm">
+                {notes.map((n) => (
+                  <li key={n.date}>
+                    <span className="text-xs text-muted-foreground">{n.event} · {new Date(`${n.date}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}</span>
+                    {n.text && <p>“{n.text}”</p>}
+                    {n.promise && <p className="text-muted-foreground">You said you'd {lowerFirst(n.promise)}</p>}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 function Timeline({ found }: { found: Found[] }) {
   const j = useJourney();
   const { upcoming, seasons } = timeline(found, SCRIPT_TODAY);
@@ -216,6 +252,9 @@ function Timeline({ found }: { found: Found[] }) {
                     <p className="mt-0.5 text-xs text-muted-foreground">{e.host} · {e.time} · {e.place}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">{PROOF_LINE[e.proof]} on <Via e={e} /></p>
                   </div>
+                {e.id === symposiumEvent.id && (
+                  <Button asChild size="sm" className="w-fit"><Link to="/event">Your plan for {symposiumEvent.day} <ArrowRight className="size-3.5" /></Link></Button>
+                )}
                 {e.prep && <p className="flex items-start gap-2 text-sm"><AgentAvatar agent="planner" className="size-6 shrink-0" />{e.prep}</p>}
                 {clash[e.id] && <p className="flex items-start gap-2 rounded-xl bg-warning-soft px-3 py-2 text-xs"><AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warning" />Overlaps with {clash[e.id]!.title} at {clash[e.id]!.time}. You might pick one.</p>}
                   <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1">

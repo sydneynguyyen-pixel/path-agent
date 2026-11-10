@@ -46,9 +46,35 @@ const allLinks: NavLink[] = groups.flatMap((g) => [...g.links] as NavLink[]);
 /** Pages without their own nav item light up the one they belong to. */
 const sectionFor = (path: string): string => {
   if (["/course-skills", "/skills-export"].includes(path)) return "/skills";
+  if (path === "/event") return "/grow";
   if (["/activity", "/permissions", "/decisions", "/counselor"].includes(path)) return "/agents";
   return path;
 };
+const groupOf = (navPath: string) => groups.find((g) => g.links.some((l) => l.to === navPath)) ?? groups[0];
+const tabs = [
+  { label: "Path", to: "/", icon: Home, group: "Path" },
+  { label: "Grow", to: "/grow", icon: Sprout, group: "Grow" },
+  { label: "Agents", to: "/agents", icon: Bot, group: "Path Agent" },
+] as const;
+
+/** Phone only: the three areas as a bottom tab bar, within thumb reach. */
+function BottomTabs({ navPath }: { navPath: string }) {
+  const waiting = waitingCount(useEvents());
+  const active = groupOf(navPath).label;
+  return (
+    <nav aria-label="Main" className="bottom-tabs fixed inset-x-3 bottom-3 z-40 md:hidden">
+      <GlassBar className="grid w-full grid-cols-3 gap-1 p-1.5">
+        {tabs.map((t) => (
+          <Link key={t.to} to={t.to} aria-current={active === t.group ? "page" : undefined} className={cn("relative flex flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] text-muted-foreground", active === t.group && "glass-active font-medium text-foreground")}>
+            <t.icon className="size-5" aria-hidden="true" />
+            {t.label}
+            {t.to === "/agents" && waiting > 0 && <span aria-label={`${waiting} waiting for you`} className="absolute right-[28%] top-0.5 grid size-4 place-items-center rounded-full count-badge text-[9px]">{waiting}</span>}
+          </Link>
+        ))}
+      </GlassBar>
+    </nav>
+  );
+}
 const badge = "ml-auto grid size-5 place-items-center rounded-full count-badge text-[10px]";
 
 /** A floating pill of real glass. Page content scrolls underneath and bends at its edges. */
@@ -156,16 +182,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </aside>
 
         <div className="app-panel relative z-[1] m-2 flex min-w-0 flex-1 flex-col rounded-[2rem] border bg-card md:ml-0 md:min-h-0 md:overflow-hidden">
-          <header className="app-header flex items-center gap-3 border-b px-6 py-4 text-sm">
-            <GlassBar>
-              <span className="text-muted-foreground">Maya</span>
-              <ChevronRight className="size-3.5 text-muted-foreground" />
-              <span key={current?.to} className="swap-enter inline-flex items-center gap-1.5 font-medium">
-                {current && <><current.icon className="size-4" /> {current.label}</>}
-              </span>
-            </GlassBar>
-            <nav aria-label="Main mobile" className="ml-4 flex min-w-0 gap-1 overflow-x-auto md:hidden">
-              {allLinks.map((l) => (
+          <header className="app-header flex items-center gap-2 border-b px-4 py-3 text-sm md:gap-3 md:px-6 md:py-4">
+            <div className="hidden md:block">
+              <GlassBar>
+                <span className="text-muted-foreground">Maya</span>
+                <ChevronRight className="size-3.5 text-muted-foreground" />
+                <span key={current?.to} className="swap-enter inline-flex items-center gap-1.5 font-medium">
+                  {current && <><current.icon className="size-4" /> {current.label}</>}
+                </span>
+              </GlassBar>
+            </div>
+            <nav aria-label="Section" className="-ml-2 flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] md:hidden">
+              {groupOf(navPath).links.length > 1 && groupOf(navPath).links.map((l) => (
                 <Link key={l.to} to={l.to} className="rounded-full px-2 py-1 text-xs text-muted-foreground" activeProps={{ className: "glass-active" }} activeOptions={{ exact: true, includeSearch: false }}>
                   {l.label}
                 </Link>
@@ -184,7 +212,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {/* Until hydration we can't tell a new student from a returning one, so show neither. */}
               {j.pathBuilt === null && (blankPage || path === "/") ? null : j.pathBuilt === false && blankPage ? <BlankPage {...blankPage} /> : children}
             </main>
-            <footer className="px-6 pb-6 text-xs text-muted-foreground md:px-10">
+            <footer className="px-6 pb-28 text-xs md:pb-6 text-muted-foreground md:px-10">
               Prototype with fully synthetic data. Fictional schools and student. Path Agent proposes and drafts; it never registers, enrolls, or sends.
               It does not give legal, financial-aid, or immigration advice.
             </footer>
@@ -192,6 +220,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
+      <BottomTabs navPath={navPath} />
       {!onPortal && <AgentPanel />}
       <Sheet open={!!ev} onOpenChange={(o) => !o && j.openEvidence(null)}>
         <SheetContent side="right" className="z-[60] sm:max-w-md">

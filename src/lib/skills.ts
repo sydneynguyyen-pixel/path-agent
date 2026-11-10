@@ -1,7 +1,7 @@
 import { careerRoles, ledgerSkills, type Skill, type EvidenceLevel } from "@/data/scenario";
 
-export type SkillReview = { confirmed?: boolean; hidden?: boolean; wording?: string; work?: string; demonstrated?: boolean };
-export function evidenceFor(skill: Skill, review?: SkillReview): EvidenceLevel { return review?.demonstrated || review?.work || skill.work ? "Demonstrated" : skill.level; }
+export type SkillReview = { confirmed?: boolean; hidden?: boolean; wording?: string; work?: string; demonstrated?: boolean; practiced?: boolean };
+export function evidenceFor(skill: Skill, review?: SkillReview): EvidenceLevel { return review?.demonstrated || review?.work || skill.work ? "Demonstrated" : review?.practiced && skill.level === "Taught" ? "Practiced" : skill.level; }
 export function resumeBullet(skill: Skill, review?: SkillReview) {
   const name = review?.wording || skill.name;
   const level = evidenceFor(skill, review);

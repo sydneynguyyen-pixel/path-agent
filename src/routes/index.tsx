@@ -45,7 +45,7 @@ function Attention() {
   if (j.atRisk) {
     icon = <AgentAvatar agent="backup" bare />;
     title = j.counselor === "declined" ? "Your counselor declined that course" : "Statistics needs a new plan";
-    body = j.counselor === "declined" ? `Drop ${chosen?.course} by ${DROP_DEADLINE}. MATH 13 still has open seats.` : "STAT 2 is full. I found options that still count, ranked by open seats.";
+    body = j.counselor === "declined" ? `Drop ${chosen?.course} by ${DROP_DEADLINE}. MATH 13 still has open seats.` : "STAT 2 is full. I found options that still count.";
     action = <Button onClick={() => j.setPanelOpen(true)}>See options</Button>;
   } else if (j.seatHeld && chosen && !j.counselor) {
     icon = <AgentAvatar agent="planner" bare />;

@@ -351,7 +351,7 @@ export const agents = [
     name: "Planner",
     role: "Checks what still counts",
     inputs: ["QR-1 requirement", "Articulation rules", "Confidence threshold 0.75"],
-    outputs: ["Ranked 5 options by open seats, then fit", "MATH 13 → Do this now (no email)", "PSYC 5, BUS 21 → Hold seat, confirm in parallel"],
+    outputs: ["Found 3 options that count; ruled out 2", "MATH 13 → Do this now (no email)", "PSYC 5, BUS 21 → Hold seat, confirm in parallel"],
   },
   {
     id: "backup",
@@ -686,6 +686,7 @@ export const postings: Record<string, Posting> = {
   "mhfa": { site: "Eventbrite", url: "https://www.eventbrite.com/e/mental-health-first-aid-eastshore-tickets-918204415527" },
   "civic-hack": { site: "Luma", url: "https://lu.ma/civic-hack-weekend-eastshore" },
   "harbor-info": { site: "Handshake", url: "https://app.joinhandshake.com/stu/events/1516348" },
+  "psych-symposium": { site: "Handshake", url: "https://app.joinhandshake.com/stu/events/1532907" },
   "symposium": { site: "Eventbrite", url: "https://www.eventbrite.com/e/undergraduate-research-symposium-bapc-tickets-861530927117" },
   "food-pack": { site: "Eventbrite", url: "https://www.eventbrite.com/e/saturday-pack-shift-bay-neighbors-tickets-948377102214" },
   "resume-lab": { site: "Handshake", url: "https://app.joinhandshake.com/stu/events/1590442" },
@@ -735,6 +736,7 @@ export const experiences: Experience[] = [
   { id: "resume-lab", title: "Resume Lab", host: "Bayview Career Center", kind: "Workshop", role: "Attended", date: "2026-10-01", time: "3:00 PM", place: "Bayview Student Center", photo: "photo-1434030216411-0b793f4b4173", foundOn: [{ platform: "handshake", proof: "checked-in" }], listing: "Bring a draft. Rewrite three bullets with a counselor so each one shows a result.", skills: [es("resume", "Resume writing", "Practiced", "Writing and communication")] },
   { id: "civic-data-up", title: "Civic Data Saturday", host: "Open Eastshore", kind: "Hackathon", role: "Attended", date: "2026-11-14", time: "9:30 AM", place: "Off campus", photo: "civic-data", foundOn: [{ platform: "luma", proof: "rsvp" }], listing: "Work in pairs on a city data set. Beginner tracks in R and SQL.", skills: [es("r", "Data analysis in R", "Practiced", "Tools")], prep: "Fills the R and SQL gaps for the policy analyst role you're looking at.", opportunityId: "civic-data" },
   { id: "survey-lab-up", title: "Write Better Questions: a survey workshop", host: "Bayview Career Center", kind: "Workshop", role: "Attended", date: "2026-11-14", time: "10:00 AM", place: "Bayview CC", photo: "survey-lab", foundOn: [{ platform: "handshake", proof: "rsvp" }], listing: "Rewrite a real survey so it doesn't lead people to an answer.", skills: [es("survey", "Survey design", "Practiced", "Research and data")], prep: "Survey design is one of the two gaps for UX researcher.", opportunityId: "survey-lab" },
+  { id: "psych-symposium", title: "Psych Research Symposium", host: "Northgate Psychology Department", kind: "Conference", role: "Attended", date: "2026-11-19", time: "4:00 PM", place: "Northgate State", photo: "research-circle", foundOn: [{ platform: "handshake", proof: "rsvp" }], listing: "Faculty and students present research posters. Open to incoming transfer students.", skills: [es("networking", "Talking with researchers", "Practiced", "Writing and communication")] },
   { id: "winter-fair", title: "Winter Career Fair", host: "Northgate Career Services", kind: "Career fair", role: "Attended", date: "2026-12-03", time: "11:00 AM", place: "Northgate State", photo: "photo-1562774053-701939374585", foundOn: [{ platform: "handshake", proof: "rsvp" }], listing: "Open to transfer students. 60 employers, including summer research internships.", skills: [es("networking", "Professional networking", "Practiced", "Writing and communication")], prep: "Three employers on the list hire summer UX research interns. Bring the resume from Resume Lab." },
   { id: "diary-studies", title: "UX Research Meetup: diary studies", host: "Eastshore UX Research Group", kind: "Meetup", role: "Attended", date: "2026-12-09", time: "6:30 PM", place: "Online", photo: "photo-1586936893354-362ad6ae47ba", foundOn: [{ platform: "eventbrite", proof: "ticket" }], listing: "A researcher shares a two-week diary study, then small groups plan one.", skills: [es("ux-methods", "UX research methods", "Practiced", "Research and data")] },
 ];

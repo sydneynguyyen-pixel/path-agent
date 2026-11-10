@@ -219,6 +219,16 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
                   </article>
                 );
               })}
+              {ruledOut.length > 0 && (
+                <details className="rounded-xl border border-dashed bg-card/60 px-4 py-3 text-sm">
+                  <summary className="cursor-pointer font-medium">{ruledOut.length} ruled out · why</summary>
+                  <ul className="mt-2 space-y-1.5 text-muted-foreground">
+                    {ruledOut.map((o) => (
+                      <li key={o.id}><span className="font-medium text-foreground">{o.course.replace("BCC ", "")} §{o.section}</span>: {o.reason}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
             </section>
           )}
 

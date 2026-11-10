@@ -476,7 +476,7 @@
   .brand-app header nav { order: 4; width: 100%; margin-left: 0; }
   .brand-app header nav a { flex-shrink: 0; }
   .brand-app [data-slot="tabs-list"] { max-width: 100%; }
-  .brand-app [role="tablist"] { display: flex; flex-wrap: wrap; height: auto; max-width: 100%; }
+  .brand-app [role="tablist"]:not(.segmented) { display: flex; flex-wrap: wrap; height: auto; max-width: 100%; }
   .brand-app [role="tab"] { white-space: normal; }
 }
 
@@ -606,6 +606,9 @@
   ::view-transition-group(app-header) { z-index: 10; animation: none; }
 }
 @media (max-width: 767px) { .glass-bar { gap: .4rem; } .glass-bar .reset-spin { padding-inline: 4px; } .glass-bar.glass { background: none; box-shadow: none; backdrop-filter: none !important; } .glass-bar.glass::before { display: none; } }
+/* Phone bottom tabs keep a solid glass surface so they read over page content. */
+.bottom-tabs .glass-bar.glass { display: grid; position: relative; border-radius: 9999px; background: linear-gradient(180deg, rgb(255 255 255 / .86), rgb(255 255 255 / .72)); box-shadow: 0 8px 28px -10px rgb(20 30 60 / .3), inset 0 0 0 1px rgb(255 255 255 / .7); backdrop-filter: blur(14px) saturate(1.6) !important; }
+.dark .bottom-tabs .glass-bar.glass { background: linear-gradient(180deg, rgb(40 44 60 / .86), rgb(30 33 46 / .78)); box-shadow: 0 8px 28px -10px rgb(0 0 0 / .6), inset 0 0 0 1px rgb(255 255 255 / .1); }
 .app-page { padding-top: calc(2rem + var(--top)); }
 .season-banner { height: calc(clamp(170px, 21vw, 290px) + var(--top)); margin-top: calc(-2rem - var(--top)); }
 .register-scene { margin-top: calc(-2rem - var(--top)); padding-top: calc(clamp(2rem, 7vh, 5rem) + var(--top)); }

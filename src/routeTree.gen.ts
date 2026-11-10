@@ -15,6 +15,7 @@ import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as CounselorRouteImport } from './routes/counselor'
 import { Route as CourseSkillsRouteImport } from './routes/course-skills'
 import { Route as DecisionsRouteImport } from './routes/decisions'
+import { Route as EventRouteImport } from './routes/event'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as GrowRouteImport } from './routes/grow'
 import { Route as PermissionsRouteImport } from './routes/permissions'
@@ -57,6 +58,11 @@ const CourseSkillsRoute = CourseSkillsRouteImport.update({
 const DecisionsRoute = DecisionsRouteImport.update({
   id: '/decisions',
   path: '/decisions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventRoute = EventRouteImport.update({
+  id: '/event',
+  path: '/event',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExploreRoute = ExploreRouteImport.update({
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
+  '/event': typeof EventRoute
   '/explore': typeof ExploreRoute
   '/grow': typeof GrowRoute
   '/permissions': typeof PermissionsRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
+  '/event': typeof EventRoute
   '/explore': typeof ExploreRoute
   '/grow': typeof GrowRoute
   '/permissions': typeof PermissionsRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
+  '/event': typeof EventRoute
   '/explore': typeof ExploreRoute
   '/grow': typeof GrowRoute
   '/permissions': typeof PermissionsRoute
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/counselor'
     | '/course-skills'
     | '/decisions'
+    | '/event'
     | '/explore'
     | '/grow'
     | '/permissions'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/counselor'
     | '/course-skills'
     | '/decisions'
+    | '/event'
     | '/explore'
     | '/grow'
     | '/permissions'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/counselor'
     | '/course-skills'
     | '/decisions'
+    | '/event'
     | '/explore'
     | '/grow'
     | '/permissions'
@@ -262,6 +274,7 @@ export interface RootRouteChildren {
   CounselorRoute: typeof CounselorRoute
   CourseSkillsRoute: typeof CourseSkillsRoute
   DecisionsRoute: typeof DecisionsRoute
+  EventRoute: typeof EventRoute
   ExploreRoute: typeof ExploreRoute
   GrowRoute: typeof GrowRoute
   PermissionsRoute: typeof PermissionsRoute
@@ -319,6 +332,13 @@ declare module '@tanstack/react-router' {
       path: '/decisions'
       fullPath: '/decisions'
       preLoaderRoute: typeof DecisionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/event': {
+      id: '/event'
+      path: '/event'
+      fullPath: '/event'
+      preLoaderRoute: typeof EventRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/explore': {
@@ -422,6 +442,7 @@ const rootRouteChildren: RootRouteChildren = {
   CounselorRoute: CounselorRoute,
   CourseSkillsRoute: CourseSkillsRoute,
   DecisionsRoute: DecisionsRoute,
+  EventRoute: EventRoute,
   ExploreRoute: ExploreRoute,
   GrowRoute: GrowRoute,
   PermissionsRoute: PermissionsRoute,

@@ -86,6 +86,10 @@ function Welcome() {
                 </li>
               ))}
             </ul>
+            <Button variant="outline" className="mt-6 w-full" onClick={() => { j.finishOnboarding(); j.finishBuild(); navigate({ to: "/" }); }}>
+              Try it as Maya
+            </Button>
+            <p className="mt-2 text-center text-xs text-muted-foreground">Skip setup and explore a ready-made synthetic path.</p>
           </div>
         )}
 

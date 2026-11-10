@@ -174,7 +174,7 @@ function Portal() {
   const elapsed = errorAt ? Math.round(((doneAt ?? now) - errorAt) / 1000) : null;
 
   return (
-    <div className={cn("grid gap-4", showDock && "2xl:grid-cols-[minmax(0,1fr)_400px]")}>
+    <div className={cn("grid gap-4", showDock && "xl:grid-cols-[minmax(0,1fr)_380px]")}>
       <div className="min-w-0">
         {elapsed !== null && (
           <div className={cn("mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs", doneAt ? "bg-success-soft text-success" : "bg-secondary text-muted-foreground")}>
@@ -325,7 +325,7 @@ function Portal() {
       </div>
 
       {showDock && (
-        <aside className="h-fit overflow-hidden rounded-xl border bg-card shadow-soft 2xl:sticky 2xl:top-4 2xl:max-h-[calc(100vh-2rem)] 2xl:overflow-y-auto">
+        <aside className="h-fit overflow-hidden rounded-xl border bg-card shadow-soft xl:sticky xl:top-0 xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto">
           <div className="flex items-center gap-2 border-b px-4 py-2.5 text-sm">
             <BrandLogo className="size-7" />
             <b>Path Agent</b>

@@ -1,5 +1,13 @@
 # Roadmap
-- [ ] Focus the home path on current/upcoming terms and collapse completed quarters into history.
+- [ ] Reduce navigation to Path, Grow and Agents, with account items in the avatar menu.
+- [ ] Add “Try it as Maya” to onboarding.
+- [ ] Rebuild Path around the watercolor road, one attention card and current/next terms; collapse completed terms.
+- [ ] Focus registration recovery on three options, BUS 21 source conflict and ruled-out details; remove confidence percentages and ranking labels.
+- [ ] Replace Skills with Grow: concise skill review, role gaps and mixed class/club/event actions.
+- [ ] Add the three-step Before/During/After event flow with student-controlled messages and Demonstrated skill update.
+- [ ] Merge Activity and Agent controls into Agents.
+- [ ] Remove confidence percentages and Sure/Fairly sure labels everywhere.
+- [ ] Test trust rules and verify Path, Grow, event, registration and Agents flows on desktop and phone.
 
 - [x] Add clear icons to Current term and Registering now status chips.
 - [ ] Add Skills ledger and course syllabus details with evidence, confirmation, editing and attached work.

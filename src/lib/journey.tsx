@@ -33,6 +33,9 @@ type State = {
   interestedRoles: string[];
   dismissedRoles: string[];
   careerInterests: string[];
+  eventNote: string;
+  eventInviteSent: boolean;
+  eventFollowUpSent: boolean;
   agentOn: Record<AgentId, boolean>;
   access: Record<AccessKey, boolean>;
   notify: { email: boolean; push: boolean; digest: boolean };
@@ -58,6 +61,9 @@ const initial: State = {
   interestedRoles: [],
   dismissedRoles: [],
   careerInterests: [],
+  eventNote: "",
+  eventInviteSent: false,
+  eventFollowUpSent: false,
   agentOn: { reader: true, planner: true, backup: true, drafter: true },
   access: { registration: true, canvas: true, sis: true, audit: true, articulation: true, handshake: true, email: true },
   notify: { email: true, push: false, digest: true },
@@ -83,6 +89,9 @@ type Ctx = State & {
   toggleCareerInterest: (interest: string) => void;
   setRoleInterest: (id: string, interested: boolean) => void;
   dismissRole: (id: string, dismissed: boolean) => void;
+  setEventNote: (note: string) => void;
+  sendEventInvite: () => void;
+  sendEventFollowUp: () => void;
   failAdd: (openSheet?: boolean) => void;
   choose: (id: string) => void;
   backToOptions: () => void;
@@ -172,7 +181,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       decisions: [...p.decisions, log(
         `Switched STAT 2 to ${o.course.replace("BCC ", "")} (Section ${o.section})`,
         o.sourceIds,
-        `${options.filter((x) => x.seatsOpen > 0 && x.verdict !== "does_not_count").length} options with open seats. You picked one marked “${o.conflict ? "Check with your counselor" : o.confidence >= 0.9 ? "Sure" : "Fairly sure"}”.`,
+        `${options.filter((x) => x.seatsOpen > 0 && x.verdict !== "does_not_count").length} options with open seats. ${o.conflict ? "You chose the option with conflicting sources." : o.verdict === "conditional" ? "You chose the option with a grade condition." : "You chose the option whose sources agree."}`, 
         hold ? "I drafted a counselor email for you to review. Nothing sent." : "No email needed. You register yourself on the school's site.",
       )],
     }));
@@ -187,6 +196,9 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       toggleCareerInterest: (interest) => set(p => ({ ...p, careerInterests: p.careerInterests.includes(interest) ? p.careerInterests.filter(i => i !== interest) : [...p.careerInterests, interest] })),
       setRoleInterest: (id, interested) => set(p => ({ ...p, interestedRoles: interested ? [...new Set([...p.interestedRoles, id])] : p.interestedRoles.filter(i => i !== id), dismissedRoles: p.dismissedRoles.filter(i => i !== id) })),
       dismissRole: (id, dismissed) => set(p => ({ ...p, dismissedRoles: dismissed ? [...new Set([...p.dismissedRoles, id])] : p.dismissedRoles.filter(i => i !== id) })),
+      setEventNote: (eventNote) => set(p => ({ ...p, eventNote })),
+      sendEventInvite: () => set(p => ({ ...p, eventInviteSent: true, decisions: [...p.decisions, log("Sent the event invitation yourself", [], "Drafter wrote the invitation; you chose to send it.", "Demo only: no message was actually sent.")] })),
+      sendEventFollowUp: () => set(p => ({ ...p, eventFollowUpSent: true, skillReviews: { ...p.skillReviews, interviewing: { ...p.skillReviews.interviewing, demonstrated: true, confirmed: true } }, decisions: [...p.decisions, log("Copied and sent the event follow-up yourself", [], "The draft used only your event note.", "Interviewing is now marked Demonstrated in Grow. Demo only: no message was actually sent.")] })),
       atRisk: (s.stage !== "idle" && !s.seatHeld) || s.counselor === "declined",
       failAdd,
       choose,

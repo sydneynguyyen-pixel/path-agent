@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { CourseLearningLink } from "@/components/app/SkillsBits";
 import { skillCourses } from "@/data/scenario";
 import { useSlidingPill } from "@/hooks/use-sliding-pill";
+import { Requirements } from "@/components/app/Requirements";
 
 export const Route = createFileRoute("/semester")({
   validateSearch: (search: Record<string, unknown>): { term?: string } => {
@@ -23,9 +24,9 @@ export const Route = createFileRoute("/semester")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { title: "Summer term deadlines — Academic Path Agent" },
+      { title: "Term view — Academic Path Agent" },
       { name: "description", content: "Week-by-week deadlines merged from three syllabi, with pile-ups highlighted." },
-      { property: "og:title", content: "Summer term deadlines — Academic Path Agent" },
+      { property: "og:title", content: "Term view — Academic Path Agent" },
       { property: "og:description", content: "Three syllabi merged into one calm week-by-week view." },
     ],
   }),
@@ -124,9 +125,13 @@ function Semester() {
       )}
       </div>
       {j.draftCourses.some(code => skillCourses.find(c => c.code === code)?.termId === term.id) && <section className="mt-6"><h2 className="font-semibold">Draft courses from your role plan</h2><p className="mt-1 text-xs text-muted-foreground">Saved to your plan only. You still register in your school's portal.</p><ul className="mt-3 divide-y rounded-2xl border bg-card px-5">{j.draftCourses.map(code => skillCourses.find(c => c.code === code)).filter(c => c?.termId === term.id).map(c => c && <li key={c.code} className="flex items-center gap-3 py-4"><SubjectIcon course={c.code} /><div className="min-w-0 flex-1"><span className="text-sm font-medium">{c.code} · {c.title}</span><div><CourseLearningLink course={c.code} /></div></div><span className="rounded-full bg-secondary px-3 py-1 text-xs">Draft · {c.units}</span></li>)}</ul></section>}
-      <section className="mt-12">
-        <h2 className="text-sm font-medium">Past terms</h2>
-        <div className="stagger mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="mt-10">
+        <h2 className="mb-3 text-lg font-semibold">Degree requirements</h2>
+        <Requirements />
+      </section>
+      <details className="mt-10 rounded-2xl border bg-card p-5">
+        <summary className="cursor-pointer text-sm font-medium">Completed terms · {terms.filter((t) => t.status === "done").length}</summary>
+        <div className="stagger mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {terms.filter((t) => t.status === "done").map((t) => (
             <article key={t.id} className="lift rounded-2xl border bg-card p-4">
               <div className="flex items-center gap-2"><TermIcon term={t.name} /><span className="font-medium">{t.name}</span><span className="ml-auto"><SchoolLogo school={t.school} className="size-6" /></span></div>
@@ -136,7 +141,7 @@ function Semester() {
             </article>
           ))}
         </div>
-      </section>
+      </details>
     </div>
   );
 }

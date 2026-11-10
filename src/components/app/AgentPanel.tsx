@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { options, rankOptions, student, syllabi, PILEUP_THRESHOLD, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist, type Option } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
 import { useJourney, fmtStamp } from "@/lib/journey";
-import { ConfidenceBadge, SourceChip } from "./bits";
+import { SourceChip } from "./bits";
 import { AgentAvatar, SubjectIcon } from "./Brand";
 import { Spot } from "./Illustrations";
 import { cn } from "@/lib/utils";
@@ -106,7 +106,8 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
   const scanning = j.stage === "failed" && step < 3 && !j.agentTimes["drafter"];
   const chosen = options.find((o) => o.id === j.chosenId);
   const path = chosen ? recoveryPath(chosen) : null;
-  const ranked = rankOptions(options);
+  const ranked = rankOptions(options).filter((o) => ["math13", "psyc5", "bus21"].includes(o.id));
+  const ruledOut = options.filter((o) => ["math10", "stat2-02"].includes(o.id));
   const plannerOff = !j.agentOn.reader || !j.agentOn.planner;
   const drafterOff = !j.agentOn.drafter;
 
@@ -140,13 +141,14 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
 
           {plannerOff && j.stage === "failed" && (
             <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-              The Reader or Planner is turned off in <Link to="/permissions" className="underline" onClick={() => j.setPanelOpen(false)}>Agent controls</Link>, so I won't suggest options. Turn them back on to continue.
+              The Reader or Planner is turned off in <Link to="/agents" search={{ tab: "controls" }} className="underline" onClick={() => j.setPanelOpen(false)}>Agent controls</Link>, so I won't suggest options. Turn them back on to continue.
             </div>
           )}
           {!plannerOff && !scanning && j.stage === "failed" && (
             <section className="space-y-3">
-              <h3 className="text-lg font-semibold">Options, ranked by open seats, then fit</h3>
-              {ranked.map((o, idx) => {
+              <h3 className="text-lg font-semibold">Three options with open seats</h3>
+              <div className="rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground xl:hidden">For the side-by-side portal and recovery view, open on desktop.</div>
+              {ranked.map((o) => {
                 const p = recoveryPath(o);
                 const heavy = o.deadlines.some((d) => weekLoad(d.week) >= PILEUP_THRESHOLD);
                 const actionable = o.seatsOpen > 0 && o.verdict !== "does_not_count";

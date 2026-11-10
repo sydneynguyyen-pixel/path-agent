@@ -5,7 +5,6 @@ import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/app/bits";
 import { Spot } from "@/components/app/Illustrations";
 import { useJourney } from "@/lib/journey";
-import { CONFIDENCE_THRESHOLD } from "@/lib/confidence";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -29,19 +28,20 @@ function Settings() {
       <PageHeader title="Settings" right={<Spot name="wateringcan" className="hidden w-32 sm:block" />} />
 
       <Section title="Notifications">
-        <Toggle title="Email me when a plan needs attention" on={j.notify.email} onChange={(v) => j.setNotify("email", v)} />
-        <Toggle title="Phone notifications" on={j.notify.push} onChange={(v) => j.setNotify("push", v)} />
-        <Toggle title="Weekly summary of deadlines" on={j.notify.digest} onChange={(v) => j.setNotify("digest", v)} />
+        <p className="border-b p-4 text-xs text-muted-foreground">Only Path items can alert you. Grow and events never notify.</p>
+        <Toggle title="Email me when my degree path needs attention" on={j.notify.email} onChange={(v) => j.setNotify("email", v)} />
+        <Toggle title="Phone notifications for Path" on={j.notify.push} onChange={(v) => j.setNotify("push", v)} />
+        <Toggle title="Weekly summary of degree deadlines" on={j.notify.digest} onChange={(v) => j.setNotify("digest", v)} />
       </Section>
 
       <Section title="Set by your school">
-        <Info title="Counselor review threshold" value={`Below ${Math.round(CONFIDENCE_THRESHOLD * 100)}% confidence, or when sources disagree`} />
+        <Info title="Counselor review" value="When sources disagree or a course rule needs a person to confirm" />
         <Info title="What the agent can never do" value="Register, drop, waitlist, or send without your approval" />
         <Info title="Advice it won't give" value="Legal, financial-aid, or immigration" />
       </Section>
 
       <Section title="Agent & data">
-        <Row title="Agent controls" desc="Turn agents on or off and choose what they read."><Button variant="outline" size="sm" asChild><Link to="/permissions">Open</Link></Button></Row>
+        <Row title="Agent controls" desc="Turn agents on or off and choose what they read."><Button variant="outline" size="sm" asChild><Link to="/agents" search={{ tab: "controls" }}>Open</Link></Button></Row>
         <Row title="Connected sources" desc="Canvas, student system, degree audit, articulation, career center, email."><Button variant="outline" size="sm" asChild><Link to="/sources">Open</Link></Button></Row>
         <Row title="Download my data" desc="Everything the agent read and produced."><Button variant="outline" size="sm" onClick={() => toast("Demo only: nothing was downloaded.")}>Download</Button></Row>
       </Section>

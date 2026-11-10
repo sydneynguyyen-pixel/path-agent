@@ -35,7 +35,7 @@ export type JourneyView = {
 
 const at = (secFromStart: number) => new Date(SCRIPT_START + secFromStart * 1000);
 const plus = (d: Date, s: number) => new Date(d.getTime() + s * 1000);
-const word = (o: (typeof options)[number]) => (o.conflict ? "Check with your counselor" : o.confidence >= 0.9 ? "Sure" : "Fairly sure");
+const word = (o: (typeof options)[number]) => (o.conflict ? "Sources disagree" : o.verdict === "conditional" ? "Counts with a C" : "Counts");
 const short = (c: string) => c.replace("BCC ", "");
 
 /** Builds the scripted timeline, newest first, from the shared journey state. */
@@ -64,7 +64,7 @@ export function buildEvents(j: JourneyView): ActivityEvent[] {
       inputs: ["Transcript (Bayview, synthetic)", "Degree audit (Northgate)", "Northgate course catalog", "Transfer rules between the two schools (articulation file — the official list of which classes transfer)"],
       outputs: ["14 source passages saved so every answer can point to where it came from", "Converted 5 quarter units to 3.3 semester units, using both schools' rules"],
       sourceIds: ["audit-stats", "nsu-units", "bcc-units"],
-      confidence: "Sure — every match points to a rule in your documents.",
+      confidence: "Every match points to a rule in your documents.",
     },
   });
 
@@ -114,9 +114,9 @@ export function buildEvents(j: JourneyView): ActivityEvent[] {
     change: j.chosenId ? undefined : ["Skip summer options", "Ask me before looking up classes"],
     details: {
       inputs: ["Registration page: “Closed Section”", "Statistics requirement (QR-1)", "Transfer rules", "Open seats and section times"],
-      outputs: ranked.map((o) => `${o.course} §${o.section} · ${o.seatsOpen} seats · ${word(o)} (${Math.round(o.confidence * 100)}%)`),
+      outputs: ranked.map((o) => `${o.course} §${o.section} · ${o.seatsOpen} seats · ${word(o)}`),
       sourceIds: ["portal-full", "artic-math13", "artic-psyc5", "catalog-bus21"],
-      confidence: "Options below 75% sure, or where two documents disagree, go to your counselor.",
+      confidence: "When two documents disagree or a grade condition applies, a counselor confirms the choice.",
     },
   });
 

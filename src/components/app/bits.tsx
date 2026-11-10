@@ -1,30 +1,8 @@
-import { CheckCircle2, CircleDot, AlertTriangle, Circle, ArrowRightLeft, FileText, ShieldCheck, ShieldQuestion, Shield, Hourglass } from "lucide-react";
-import { confidenceLevel } from "@/lib/confidence";
+import { CheckCircle2, CircleDot, AlertTriangle, Circle, ArrowRightLeft, FileText, Hourglass } from "lucide-react";
 import { sources, type ReqStatus } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-export function ConfidenceBadge({ score, conflict }: { score: number; conflict?: boolean }) {
-  const level = conflict ? "low" : confidenceLevel(score);
-  const Icon = level === "high" ? ShieldCheck : level === "medium" ? Shield : ShieldQuestion;
-  const label = level === "high" ? "Sure" : level === "medium" ? "Fairly sure" : "Check with your counselor";
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
-        `confidence-${level}`,
-        level === "high" && "border-success/30 bg-success-soft text-success",
-        level === "medium" && "border-info/30 bg-info-soft text-info",
-        level === "low" && "border-warning/40 bg-warning-soft text-warning",
-      )}
-      title={`How sure the assistant is: ${Math.round(score * 100)}%`}
-    >
-      <Icon className="size-3.5" aria-hidden />
-      {label}
-    </span>
-  );
-}
 
 /** Plain-language label for a source, so students never see internal names like "Row 118". */
 export function plainSource(id: string) {

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivityRouteImport } from './routes/activity'
+import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as CounselorRouteImport } from './routes/counselor'
 import { Route as CourseSkillsRouteImport } from './routes/course-skills'
 import { Route as DecisionsRouteImport } from './routes/decisions'
@@ -32,6 +33,11 @@ const IndexRoute = IndexRouteImport.update({
 const ActivityRoute = ActivityRouteImport.update({
   id: '/activity',
   path: '/activity',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentsRoute = AgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CounselorRoute = CounselorRouteImport.update({
@@ -98,6 +104,7 @@ const WelcomeRoute = WelcomeRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
+  '/agents': typeof AgentsRoute
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
+  '/agents': typeof AgentsRoute
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
+  '/agents': typeof AgentsRoute
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/activity'
+    | '/agents'
     | '/counselor'
     | '/course-skills'
     | '/decisions'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/activity'
+    | '/agents'
     | '/counselor'
     | '/course-skills'
     | '/decisions'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/activity'
+    | '/agents'
     | '/counselor'
     | '/course-skills'
     | '/decisions'
@@ -198,6 +210,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActivityRoute: typeof ActivityRoute
+  AgentsRoute: typeof AgentsRoute
   CounselorRoute: typeof CounselorRoute
   CourseSkillsRoute: typeof CourseSkillsRoute
   DecisionsRoute: typeof DecisionsRoute
@@ -226,6 +239,13 @@ declare module '@tanstack/react-router' {
       path: '/activity'
       fullPath: '/activity'
       preLoaderRoute: typeof ActivityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agents': {
+      id: '/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof AgentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/counselor': {
@@ -318,6 +338,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivityRoute: ActivityRoute,
+  AgentsRoute: AgentsRoute,
   CounselorRoute: CounselorRoute,
   CourseSkillsRoute: CourseSkillsRoute,
   DecisionsRoute: DecisionsRoute,

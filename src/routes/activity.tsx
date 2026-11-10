@@ -32,7 +32,7 @@ export const Route = createFileRoute("/activity")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: Activity,
+  component: ActivityPage,
 });
 
 export const helperInfo: Record<AgentId, { name: string; plain: string }> = {
@@ -42,28 +42,28 @@ export const helperInfo: Record<AgentId, { name: string; plain: string }> = {
   drafter: { name: "Drafter", plain: "Writes emails for you to review. Never sends on its own." },
 };
 
-function Activity() {
+function ActivityPage() {
   const { tab, helper } = Route.useSearch();
+  return <Activity tab={tab} helper={helper} />;
+}
+
+export function Activity({ embedded = false, tab, helper }: { embedded?: boolean; tab?: "timeline" | "decisions"; helper?: AgentId }) {
   return (
     <div className="w-full min-w-0">
-      <PageHeader title="Activity" sub="Here's what your assistant did for you, and what it left for you to decide." right={<Spot name="journal" className="hidden w-32 sm:block" />} />
-      <div role="tablist" className="mb-6 inline-flex rounded-full border bg-card p-1 text-sm">
+      <PageHeader title={embedded ? "Agent activity" : "Activity"} sub="Here's what your assistant did for you, and what it left for you to decide." right={<Spot name="journal" className="hidden w-32 sm:block" />} />
+      {!embedded && <div role="tablist" className="mb-6 inline-flex rounded-full border bg-card p-1 text-sm">
         {([["timeline", "Timeline"], ["decisions", "Your decisions"]] as const).map(([k, l]) => {
           const active = (tab ?? "timeline") === k;
-          return (
-            <Link key={k} role="tab" aria-selected={active} to="/activity" search={k === "decisions" ? { tab: "decisions" } : {}} className={cn("rounded-full px-4 py-1.5", active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
-              {l}
-            </Link>
-          );
+          return <Link key={k} role="tab" aria-selected={active} to="/activity" search={k === "decisions" ? { tab: "decisions" } : {}} className={cn("rounded-full px-4 py-1.5", active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>{l}</Link>;
         })}
-      </div>
-      {tab === "decisions" ? <Decisions /> : <Timeline helper={helper} />}
-      <CanCantStrip />
+      </div>}
+      {tab === "decisions" ? <Decisions /> : <Timeline helper={helper} embedded={embedded} />}
+      <CanCantStrip embedded={embedded} />
     </div>
   );
 }
 
-function Timeline({ helper }: { helper?: AgentId | undefined }) {
+function Timeline({ helper, embedded = false }: { helper?: AgentId | undefined; embedded?: boolean }) {
   const j = useJourney();
   const events = useEvents();
   const now = useScriptNow();
@@ -73,7 +73,7 @@ function Timeline({ helper }: { helper?: AgentId | undefined }) {
   const [order, setOrder] = useState<ActivityFilters["order"]>("newest");
   const shown = filterActivity(events, { query, helper, status, order });
   const filtered = Boolean(query || helper || status !== "all");
-  const clear = () => { setQuery(""); setStatus("all"); navigate({ to: "/activity", search: {} }); };
+  const clear = () => { setQuery(""); setStatus("all"); navigate(embedded ? { to: "/agents", search: { tab: "timeline" } } : { to: "/activity", search: {} }); };
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3" role="search" aria-label="Activity filters">
@@ -81,7 +81,7 @@ function Timeline({ helper }: { helper?: AgentId | undefined }) {
           <SearchIcon className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground" />
           <Input aria-label="Search activity" placeholder="Search activity, classes, or sources…" value={query} onChange={e => setQuery(e.target.value)} className="bg-card pl-9" />
         </div>
-        <Select value={helper ?? "all"} onValueChange={value => navigate({ to: "/activity", search: value === "all" ? {} : { helper: value as AgentId } })}>
+        <Select value={helper ?? "all"} onValueChange={value => navigate(embedded ? { to: "/agents", search: value === "all" ? { tab: "timeline" } : { tab: "timeline", helper: value as AgentId } } : { to: "/activity", search: value === "all" ? {} : { helper: value as AgentId } })}>
           <SelectTrigger aria-label="Filter by helper" className="w-[160px] bg-card"><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="all">All helpers</SelectItem>{HELPERS.map(h => <SelectItem key={h} value={h}>{helperInfo[h].name}</SelectItem>)}</SelectContent>
         </Select>
@@ -128,7 +128,7 @@ function Timeline({ helper }: { helper?: AgentId | undefined }) {
                 <p className="mt-1 text-sm">{helperInfo[h].plain}</p>
                 <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                   <span>{!j.agentOn[h] ? "Off" : t ? `Last active ${fmtStamp(t)}` : "Not active yet"}</span>
-                  <Link to="/activity" search={{ helper: h }} className="text-primary underline">See their steps</Link>
+                  <Link to={embedded ? "/agents" : "/activity"} search={embedded ? { tab: "timeline", helper: h } : { helper: h }} className="text-primary underline">See their steps</Link>
                 </div>
               </div>
             );
@@ -265,13 +265,13 @@ function Decisions() {
   );
 }
 
-export function CanCantStrip() {
+export function CanCantStrip({ embedded = false }: { embedded?: boolean }) {
   return (
     <div className="sticky bottom-4 z-30 mt-8 rounded-2xl border bg-card/95 px-4 py-2.5 text-xs shadow-frame backdrop-blur">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <span><Check className="mr-1 inline size-3.5 text-mark-yes" /><b>Can:</b> read your files, suggest classes, draft emails, say how sure it is.</span>
         <span><Ban className="mr-1 inline size-3.5 text-mark-no" /><b>Can't:</b> register you, send anything without your OK, change your degree record, see anything you haven't shared.</span>
-        <Link to="/permissions" className="text-primary underline">Change what it's allowed to do</Link>
+        <Link to={embedded ? "/agents" : "/permissions"} search={embedded ? { tab: "controls" } : {}} className="text-primary underline">Change what it's allowed to do</Link>
       </div>
     </div>
   );

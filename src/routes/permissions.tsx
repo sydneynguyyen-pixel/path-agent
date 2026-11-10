@@ -50,7 +50,7 @@ const helperVisuals: Record<AgentId, { task: string; result: string; icon: typeo
   drafter: { task: "Prepare a counselor email", result: "A draft for you to review", icon: Mail },
 };
 
-function Controls() {
+export function Controls({ embedded = false }: { embedded?: boolean }) {
   const j = useJourney();
   const events = useEvents();
   return (
@@ -80,7 +80,7 @@ function Controls() {
                 </div>
                 <div className="flex items-center gap-2 border-t py-3 text-xs"><visual.icon className="size-4 shrink-0 text-muted-foreground" /><span>{visual.result}</span></div>
                 <p className="flex min-h-12 items-start gap-2 text-xs text-muted-foreground"><Lock className="mt-0.5 size-3.5 shrink-0" />{never[id]}</p>
-                {!j.agentOn[id] && skippedEvent && <Link to="/activity" hash={`event-${skippedEvent.id}`} className="mb-3 text-xs underline">See what was skipped</Link>}
+                {!j.agentOn[id] && skippedEvent && <Link to={embedded ? "/agents" : "/activity"} search={embedded ? { tab: "timeline" } : {}} hash={`event-${skippedEvent.id}`} className="mb-3 text-xs underline">See what was skipped</Link>}
                 <details className="group mt-auto border-t pt-3">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium focus-visible:ring-2 focus-visible:ring-ring">School access <span className="flex items-center gap-1 text-muted-foreground">{agentAccess[id].filter(k => j.access[k]).length}/{agentAccess[id].length}<ChevronDown className="size-3.5 transition-transform group-open:rotate-180" /></span></summary>
                   <div className="mt-3 space-y-3">{agentAccess[id].map(k => {
@@ -89,7 +89,7 @@ function Controls() {
                     return <div key={k} className="flex items-center gap-2"><span className="grid size-7 shrink-0 place-items-center">{source ? <img src={source.logo} alt="" className="max-h-6 max-w-6 object-contain" /> : <Icon className="size-5" />}</span><span className="min-w-0 flex-1 text-xs" title={sourceLabel(k)}>{k === "registration" ? "Registration page" : source?.name}</span><Switch checked={j.access[k]} onCheckedChange={value => j.setAccess(k, value)} aria-label={`${helperInfo[id].name}: ${sourceLabel(k)}`} /></div>;
                   })}</div>
                 </details>
-                <Link to="/activity" search={{ helper: id }} title={t ? `Last active ${fmtStamp(t)}` : "Not active yet"} className="mt-4 flex items-center justify-between gap-2 text-xs text-muted-foreground hover:text-foreground">See activity <ArrowRight className="size-3.5" /></Link>
+                <Link to={embedded ? "/agents" : "/activity"} search={embedded ? { tab: "timeline", helper: id } : { helper: id }} title={t ? `Last active ${fmtStamp(t)}` : "Not active yet"} className="mt-4 flex items-center justify-between gap-2 text-xs text-muted-foreground hover:text-foreground">See activity <ArrowRight className="size-3.5" /></Link>
                 {index < 3 && <ArrowRight aria-hidden className="absolute -right-3 top-32 z-10 hidden size-5 bg-background text-muted-foreground xl:block" />}
               </article>
             );

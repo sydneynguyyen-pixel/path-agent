@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertTriangle, ArrowRight, CheckCircle2, CircleHelp, RotateCcw } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
-import { PageHeader, SimLabel, SourceChip } from "@/components/app/bits";
+import { PageHeader, SourceChip } from "@/components/app/bits";
 import { SubjectIcon } from "@/components/app/Brand";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -154,7 +154,7 @@ function WhatIfPage() {
 
   return (
     <div>
-      <PageHeader title="What if" sub="Try a change. Your real plan stays put." right={<SimLabel>Synthetic data</SimLabel>} />
+      <PageHeader title="What if" sub="Try a change. Your real plan stays put." />
 
       <form onSubmit={submit} className="what-if-ask flex items-center gap-2 rounded-full border bg-card py-1.5 pl-5 pr-1.5">
         <label htmlFor="what-if-text" className="sr-only">Describe a change to your plan</label>

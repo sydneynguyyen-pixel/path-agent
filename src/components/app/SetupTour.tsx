@@ -104,7 +104,7 @@ function MiniApp({ active, children }: { active: (typeof NAV)[number][0]; childr
 }
 
 const MiniButton = ({ name, outline, className, children }: { name?: string | undefined; outline?: boolean; className?: string; children: ReactNode }) => (
-  <span data-cursor={name} className={cn("tour-button", outline ? "border bg-card" : "bg-primary text-primary-foreground", className)}>{children}</span>
+  <span data-cursor={name} className={cn("tour-button", outline ? "glass-control" : "glass-cta", className)}>{children}</span>
 );
 
 function HomeScene({ b }: { b: number }) {
@@ -194,7 +194,7 @@ function ChooseScene({ b }: { b: number }) {
       <div className="text-[15px] font-semibold">Backups for STAT 2</div>
       <div className="mt-2 space-y-1.5">
         {list.map((o) => (
-          <div key={o.id} data-cursor={o === pick ? "pick" : undefined} className={cn("flex items-center justify-between rounded-xl border px-3 py-1.5 transition-colors duration-300", o === pick && b >= 2 && "border-primary bg-secondary")}>
+          <div key={o.id} data-cursor={o === pick ? "pick" : undefined} className={cn("flex items-center justify-between rounded-xl border px-3 py-1.5 transition-colors duration-300", o === pick && b >= 2 && "glass-active border-transparent")}>
             <span><span className="font-medium">{o.course.replace("BCC ", "")}</span> <span className="text-muted-foreground">{o.sectionTime.split(" · ")[0]}</span></span>
             <span className="text-muted-foreground">{o.seatsOpen} open</span>
           </div>

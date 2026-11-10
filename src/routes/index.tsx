@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PostingLink } from "@/components/app/PostingLink";
 import { Fragment, useState } from "react";
 import { CheckCircle2, ArrowRight, AlertTriangle, CalendarClock, CalendarDays, CalendarPlus, Sparkles, ChevronDown } from "lucide-react";
 import { requirements, options, student, terms, progress, schools, outsideSchool, DROP_DEADLINE, careerRoles, freeTime, opportunities, type ReqStatus, type Term } from "@/data/scenario";
@@ -7,7 +8,7 @@ import { useConfirmWent, useSaveToPlan } from "@/components/app/PlanActions";
 import { recoveryPath } from "@/lib/confidence";
 import { BlankHome } from "@/components/app/BlankState";
 import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
-import { ConfidenceBadge, SourceChip, StatusBadge } from "@/components/app/bits";
+import { SourceChip, StatusBadge } from "@/components/app/bits";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ function Attention() {
     const hold = recoveryPath(chosen) === "hold";
     title = hold ? `You hold a seat in ${chosen.course}` : `You're set with ${chosen.course}`;
     body = hold ? `Counselor confirmation is pending. Drop by ${DROP_DEADLINE} if not confirmed.` : "It counts toward Statistics.";
-    action = <Button variant="outline" asChild><Link to="/activity" search={{ tab: "decisions" }}>View your decisions</Link></Button>;
+    action = <Button variant="outline" asChild><Link to="/agents" search={{ tab: "decisions" }}>View your decisions</Link></Button>;
   } else if (j.counselor === "confirmed" && chosen) {
     icon = <AgentAvatar agent="planner" bare />;
     title = "All set for summer";
@@ -91,6 +92,7 @@ function NextOutsideClass() {
         <div className="aqua-chip mb-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold">{upcoming ? "On your plan" : `For your ${goal.title} goal`}</div>
         <div className="font-medium">{o.title}</div>
         <div className="text-xs text-muted-foreground">{hostLine(o)} · {o.when}</div>
+        <PostingLink item={o} className="mt-1" />
         {!upcoming && <p className="mt-1.5 text-sm text-muted-foreground">{suggestionWhy(o, open, goal.title)}</p>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -129,7 +131,7 @@ function TransferReadiness() {
         <span className="text-xs text-muted-foreground">{ip} in progress · {left} still to take</span>
       </div>
       <div className="mt-2 flex h-2 gap-1" role="img" aria-label={`${done} of ${pre.length} requirements complete`}>
-        {pre.map((r) => <div key={r.id} title={`${r.code} ${r.name}`} className={cn("flex-1 rounded-full", r.status === "done" || r.status === "transfer" ? "aqua-chip" : r.status === "in_progress" || r.status === "pending" ? "bg-primary/40" : "bg-secondary")} />)}
+        {pre.map((r) => <div key={r.id} title={`${r.code} ${r.name}`} className={cn("flex-1 rounded-full", r.status === "done" || r.status === "transfer" ? "aqua-chip" : r.status === "in_progress" || r.status === "pending" ? "aqua-chip opacity-50" : "bg-secondary")} />)}
       </div>
       <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {pre.map((r) => <li key={r.id} className="flex items-center gap-1">{r.status === "done" || r.status === "transfer" ? <CheckCircle2 className="size-3 text-mark-yes" /> : <span className="size-3 rounded-full border" />}{r.name}</li>)}
@@ -240,8 +242,6 @@ function Requirements() {
           let status: ReqStatus = r.status;
           let detail = r.detail;
           let src = r.sourceId;
-          let conf = r.confidence;
-          let conflict = false;
           if (r.id === "qr1" && j.atRisk) {
             status = "at_risk";
             detail = "STAT 2 is full — replacement options found";
@@ -254,15 +254,11 @@ function Requirements() {
               ? `Seat held: ${chosen.course} §${chosen.section} · awaiting ${student.counselor} · drop by ${DROP_DEADLINE} if not confirmed`
               : `Enrolled: ${chosen.course} §${chosen.section} · Summer 2027`;
             src = chosen.sourceIds[0]!;
-            conf = chosen.confidence;
-            conflict = !!chosen.conflict;
           }
           if (r.id === "qr1" && chosen && j.counselor === "confirmed") {
             status = "done";
             detail = `${chosen.course} §${chosen.section} · confirmed by ${student.counselor}`;
             src = "counselor-confirm";
-            conf = 0.99;
-            conflict = false;
           }
           if (r.id === "qr1" && chosen && j.counselor === "declined") {
             status = "at_risk";
@@ -276,7 +272,6 @@ function Requirements() {
                 <div className="text-sm text-muted-foreground">{detail}</div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <SourceChip id={src} />
-                  <ConfidenceBadge score={conf} conflict={conflict} />
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -305,7 +300,7 @@ function Conversion() {
             <div key={id} className="surface p-5">
               <div className="text-xs text-muted-foreground">{h}</div>
               <div className="mt-1 font-serif text-lg">{rule}</div>
-              <div className="mt-3 flex gap-2"><SourceChip id={id} /><ConfidenceBadge score={0.97} /></div>
+              <div className="mt-3 flex gap-2"><SourceChip id={id} /></div>
             </div>
           ))}
         </div>

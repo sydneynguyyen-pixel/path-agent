@@ -20,6 +20,7 @@ import { Roll } from "@/components/app/Roll";
 import { useSlidingPill } from "@/hooks/use-sliding-pill";
 import { growFrom, shrinkInto } from "@/lib/motion";
 import { photoUrl } from "@/lib/photos";
+import { PostingLink } from "@/components/app/PostingLink";
 import sceneOpportunities from "@/assets/scene-opportunities.jpg";
 
 export const Route = createFileRoute("/explore")({
@@ -128,7 +129,7 @@ function OpportunityCard({ o, gaps, onOpen }: { o: Opportunity; gaps: string[]; 
         <HostRow o={o} tone="muted" />
         <h3 className="mt-2.5 line-clamp-2 text-base leading-snug font-semibold">{shortTitle(o)}</h3>
         <div className="mt-1 truncate text-sm text-muted-foreground">{detailLine(o)}</div>
-        <div className="mt-auto pt-3"><div className="flex min-h-11 items-center justify-between gap-2 border-t pt-3"><div className="min-w-0"><Signals o={o} gap={goalGap(o, gaps)} tone="muted" limit={1} /></div><SaveButton o={o} compact /></div></div>
+        <div className="mt-auto pt-3"><div className="flex min-h-11 items-center justify-between gap-2 border-t pt-3"><div className="min-w-0"><Signals o={o} gap={goalGap(o, gaps)} tone="muted" limit={1} /></div><div className="flex shrink-0 items-center gap-1.5"><PostingLink item={o} compact /><SaveButton o={o} compact /></div></div></div>
       </div>
     </article>
   );
@@ -214,7 +215,7 @@ function Calendar({ items, gaps, onOpen, byDeadline, showKind }: { items: Opport
                     <h3 className="mt-1 text-base leading-snug font-semibold sm:text-lg">{shortTitle(o)}</h3>
                     <div className="mt-2"><HostRow o={o} tone="muted" showKind={showKind} /></div>
                     {o.place !== o.host && <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground"><span className="grid size-7 shrink-0 place-items-center"><MapPin className="size-3.5" aria-hidden="true" /></span> {o.place}</div>}
-                    <div className="mt-auto flex items-center justify-between gap-2 pt-3"><SignalChips o={o} gap={goalGap(o, gaps)} /><SaveButton o={o} compact /></div>
+                    <div className="mt-auto flex items-center justify-between gap-2 pt-3"><SignalChips o={o} gap={goalGap(o, gaps)} /><div className="flex shrink-0 items-center gap-1.5"><PostingLink item={o} compact /><SaveButton o={o} compact /></div></div>
                   </div>
                   <Art o={o} className="size-24 sm:size-36" />
                 </article>
@@ -330,6 +331,7 @@ function Details({ o, gaps, onOpen, onClose, panelRef }: { o: Opportunity | unde
                 <div className="flex items-center gap-2"><MapPin className="size-4 shrink-0" aria-hidden="true" /> {o.place}</div>
                 {o.cost !== undefined && <div className="flex items-center gap-2"><CircleDollarSign className="size-4 shrink-0" aria-hidden="true" /> About ${o.cost.toLocaleString("en-US")} in tuition</div>}
                 <div className="flex items-center gap-2"><GraduationCap className="size-4 shrink-0" aria-hidden="true" /> {degreeLine(o)}</div>
+                <PostingLink item={o} className="pt-1 text-sm" />
               </div>
               <p className="text-sm">{whyLine(o, gaps, freeTime)}</p>
               <div>
@@ -350,7 +352,7 @@ function Details({ o, gaps, onOpen, onClose, panelRef }: { o: Opportunity | unde
 function FilterMenu({ label, any, value, options, onChange }: { label: string; any: string; value: string | null; options: { value: string; label: string }[]; onChange: (v: string | null) => void }) {
   return (
     <Select value={value ?? ANY} onValueChange={(v) => onChange(v === ANY ? null : v)}>
-      <SelectTrigger aria-label={label} className={cn("h-9 w-auto max-w-56 gap-1.5 rounded-full text-xs", value && "border-primary bg-secondary font-medium")}><SelectValue /></SelectTrigger>
+      <SelectTrigger aria-label={label} className={cn("h-9 w-auto max-w-56 gap-1.5 rounded-full text-xs", value && "glass-active border-transparent font-medium")}><SelectValue /></SelectTrigger>
       <SelectContent>
         <SelectItem value={ANY}>{any}</SelectItem>
         {options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -360,7 +362,7 @@ function FilterMenu({ label, any, value, options, onChange }: { label: string; a
 }
 
 function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
-  return <button type="button" aria-pressed={active} onClick={onClick} className={cn("inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm whitespace-nowrap transition-colors", active ? "bg-primary font-medium text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground")}>{children}</button>;
+  return <button type="button" aria-pressed={active} onClick={onClick} className={cn("inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm whitespace-nowrap transition-colors", active ? "glass-active font-medium" : "text-muted-foreground hover:bg-secondary hover:text-foreground")}>{children}</button>;
 }
 
 /** A row of choices sharing one glass pill that glides to whichever is on. */

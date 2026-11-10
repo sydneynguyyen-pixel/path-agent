@@ -1,15 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { PageHeader, SimLabel } from "@/components/app/bits";
+import { PageHeader } from "@/components/app/bits";
 import { SourceLogo } from "@/components/app/SourceLogo";
 import { UploadFlow } from "@/components/app/UploadFlow";
 import { Spot } from "@/components/app/Illustrations";
 import { connectedSources } from "@/components/app/sourcesData";
-import { UPLOAD_ORDER, uploadSamples, type UploadKey } from "@/data/scenario";
+import { UPLOAD_ORDER, eventPlatforms, uploadSamples, type UploadKey } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { cn } from "@/lib/utils";
 
@@ -38,11 +38,11 @@ function Sources() {
   const publicSources = connectedSources.filter((s) => s.id === "articulation");
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Your sources" sub={manual ? "Add your records so Path Agent can use them." : "Turn off anything you don't want Path Agent to read."} right={<div className="flex items-center gap-4"><Spot name="stones" className="hidden w-40 sm:block" /><SimLabel>Simulated connections</SimLabel></div>} />
+      <PageHeader title="Your sources" sub={manual ? "Add your records so Path Agent can use them." : "Turn off anything you don't want Path Agent to read."} right={<Spot name="stones" className="hidden w-40 sm:block" />} />
       <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground" role="group" aria-label="Demo view">
         Demo view
         <div className="flex rounded-full border bg-card p-0.5">
-          {VIEWS.map(([id, label]) => <button key={id} type="button" aria-pressed={j.setupMethod === id} onClick={() => j.setSetupMethod(id)} className={cn("rounded-full px-3 py-1 font-medium", j.setupMethod === id ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{label}</button>)}
+          {VIEWS.map(([id, label]) => <button key={id} type="button" aria-pressed={j.setupMethod === id} onClick={() => j.setSetupMethod(id)} className={cn("rounded-full px-3 py-1 font-medium", j.setupMethod === id ? "glass-active" : "text-muted-foreground")}>{label}</button>)}
         </div>
       </div>
       {manual ? (
@@ -80,6 +80,22 @@ function Sources() {
           ))}
         </div>
       )}
+      <section className="mt-8">
+        <h2 className="text-sm font-medium">Your event accounts</h2>
+        <p className="mt-1 text-xs text-muted-foreground">Personal accounts you connect yourself. Read only.</p>
+        <div className="mt-3 space-y-3">
+          {(["luma", "eventbrite"] as const).map((p) => {
+            const on = j.eventAccounts.includes(p);
+            return (
+              <section key={p} className="surface flex items-center gap-4 p-5">
+                <span aria-hidden="true" className={cn("grid size-10 shrink-0 place-items-center rounded-xl border text-sm font-semibold", `platform-${p}`)}>{eventPlatforms[p].name[0]}</span>
+                <div className="min-w-0 flex-1"><div className="font-medium">{eventPlatforms[p].name}</div><div className="text-sm text-muted-foreground">{eventPlatforms[p].what} · {on ? "Connected" : "Not connected"}</div></div>
+                <Button variant="outline" size="sm" className="shrink-0" asChild><Link to="/grow">{on ? "View events" : "Connect"}</Link></Button>
+              </section>
+            );
+          })}
+        </div>
+      </section>
       <Dialog open={!!sample} onOpenChange={(v) => { if (!v) setOpen(null); }}>
         <DialogContent className="brand-app sm:max-w-md">
           {sample && (

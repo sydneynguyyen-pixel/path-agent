@@ -646,6 +646,99 @@ export const goTogetherEvent: { id: string; shortName: string; going: number; vi
   ],
 };
 
+// ---------- Experiences: events from the student's own event accounts (synthetic) ----------
+/** Event services a student signs in to. Handshake arrives through the school; Luma and Eventbrite are personal accounts. */
+export type EventPlatform = "luma" | "eventbrite" | "handshake";
+/** How strongly a service knows the student was there. Only a check-in counts without asking. */
+export type AttendanceProof = "checked-in" | "ticket" | "rsvp";
+export type ExperienceRole = "Attended" | "Volunteered" | "Competed" | "Presented";
+export type ExperienceKind = "Career fair" | "Workshop" | "Hackathon" | "Info session" | "Training" | "Conference" | "Volunteering" | "Meetup";
+export type ExperienceSkill = { id: string; name: string; level: EvidenceLevel; theme: string };
+export type Experience = {
+  id: string;
+  title: string;
+  host: string;
+  kind: ExperienceKind;
+  role: ExperienceRole;
+  /** YYYY-MM-DD */
+  date: string;
+  time: string;
+  place: string;
+  /** Cover photo: a file name in src/assets/explore, or an Unsplash id starting "photo-". */
+  photo: string;
+  /** The same event can be listed on more than one service. */
+  foundOn: { platform: EventPlatform; proof: AttendanceProof }[];
+  /** A line from the event listing. Skills come only from what the listing says happens there. */
+  listing: string;
+  skills: ExperienceSkill[];
+  outcome?: string;
+  /** Upcoming only: why Path Agent thinks it's worth the time. */
+  prep?: string;
+  /** The matching Explore listing, when there is one. */
+  opportunityId?: string;
+};
+
+/** Where a listing was first posted. Event services use their real address shape; fictional schools and groups use .example addresses. */
+export type Posting = { site: string; url: string };
+export const postings: Record<string, Posting> = {
+  "fall-fair-25": { site: "Handshake", url: "https://app.joinhandshake.com/stu/events/1482207" },
+  "figma-intro": { site: "Luma", url: "https://lu.ma/figma-non-designers-esdc" },
+  "mhfa": { site: "Eventbrite", url: "https://www.eventbrite.com/e/mental-health-first-aid-eastshore-tickets-918204415527" },
+  "civic-hack": { site: "Luma", url: "https://lu.ma/civic-hack-weekend-eastshore" },
+  "harbor-info": { site: "Handshake", url: "https://app.joinhandshake.com/stu/events/1516348" },
+  "symposium": { site: "Eventbrite", url: "https://www.eventbrite.com/e/undergraduate-research-symposium-bapc-tickets-861530927117" },
+  "food-pack": { site: "Eventbrite", url: "https://www.eventbrite.com/e/saturday-pack-shift-bay-neighbors-tickets-948377102214" },
+  "resume-lab": { site: "Handshake", url: "https://app.joinhandshake.com/stu/events/1590442" },
+  "winter-fair": { site: "Handshake", url: "https://app.joinhandshake.com/stu/events/1620518" },
+  "diary-studies": { site: "Eventbrite", url: "https://www.eventbrite.com/e/ux-research-meetup-diary-studies-tickets-1029384756120" },
+  "civic-data": { site: "Luma", url: "https://lu.ma/civic-data-saturday-eastshore" },
+  "survey-lab": { site: "Handshake", url: "https://app.joinhandshake.com/stu/events/1611093" },
+  "ux-night": { site: "Luma", url: "https://lu.ma/ux-night-esdc" },
+  "archives-day": { site: "Eventbrite", url: "https://www.eventbrite.com/e/inside-the-archive-open-day-tickets-1004417758203" },
+  "r-group": { site: "Luma", url: "https://lu.ma/eastshore-r-users" },
+  "library-usability": { site: "Handshake", url: "https://app.joinhandshake.com/stu/jobs/9184402" },
+  "campus-survey": { site: "Handshake", url: "https://app.joinhandshake.com/stu/jobs/9201775" },
+  "market-intern": { site: "Handshake", url: "https://app.joinhandshake.com/stu/jobs/9233610" },
+  "nonprofit-eval": { site: "Handshake", url: "https://app.joinhandshake.com/stu/jobs/9240157" },
+  "county-policy": { site: "Eastshore County jobs", url: "https://jobs.eastshore-county.example/budget-research-intern" },
+  "museum-intern": { site: "Valley Art Museum", url: "https://valleyart.example/jobs/collections-intern" },
+  "archive-volunteers": { site: "Eastshore History Center", url: "https://eastshorehistory.example/volunteer" },
+  "design-club": { site: "Bayview clubs", url: "https://clubs.bayview.example/people-products" },
+  "research-circle": { site: "Bayview clubs", url: "https://clubs.bayview.example/research-circle" },
+  "policy-committee": { site: "Bayview clubs", url: "https://clubs.bayview.example/student-government" },
+  "sql-sprint": { site: "Northgate clubs", url: "https://clubs.northgate.example/data-club" },
+  "dsgn20": { site: "Northgate catalog", url: "https://catalog.northgate.example/courses/dsgn-20" },
+  "psyc41": { site: "Northgate catalog", url: "https://catalog.northgate.example/courses/psyc-41" },
+  "cis22": { site: "Bayview catalog", url: "https://catalog.bayview.example/courses/cis-22" },
+  "math17": { site: "Bayview catalog", url: "https://catalog.bayview.example/courses/math-17" },
+  "lcc-psyc20": { site: "Lakeshore catalog", url: "https://catalog.lakeshore.example/courses/psyc-20" },
+  "lcc-libr10": { site: "Lakeshore catalog", url: "https://catalog.lakeshore.example/courses/libr-10" },
+  "rbc-soc31": { site: "Redwood Bend catalog", url: "https://catalog.redwoodbend.example/courses/soc-31" },
+  "ecc-dsgn14": { site: "Eastshore City catalog", url: "https://catalog.eastshorecity.example/courses/dsgn-14" },
+};
+
+export const eventPlatforms: Record<EventPlatform, { name: string; what: string; signIn: string; via: string }> = {
+  luma: { name: "Luma", what: "Events you RSVP'd to and check-ins", signIn: "lu.ma", via: "Your Luma account" },
+  eventbrite: { name: "Eventbrite", what: "Tickets you've registered for", signIn: "eventbrite.com", via: "Your Eventbrite account" },
+  handshake: { name: "Handshake", what: "Career-center events and check-ins", signIn: "sso.bayview.example", via: "Bayview's career center" },
+};
+
+const es = (id: string, name: string, level: EvidenceLevel, theme: string): ExperienceSkill => ({ id, name, level, theme });
+export const experiences: Experience[] = [
+  { id: "fall-fair-25", title: "Fall Career & Internship Fair", host: "Bayview Career Center", kind: "Career fair", role: "Attended", date: "2025-10-08", time: "11:00 AM", place: "Bayview CC gym", photo: "archives-day", foundOn: [{ platform: "handshake", proof: "checked-in" }], listing: "Meet 40+ employers hiring for internships and part-time roles. Bring a resume and practice a 30-second introduction.", skills: [es("networking", "Professional networking", "Practiced", "Writing and communication")] },
+  { id: "figma-intro", title: "Figma for Non-Designers", host: "Eastshore Design Collective", kind: "Workshop", role: "Attended", date: "2025-11-15", time: "10:00 AM", place: "Eastshore Makerspace", photo: "photo-1586717791821-3f44a563fa4c", foundOn: [{ platform: "luma", proof: "checked-in" }], listing: "Hands-on: everyone builds a clickable prototype of one mobile screen before they leave.", skills: [es("prototyping", "Prototyping", "Practiced", "Tools")] },
+  { id: "mhfa", title: "Mental Health First Aid training", host: "Eastshore County Behavioral Health", kind: "Training", role: "Attended", date: "2026-02-21", time: "9:00 AM", place: "Eastshore Library", photo: "photo-1460518451285-97b6aa326961", foundOn: [{ platform: "eventbrite", proof: "ticket" }], listing: "An 8-hour certification course: practice listening without judgment and guiding someone toward support.", skills: [es("active-listening", "Active listening", "Practiced", "Writing and communication")], outcome: "Certificate issued by the county" },
+  { id: "civic-hack", title: "Civic Hack Weekend", host: "Open Eastshore", kind: "Hackathon", role: "Competed", date: "2026-03-14", time: "9:00 AM", place: "Eastshore City Hall annex", photo: "sql-sprint", foundOn: [{ platform: "luma", proof: "checked-in" }, { platform: "handshake", proof: "rsvp" }], listing: "Teams interview residents about a city service, then build and demo a working prototype in 30 hours.", skills: [es("user-interviews", "User interviews", "Demonstrated", "Research and data"), es("prototyping", "Prototyping", "Demonstrated", "Tools"), es("teamwork", "Teamwork", "Practiced", "Writing and communication")], outcome: "Team placed 2nd with a map of food pantry hours" },
+  { id: "harbor-info", title: "UX Research at Harbor Health: info session", host: "Harbor Health", kind: "Info session", role: "Attended", date: "2026-04-09", time: "4:00 PM", place: "Online", photo: "photo-1522202176988-66273c2fd55f", foundOn: [{ platform: "handshake", proof: "rsvp" }], listing: "Researchers walk through a real usability study and how they hire summer interns.", skills: [es("ux-methods", "UX research methods", "Taught", "Research and data")] },
+  { id: "symposium", title: "Undergraduate Research Symposium", host: "Bay Area Psychology Consortium", kind: "Conference", role: "Presented", date: "2026-05-02", time: "1:00 PM", place: "Northgate State", photo: "policy-committee", foundOn: [{ platform: "eventbrite", proof: "ticket" }], listing: "Students present posters on their own research to faculty and peers, with five minutes of questions each.", skills: [es("presenting", "Presenting research", "Demonstrated", "Writing and communication"), es("observation", "Qualitative observation", "Demonstrated", "Research and data")], outcome: "Poster: how students choose study spaces (from ANTH 2 fieldnotes)" },
+  { id: "food-pack", title: "Saturday pack shift", host: "Bay Neighbors Food Network", kind: "Volunteering", role: "Volunteered", date: "2026-08-15", time: "8:30 AM", place: "Bay Neighbors warehouse", photo: "photo-1593113616828-6f22bca04804", foundOn: [{ platform: "eventbrite", proof: "ticket" }], listing: "Volunteers sort and pack grocery boxes in teams of six for 300 families.", skills: [es("teamwork", "Teamwork", "Practiced", "Writing and communication")] },
+  { id: "resume-lab", title: "Resume Lab", host: "Bayview Career Center", kind: "Workshop", role: "Attended", date: "2026-10-01", time: "3:00 PM", place: "Bayview Student Center", photo: "photo-1434030216411-0b793f4b4173", foundOn: [{ platform: "handshake", proof: "checked-in" }], listing: "Bring a draft. Rewrite three bullets with a counselor so each one shows a result.", skills: [es("resume", "Resume writing", "Practiced", "Writing and communication")] },
+  { id: "civic-data-up", title: "Civic Data Saturday", host: "Open Eastshore", kind: "Hackathon", role: "Attended", date: "2026-11-14", time: "9:30 AM", place: "Off campus", photo: "civic-data", foundOn: [{ platform: "luma", proof: "rsvp" }], listing: "Work in pairs on a city data set. Beginner tracks in R and SQL.", skills: [es("r", "Data analysis in R", "Practiced", "Tools")], prep: "Fills the R and SQL gaps for the policy analyst role you're looking at.", opportunityId: "civic-data" },
+  { id: "survey-lab-up", title: "Write Better Questions: a survey workshop", host: "Bayview Career Center", kind: "Workshop", role: "Attended", date: "2026-11-14", time: "10:00 AM", place: "Bayview CC", photo: "survey-lab", foundOn: [{ platform: "handshake", proof: "rsvp" }], listing: "Rewrite a real survey so it doesn't lead people to an answer.", skills: [es("survey", "Survey design", "Practiced", "Research and data")], prep: "Survey design is one of the two gaps for UX researcher.", opportunityId: "survey-lab" },
+  { id: "winter-fair", title: "Winter Career Fair", host: "Northgate Career Services", kind: "Career fair", role: "Attended", date: "2026-12-03", time: "11:00 AM", place: "Northgate State", photo: "photo-1562774053-701939374585", foundOn: [{ platform: "handshake", proof: "rsvp" }], listing: "Open to transfer students. 60 employers, including summer research internships.", skills: [es("networking", "Professional networking", "Practiced", "Writing and communication")], prep: "Three employers on the list hire summer UX research interns. Bring the resume from Resume Lab." },
+  { id: "diary-studies", title: "UX Research Meetup: diary studies", host: "Eastshore UX Research Group", kind: "Meetup", role: "Attended", date: "2026-12-09", time: "6:30 PM", place: "Online", photo: "photo-1586936893354-362ad6ae47ba", foundOn: [{ platform: "eventbrite", proof: "ticket" }], listing: "A researcher shares a two-week diary study, then small groups plan one.", skills: [es("ux-methods", "UX research methods", "Practiced", "Research and data")] },
+];
+
 // ---------- Manual setup, for schools without a sign-in agreement (synthetic) ----------
 export type UploadKey = "transcript" | "audit" | "calendar" | "syllabus";
 export type UploadRow = { id: string; label: string; detail: string; unclear?: boolean };

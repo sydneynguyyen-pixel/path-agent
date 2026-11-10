@@ -270,6 +270,8 @@
 
 /* Path Agent brand. Institutional portal is explicitly scoped out. */
 @utility aqua-chip { background: var(--aqua-gradient); color: var(--foreground); }
+/* Count badges follow the chosen theme. */
+@utility count-badge { background: linear-gradient(135deg, var(--aqua-ring-start), var(--aqua-ring-end)); color: var(--foreground); font-weight: 600; }
 .mesh-tile, .term-band {
   background: radial-gradient(120% 90% at 50% 112%, var(--mesh-bottom) 0%, transparent 62%), radial-gradient(90% 80% at 85% 55%, var(--mesh-mid) 0%, transparent 70%), linear-gradient(180deg, var(--mesh-top) 0%, var(--mesh-mid) 135%);
 }
@@ -402,7 +404,7 @@
 .brand-app :is(.text-success,.text-info,.text-accent-foreground) { color: var(--foreground); }
 .brand-app :is(.bg-lilac,.bg-sky,.bg-butter,.bg-mint,.bg-accent,.bg-info-soft) { background-color: var(--secondary); }
 .brand-app :is(th,td) { padding: 18px 16px; }
-.brand-app :is(button,a,input,textarea,summary,[role=switch]):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.brand-app :is(button,a,input,textarea,summary,[role=switch],[role=tab]):focus-visible:not(.school-portal *) { outline: 2px solid var(--ring); outline-offset: 2px; box-shadow: none; }
 .brand-app .agent-panel :is(.text-warning,.text-success) { color: var(--foreground); }
 .brand-app .term-card { padding: 0; overflow: hidden; background: var(--card); }
 .brand-app .term-card ul { padding: 0 14px 16px; }
@@ -415,7 +417,7 @@
 .term-status-chip { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; border-radius: 9999px; padding: 3px 8px; font-size: 11px; }
 .term-status-completed { background: var(--muted); color: var(--term-completed-text); }
 .term-status-planned { background: var(--muted); color: var(--muted-foreground); }
-.term-status-registering { background: var(--primary); color: var(--primary-foreground); }
+.term-status-registering { background: linear-gradient(135deg, color-mix(in oklab, var(--aqua-ring-start) 80%, white), color-mix(in oklab, var(--aqua-ring-end) 80%, white)); color: var(--foreground); font-weight: 600; box-shadow: inset 0 1px 1px rgb(255 255 255 / .85); }
 .term-current-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--aqua-ring-start); }
 .brand-app .term-state-done .term-edge-stripe { height: 6px; opacity: .55; }
 .brand-app .term-state-done .term-course, .brand-app .term-state-done .term-course .text-muted-foreground { color: var(--term-completed-text); }
@@ -425,8 +427,8 @@
 .brand-app .term-state-planned { border: 1px dashed var(--term-planned-border); }
 .brand-app .term-state-planned .term-edge-stripe { opacity: .35; }
 .brand-app .edge-term-card:hover { transform: none; }
-.brand-app .edge-term-card.term-selected { border: 1px solid var(--primary); transform: translateY(-4px); box-shadow: var(--shadow-term-selected); }
-.brand-app .edge-term-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.brand-app .edge-term-card.term-selected { border: 1px solid var(--ring); transform: translateY(-4px); box-shadow: var(--shadow-term-selected); }
+.brand-app .edge-term-card:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
 .term-compact-meta { padding: 4px 16px 14px; color: var(--muted-foreground); font-size: 12px; }
 .brand-app .term-compact .term-edge-stripe { height: 4px; }
 .brand-app .term-compact .term-edge-header { flex-wrap: nowrap; }
@@ -559,7 +561,7 @@
 .tour-scene { position: absolute; inset: 0; animation: tour-fade .35s ease both; }
 .tour-swap { animation: tour-fade .3s ease both; }
 .tour-pointer { position: absolute; top: 0; left: 0; z-index: 30; transition: transform .7s cubic-bezier(.45, .05, .25, 1); pointer-events: none; }
-.tour-ripple { position: absolute; top: -12px; left: -12px; width: 28px; height: 28px; border-radius: 999px; background: color-mix(in oklab, var(--primary) 30%, transparent); animation: tour-ripple .55s ease-out both; }
+.tour-ripple { position: absolute; top: -12px; left: -12px; width: 28px; height: 28px; border-radius: 999px; background: color-mix(in oklab, var(--ink-b) 35%, transparent); animation: tour-ripple .55s ease-out both; }
 .tour-button { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-weight: 500; transition: transform .15s ease; }
 .brand-app .school-portal .tour-button { border-radius: 999px; }
 .tour-portal-button { display: inline-block; padding: 2px 8px; border: 1px solid var(--portal-navy); border-radius: 3px; background: var(--portal-navy); color: var(--portal-navy-foreground); transition: transform .15s ease; }
@@ -569,7 +571,7 @@
 .tour-reveal { opacity: 0; transform: translateY(10px); transition: opacity .35s ease, transform .35s ease; }
 .tour-reveal-in { opacity: 1; transform: none; }
 .tour-dot { width: 6px; height: 6px; border-radius: 999px; background: var(--border); transition: width .2s ease, background-color .2s ease; }
-.tour-dot-on { width: 18px; background: var(--primary); }
+.tour-dot-on { width: 18px; background: linear-gradient(90deg, var(--ink-a), var(--ink-b)); }
 @keyframes tour-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes tour-ripple { from { opacity: 1; transform: scale(.3); } to { opacity: 0; transform: scale(1.5); } }
 
@@ -721,3 +723,40 @@ html[data-vt="theme"]::view-transition-new(root) { animation: none; }
 .plan-ribbon { scrollbar-width: none; }
 .what-if-ask:focus-within { border-color: color-mix(in oklab, var(--foreground) 35%, transparent); }
 @media (prefers-reduced-motion: reduce) { .plan-bar, .plan-ghost, .plan-tick { transition: none; } }
+
+/* Event account marks: a letter on a soft tint, never the service's own logo or colors. */
+
+
+/* ---------- Controls: one glass family for buttons, pills, toggles and callouts ----------
+   glass-cta     the main action on a screen, tinted by the chosen theme
+   glass-control secondary actions: clear glass with a rim
+   glass-active  the selected item in any pill group, the same glass as the nav pill
+   glass-on      a switch or checkbox that is on */
+:root { --ring: color-mix(in oklab, var(--ink-b) 70%, var(--foreground)); }
+@utility glass-cta {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--aqua-ring-start) 72%, white), color-mix(in oklab, var(--aqua-ring-end) 72%, white));
+  color: var(--foreground);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 .5px rgb(255 255 255 / .9), inset 0 1.5px 1px rgb(255 255 255 / .85), inset 0 -1px 2px rgb(30 70 90 / .1), 0 1px 2px rgb(30 70 90 / .1), 0 8px 18px -9px color-mix(in oklab, var(--ink-b) 60%, transparent);
+  &:hover { background: linear-gradient(135deg, color-mix(in oklab, var(--aqua-ring-start) 88%, white), color-mix(in oklab, var(--aqua-ring-end) 88%, white)); }
+}
+@utility glass-control {
+  background: rgb(255 255 255 / .64);
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 1px rgb(30 70 90 / .1), inset 0 1px 1px rgb(255 255 255 / .95), 0 1px 2px rgb(30 70 90 / .06), 0 6px 14px -9px rgb(30 70 90 / .22);
+  &:hover { background: rgb(255 255 255 / .92); }
+}
+@utility glass-active {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--aura-a) 55%, white), color-mix(in oklab, var(--aura-b) 50%, white));
+  color: var(--foreground);
+  box-shadow: inset 0 0 0 .5px rgb(255 255 255 / .9), inset 0 1.5px 1px rgb(255 255 255 / .85), inset 0 -1px 2px rgb(30 70 90 / .08), 0 1px 2px rgb(30 70 90 / .1), 0 6px 14px -7px rgb(30 70 90 / .22);
+}
+@utility glass-on {
+  background: linear-gradient(135deg, var(--ink-a), var(--ink-b));
+  color: white;
+  box-shadow: inset 0 1px 1px rgb(255 255 255 / .45), inset 0 -1px 2px rgb(30 70 90 / .15);
+}
+/* Callouts get the same bright rim, so they read as glass rather than flat paint. */
+.brand-app :is(.bg-warning-soft, .bg-success-soft):not(.school-portal *) { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .7), inset 0 1px 1px rgb(255 255 255 / .9); }
+/* A heavy week is flagged with a rose glass and red text, not a solid block. */
+.week-pileup { background: linear-gradient(135deg, color-mix(in oklab, var(--alert) 14%, white), color-mix(in oklab, var(--alert) 8%, white)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--alert) 22%, transparent), inset 0 1px 1px rgb(255 255 255 / .9); }

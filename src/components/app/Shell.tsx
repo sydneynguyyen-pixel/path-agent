@@ -1,10 +1,11 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, SlidersHorizontal, ChevronRight, UserCheck, UserRound, Settings, GraduationCap, BookOpenCheck, Compass, Split } from "lucide-react";
+import { RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, ChevronRight, ChevronDown, UserCheck, UserRound, Settings, BookOpenCheck, Compass, Split, Sprout } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { sources, student } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
-import { BrandLogo, AgentAvatar } from "./Brand";
+import { BrandLogo } from "./Brand";
 import mayaPhoto from "@/assets/maya.jpg";
 import { Button } from "@/components/ui/button";
 import { AgentPanel } from "./AgentPanel";
@@ -18,7 +19,7 @@ import { Roll } from "./Roll";
 
 const groups = [
   {
-    label: "Stay on track",
+    label: "Path",
     links: [
       { to: "/", label: "Home", icon: Home },
       { to: "/semester", label: "Terms", icon: CalendarDays },
@@ -27,32 +28,28 @@ const groups = [
     ],
   },
   {
-    label: "Explore",
+    label: "Grow",
     links: [
-      { to: "/explore", label: "Opportunities", icon: Compass },
+      { to: "/grow", label: "Experiences", icon: Sprout },
       { to: "/skills", label: "Skills", icon: BookOpenCheck },
+      { to: "/explore", label: "Opportunities", icon: Compass },
     ],
   },
   {
     label: "Path Agent",
-    links: [
-      { to: "/activity", label: "Activity", icon: Bot },
-      { to: "/permissions", label: "Controls", icon: SlidersHorizontal },
-    ],
-  },
-  {
-    label: "Account",
-    links: [
-      { to: "/profile", label: "Profile", icon: UserRound },
-      { to: "/sources", label: "Your sources", icon: Database },
-      { to: "/settings", label: "Settings", icon: Settings },
-    ],
+    links: [{ to: "/agents", label: "Agents", icon: Bot }],
   },
 ] as const;
 
 type NavLink = (typeof groups)[number]["links"][number];
 const allLinks: NavLink[] = groups.flatMap((g) => [...g.links] as NavLink[]);
-const extra = [{ to: "/counselor", label: "Counselor's side", icon: UserCheck }] as const;
+/** Pages without their own nav item light up the one they belong to. */
+const sectionFor = (path: string): string => {
+  if (["/course-skills", "/skills-export"].includes(path)) return "/skills";
+  if (["/activity", "/permissions", "/decisions", "/counselor"].includes(path)) return "/agents";
+  return path;
+};
+const badge = "ml-auto grid size-5 place-items-center rounded-full count-badge text-[10px]";
 
 /** A floating pill of real glass. Page content scrolls underneath and bends at its edges. */
 function GlassBar({ className, children }: { className?: string; children: ReactNode }) {
@@ -61,14 +58,33 @@ function GlassBar({ className, children }: { className?: string; children: React
   return <div ref={ref} className={cn("glass-bar glass", className)}>{children}</div>;
 }
 
+function AccountMenu({ compact = false }: { compact?: boolean }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button aria-label="Open Maya's account menu" className={compact ? "flex shrink-0 items-center gap-1 rounded-full p-0.5 hover:bg-foreground/5" : "flex w-full items-center gap-3 rounded-2xl px-2 py-1.5 text-left hover:bg-foreground/5"}>
+          <img src={mayaPhoto} alt="" className="size-9 rounded-full object-cover" />
+          {!compact && <><div className="min-w-0 flex-1 text-sm leading-tight"><div className="font-medium">{student.name}</div><div className="text-xs text-muted-foreground">Transfer student</div></div><ChevronDown className="size-4 text-muted-foreground" /></>}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={8} className="w-56">
+        <DropdownMenuLabel>{student.name}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild><Link to="/profile"><UserRound />Profile</Link></DropdownMenuItem>
+        <DropdownMenuItem asChild><Link to="/sources"><Database />Connected sources</Link></DropdownMenuItem>
+        <DropdownMenuItem asChild><Link to="/settings"><Settings />Settings</Link></DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild><Link to="/counselor"><UserCheck />Counselor's side preview</Link></DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function SidebarNav({ navPath }: { navPath: string }) {
-  const j = useJourney();
   const waiting = waitingCount(useEvents());
   const { containerRef, pillRef } = useSlidingPill<HTMLElement>('[aria-current="page"]');
-  const badge = "ml-auto grid size-5 place-items-center rounded-full bg-warning text-[10px] text-primary-foreground";
-
   return (
-    <nav ref={containerRef} className="relative mt-8 min-h-0 flex-1 space-y-7 overflow-y-auto pb-4 [scrollbar-width:none]">
+    <nav ref={containerRef} aria-label="Main" className="relative mt-8 min-h-0 flex-1 space-y-7 overflow-y-auto pb-4 [scrollbar-width:none]">
       <span ref={pillRef} className="sliding-pill liquid" aria-hidden="true" />
       {groups.map((g) => (
         <div key={g.label}>
@@ -83,7 +99,7 @@ function SidebarNav({ navPath }: { navPath: string }) {
               >
                 <l.icon className="size-4" />
                 {l.label}
-                {l.to === "/activity" && waiting > 0 && (
+                {l.to === "/agents" && waiting > 0 && (
                   <span title={`${waiting} thing${waiting > 1 ? "s" : ""} waiting for you`} aria-label={`${waiting} waiting for you`} className={badge}><Roll value={waiting} /></span>
                 )}
               </Link>
@@ -91,17 +107,6 @@ function SidebarNav({ navPath }: { navPath: string }) {
           </div>
         </div>
       ))}
-      <div className="border-t pt-5">
-        <div className="px-3 text-xs text-muted-foreground">Preview</div>
-        <Link
-          to="/counselor"
-          className="nav-link relative z-[1] mt-2 flex items-center gap-3 rounded-full px-3 py-2 text-sm text-muted-foreground"
-          aria-current={navPath === "/counselor" ? "page" : undefined}
-        >
-          <UserCheck className="size-4" /> Counselor's side
-          {j.emailSent && !j.counselor && <span className={badge}>1</span>}
-        </Link>
-      </div>
     </nav>
   );
 }
@@ -112,7 +117,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const onPortal = path === "/portal";
   const blankPage = blankPages[path];
-  // The location changes before the next page has loaded. Follow the rendered route so leaving /welcome doesn't remount it.
   const welcomeOnScreen = useRouterState({ select: (s) => s.matches.some((m) => m.routeId === "/welcome") });
 
   useEffect(() => {
@@ -121,8 +125,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   if (welcomeOnScreen) return <>{children}</>;
 
-  const navPath = path === "/course-skills" || path === "/skills-export" ? "/skills" : path;
-  const current = [...allLinks, ...extra].find((l) => l.to === navPath) ?? allLinks[0];
+  const navPath = sectionFor(path);
+  const current = allLinks.find((l) => l.to === navPath);
   const ev = j.evidenceId ? (sources as Record<string, (typeof sources)[keyof typeof sources] | undefined>)[j.evidenceId] : null;
 
   return (
@@ -139,7 +143,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
           <div className="mt-3 space-y-4">
             {(j.paused || j.watchingRegistration) && (
-              <Link to="/permissions" className="flex items-center gap-2 rounded-full bg-secondary px-3 py-2.5 text-xs">
+              <Link to="/agents" search={{ tab: "controls" }} className="flex items-center gap-2 rounded-full bg-secondary px-3 py-2.5 text-xs">
                 {j.paused ? (
                   <><Pause className="size-3.5" aria-hidden="true" /> Path Agent paused</>
                 ) : (
@@ -147,13 +151,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 )}
               </Link>
             )}
-            <Link to="/profile" className="flex items-center gap-3 rounded-2xl px-2 py-1.5 hover:bg-foreground/5">
-              <img src={mayaPhoto} alt="" className="size-9 rounded-full object-cover" />
-              <div className="text-sm leading-tight">
-                <div className="font-medium">{student.name}</div>
-                <div className="text-xs text-muted-foreground">Transfer student</div>
-              </div>
-            </Link>
+            <AccountMenu />
           </div>
         </aside>
 
@@ -166,9 +164,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 {current && <><current.icon className="size-4" /> {current.label}</>}
               </span>
             </GlassBar>
-            <nav className="ml-4 flex gap-1 overflow-x-auto md:hidden">
+            <nav aria-label="Main mobile" className="ml-4 flex min-w-0 gap-1 overflow-x-auto md:hidden">
               {allLinks.map((l) => (
-                <Link key={l.to} to={l.to} className="rounded-full px-2 py-1 text-xs text-muted-foreground" activeProps={{ className: "bg-primary text-primary-foreground" }} activeOptions={{ exact: true, includeSearch: false }}>
+                <Link key={l.to} to={l.to} className="rounded-full px-2 py-1 text-xs text-muted-foreground" activeProps={{ className: "glass-active" }} activeOptions={{ exact: true, includeSearch: false }}>
                   {l.label}
                 </Link>
               ))}
@@ -178,6 +176,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 <RotateCcw className="size-3" /> Reset demo
               </Button>
             </GlassBar>
+            <div className="md:hidden"><AccountMenu compact /></div>
           </header>
           {/* Keyed by route so each page opens at the top of this scroll area. */}
           <div key={path} className={`app-scroll flex min-h-0 flex-1 flex-col md:overflow-y-auto ${onPortal ? "" : "app-canvas"}`}>
@@ -194,7 +193,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </div>
 
       {!onPortal && <AgentPanel />}
-
       <Sheet open={!!ev} onOpenChange={(o) => !o && j.openEvidence(null)}>
         <SheetContent side="right" className="z-[60] sm:max-w-md">
           {ev && (
@@ -206,7 +204,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <div className="px-4">
                 <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{ev.section}</div>
                 <blockquote className="mt-3 rounded-2xl bg-secondary p-4 text-base leading-relaxed">“{ev.passage}”</blockquote>
-                <p className="mt-4 text-xs text-muted-foreground">Synthetic document</p>
+                <p className="mt-4 text-xs text-muted-foreground">Synthetic document · shown exactly as the Reader extracted it.</p>
               </div>
             </>
           )}

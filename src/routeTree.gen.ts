@@ -11,10 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivityRouteImport } from './routes/activity'
+import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as CounselorRouteImport } from './routes/counselor'
 import { Route as CourseSkillsRouteImport } from './routes/course-skills'
 import { Route as DecisionsRouteImport } from './routes/decisions'
 import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as GrowRouteImport } from './routes/grow'
 import { Route as PermissionsRouteImport } from './routes/permissions'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -37,6 +39,11 @@ const ActivityRoute = ActivityRouteImport.update({
   path: '/activity',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentsRoute = AgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CounselorRoute = CounselorRouteImport.update({
   id: '/counselor',
   path: '/counselor',
@@ -55,6 +62,11 @@ const DecisionsRoute = DecisionsRouteImport.update({
 const ExploreRoute = ExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GrowRoute = GrowRouteImport.update({
+  id: '/grow',
+  path: '/grow',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PermissionsRoute = PermissionsRouteImport.update({
@@ -116,10 +128,12 @@ const ApiAgentRecoverRoute = ApiAgentRecoverRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
+  '/agents': typeof AgentsRoute
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
   '/explore': typeof ExploreRoute
+  '/grow': typeof GrowRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
   '/profile': typeof ProfileRoute
@@ -135,10 +149,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
+  '/agents': typeof AgentsRoute
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
   '/explore': typeof ExploreRoute
+  '/grow': typeof GrowRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
   '/profile': typeof ProfileRoute
@@ -155,10 +171,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
+  '/agents': typeof AgentsRoute
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
   '/explore': typeof ExploreRoute
+  '/grow': typeof GrowRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
   '/profile': typeof ProfileRoute
@@ -176,10 +194,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/activity'
+    | '/agents'
     | '/counselor'
     | '/course-skills'
     | '/decisions'
     | '/explore'
+    | '/grow'
     | '/permissions'
     | '/portal'
     | '/profile'
@@ -195,10 +215,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/activity'
+    | '/agents'
     | '/counselor'
     | '/course-skills'
     | '/decisions'
     | '/explore'
+    | '/grow'
     | '/permissions'
     | '/portal'
     | '/profile'
@@ -214,10 +236,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/activity'
+    | '/agents'
     | '/counselor'
     | '/course-skills'
     | '/decisions'
     | '/explore'
+    | '/grow'
     | '/permissions'
     | '/portal'
     | '/profile'
@@ -234,10 +258,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActivityRoute: typeof ActivityRoute
+  AgentsRoute: typeof AgentsRoute
   CounselorRoute: typeof CounselorRoute
   CourseSkillsRoute: typeof CourseSkillsRoute
   DecisionsRoute: typeof DecisionsRoute
   ExploreRoute: typeof ExploreRoute
+  GrowRoute: typeof GrowRoute
   PermissionsRoute: typeof PermissionsRoute
   PortalRoute: typeof PortalRoute
   ProfileRoute: typeof ProfileRoute
@@ -267,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ActivityRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agents': {
+      id: '/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof AgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/counselor': {
       id: '/counselor'
       path: '/counselor'
@@ -293,6 +326,13 @@ declare module '@tanstack/react-router' {
       path: '/explore'
       fullPath: '/explore'
       preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/grow': {
+      id: '/grow'
+      path: '/grow'
+      fullPath: '/grow'
+      preLoaderRoute: typeof GrowRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/permissions': {
@@ -378,10 +418,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivityRoute: ActivityRoute,
+  AgentsRoute: AgentsRoute,
   CounselorRoute: CounselorRoute,
   CourseSkillsRoute: CourseSkillsRoute,
   DecisionsRoute: DecisionsRoute,
   ExploreRoute: ExploreRoute,
+  GrowRoute: GrowRoute,
   PermissionsRoute: PermissionsRoute,
   PortalRoute: PortalRoute,
   ProfileRoute: ProfileRoute,

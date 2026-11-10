@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { UploadKey } from "@/data/scenario";
+import type { EventPlatform, UploadKey } from "@/data/scenario";
+import type { Checks } from "@/lib/experiences";
 import { recover } from "@/lib/agent/client";
 import { applyAgentEvent, newRun, type AgentEvent, type AgentRun } from "@/lib/agent/loop";
 import { goTogetherEvent, options, student, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist } from "@/data/scenario";
@@ -49,9 +50,19 @@ type State = {
   draftCourses: string[];
   /** The sandbox on the What if page. Nothing reads it as the real plan. */
   whatIf: WhatIf;
+  /** Personal event accounts the student signed in to. Handshake comes through the school instead. */
+  eventAccounts: EventPlatform[];
+  /** The student's own answers to "Did you go?". */
+  eventChecks: Checks;
+  /** Experiences the student picked for a shared profile. Nothing is shared until they pick it. */
+  profilePicks: string[];
+  profileLink: boolean;
   interestedRoles: string[];
   dismissedRoles: string[];
   careerInterests: string[];
+  eventNote: string;
+  eventInviteSent: boolean;
+  eventFollowUpSent: boolean;
   agentOn: Record<AgentId, boolean>;
   access: Record<AccessKey, boolean>;
   uploads: UploadKey[];
@@ -88,6 +99,9 @@ const initial: State = {
   interestedRoles: [],
   dismissedRoles: [],
   careerInterests: [],
+  eventNote: "",
+  eventInviteSent: false,
+  eventFollowUpSent: false,
   agentOn: { reader: true, planner: true, backup: true, drafter: true },
   access: { registration: true, canvas: true, sis: true, audit: true, articulation: true, handshake: true, email: true },
   uploads: [],
@@ -109,6 +123,10 @@ const initial: State = {
   evidenceId: null,
   guide: false,
   whatIf: NO_CHANGE,
+  eventAccounts: [],
+  eventChecks: {},
+  profilePicks: [],
+  profileLink: false,
   startedAt: 0,
 };
 
@@ -127,6 +145,9 @@ type Ctx = State & {
   toggleCareerInterest: (interest: string) => void;
   setRoleInterest: (id: string, interested: boolean) => void;
   dismissRole: (id: string, dismissed: boolean) => void;
+  setEventNote: (note: string) => void;
+  sendEventInvite: () => void;
+  sendEventFollowUp: () => void;
   failAdd: (openSheet?: boolean) => void;
   choose: (id: string) => void;
   backToOptions: () => void;
@@ -139,6 +160,11 @@ type Ctx = State & {
   setPaused: (b: boolean) => void;
   openEvidence: (id: string | null) => void;
   setWhatIf: (w: WhatIf) => void;
+  linkEventAccount: (platform: EventPlatform, name: string, found: number) => void;
+  unlinkEventAccount: (platform: EventPlatform, name: string) => void;
+  checkEvent: (id: string, answer: "went" | "missed" | null) => void;
+  toggleProfilePick: (id: string) => void;
+  setProfileLink: (on: boolean) => void;
   reset: () => void;
   setWatchingRegistration: (b: boolean) => void;
   setGuide: (b: boolean) => void;
@@ -237,7 +263,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       decisions: [...p.decisions, log(
         `Switched STAT 2 to ${o.course.replace("BCC ", "")} (Section ${o.section})`,
         o.sourceIds,
-        `${options.filter((x) => x.seatsOpen > 0 && x.verdict !== "does_not_count").length} options with open seats. You picked one marked “${o.conflict ? "Check with your counselor" : o.confidence >= 0.9 ? "Sure" : "Fairly sure"}”.`,
+        `${options.filter((x) => x.seatsOpen > 0 && x.verdict !== "does_not_count").length} options with open seats. ${o.conflict ? "You chose the option with conflicting sources." : o.verdict === "conditional" ? "You chose the option with a grade condition." : "You chose the option whose sources agree."}`, 
         hold ? "I drafted a counselor email for you to review. Nothing sent." : "No email needed. You register yourself on the school's site.",
       )],
     }));
@@ -287,6 +313,9 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       toggleCareerInterest: (interest) => set(p => ({ ...p, careerInterests: p.careerInterests.includes(interest) ? p.careerInterests.filter(i => i !== interest) : [...p.careerInterests, interest] })),
       setRoleInterest: (id, interested) => set(p => ({ ...p, interestedRoles: interested ? [...new Set([...p.interestedRoles, id])] : p.interestedRoles.filter(i => i !== id), dismissedRoles: p.dismissedRoles.filter(i => i !== id) })),
       dismissRole: (id, dismissed) => set(p => ({ ...p, dismissedRoles: dismissed ? [...new Set([...p.dismissedRoles, id])] : p.dismissedRoles.filter(i => i !== id) })),
+      setEventNote: (eventNote) => set(p => ({ ...p, eventNote })),
+      sendEventInvite: () => set(p => ({ ...p, eventInviteSent: true, decisions: [...p.decisions, log("Sent the event invitation yourself", [], "Drafter wrote the invitation; you chose to send it.", "Demo only: no message was actually sent.")] })),
+      sendEventFollowUp: () => set(p => ({ ...p, eventFollowUpSent: true, skillReviews: { ...p.skillReviews, interviewing: { ...p.skillReviews["interviewing"], demonstrated: true, confirmed: true } }, decisions: [...p.decisions, log("Copied and sent the event follow-up yourself", [], "The draft used only your event note.", "Interviewing is now marked Demonstrated in Grow. Demo only: no message was actually sent.")] })),
       atRisk: (s.stage !== "idle" && !s.seatHeld) || s.counselor === "declined",
       failAdd,
       choose,
@@ -333,6 +362,14 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       setPaused: (b) => set((p) => ({ ...p, paused: b, panelOpen: b ? false : p.panelOpen })),
       openEvidence: (id) => set((p) => ({ ...p, evidenceId: id })),
       setWhatIf: (w) => set((p) => ({ ...p, whatIf: w })),
+      linkEventAccount: (platform, name, found) => set((p) => p.eventAccounts.includes(platform) ? p : ({ ...p, eventAccounts: [...p.eventAccounts, platform], decisions: [...p.decisions, log(`Connected ${name}, read only`, [], `Path Agent found ${found} events. It can't register you or message hosts.`)] })),
+      unlinkEventAccount: (platform, name) => set((p) => ({ ...p, eventAccounts: p.eventAccounts.filter((x) => x !== platform), decisions: [...p.decisions, log(`Disconnected ${name}`, [], "Its events no longer show in Experiences.")] })),
+      checkEvent: (id, answer) => set((p) => {
+        const { [id]: _old, ...rest } = p.eventChecks;
+        return { ...p, eventChecks: answer ? { ...rest, [id]: answer } : rest };
+      }),
+      toggleProfilePick: (id) => set((p) => ({ ...p, profilePicks: p.profilePicks.includes(id) ? p.profilePicks.filter((x) => x !== id) : [...p.profilePicks, id] })),
+      setProfileLink: (on) => set((p) => ({ ...p, profileLink: on, decisions: [...p.decisions, log(on ? "Turned on a private link to your experience profile" : "Turned off your profile link", [], on ? "Only people you give the link to can see what you picked." : "The link stopped working.")] })),
       reset: () => {
         clockRef.startedAt = Date.now();
         runControl.current?.abort();

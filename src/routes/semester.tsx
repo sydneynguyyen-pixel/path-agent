@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { PostingLink } from "@/components/app/PostingLink";
 import { AlertTriangle, Check, X } from "lucide-react";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -8,7 +9,7 @@ import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
 import { currentWeek, firstWeekToShow, isPileup, pileupLine, shortDate, weekDates } from "@/lib/weeks";
 import { canConfirm, confirmLabel, degreeLine, doneLabel, planTermId } from "@/lib/opportunities";
 import { useConfirmWent } from "@/components/app/PlanActions";
-import { PageHeader, SimLabel, SourceChip } from "@/components/app/bits";
+import { PageHeader, SourceChip } from "@/components/app/bits";
 import { TermIcon, SubjectIcon } from "@/components/app/Brand";
 import { PageBanner } from "@/components/app/SeasonBanner";
 import sceneTerms from "@/assets/scene-terms.jpg";
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { CourseLink } from "@/components/app/SkillsBits";
 import { opportunities, skillCourses } from "@/data/scenario";
 import { useSlidingPill } from "@/hooks/use-sliding-pill";
+import { Requirements } from "@/components/app/Requirements";
 
 export const Route = createFileRoute("/semester")({
   validateSearch: (search: Record<string, unknown>): { term?: string } => {
@@ -53,6 +55,7 @@ function OutsideClass({ termId }: { termId: string }) {
               <div className="min-w-0 flex-1 basis-48">
                 <div className="text-sm font-medium">{o.title}</div>
                 <div className="mt-0.5 text-xs text-muted-foreground">{o.when} · {degreeLine(o)}</div>
+                <PostingLink item={o} className="mt-1" />
               </div>
               <div className="flex items-center gap-1">
                 {done ? <>
@@ -96,7 +99,7 @@ function Semester() {
   return (
     <div>
       <PageBanner src={sceneTerms} position="50% 86%" />
-      <PageHeader title="Your terms" sub="Your plan through graduation." right={<div className="flex items-center gap-3"><SimLabel>Synthetic data</SimLabel><Button variant="outline" size="sm" asChild><Link to="/what-if">What if…</Link></Button></div>} />
+      <PageHeader title="Your terms" sub="Your plan through graduation." right={<Button variant="outline" size="sm" asChild><Link to="/what-if">What if…</Link></Button>} />
       {/* The padding gives shadows room inside the scroller; the negative margins keep the row in place. */}
       <div ref={containerRef} className="term-tabs relative -mx-3 -mt-3 mb-3 flex gap-2 overflow-x-auto px-3 py-3">
         <span ref={pillRef} className="sliding-pill liquid" aria-hidden="true" />
@@ -139,7 +142,7 @@ function Semester() {
         <div ref={weekPill.containerRef} className="week-strip relative grid grid-cols-4 gap-1.5 border-b p-3 xl:grid-cols-8">
           <span ref={weekPill.pillRef} className="sliding-pill liquid" aria-hidden="true" />
           {weeks.map((w) => (
-            <button key={w} type="button" aria-pressed={week === w} aria-current={nowWeek === w ? "date" : undefined} aria-label={`Week ${w}, ${weekDates(SUMMER_2027_START, w)}${nowWeek === w ? ", this week" : ""}: ${load(w)} due${isPileup(load(w)) ? ", pile-up" : ""}`} onClick={() => setPickedWeek(w)} className={cn("rounded-xl px-1 py-2 text-center text-xs outline-offset-2 transition-colors", isPileup(load(w)) ? "week-pileup bg-alert font-semibold text-white" : load(w) > 0 ? "bg-secondary font-medium hover:bg-secondary/70" : "text-muted-foreground hover:bg-secondary/50", nowWeek === w && "ring-1 ring-inset ring-foreground/25")}>
+            <button key={w} type="button" aria-pressed={week === w} aria-current={nowWeek === w ? "date" : undefined} aria-label={`Week ${w}, ${weekDates(SUMMER_2027_START, w)}${nowWeek === w ? ", this week" : ""}: ${load(w)} due${isPileup(load(w)) ? ", pile-up" : ""}`} onClick={() => setPickedWeek(w)} className={cn("rounded-xl px-1 py-2 text-center text-xs outline-offset-2 transition-colors", isPileup(load(w)) ? "week-pileup font-semibold text-alert" : load(w) > 0 ? "bg-secondary font-medium hover:bg-secondary/70" : "text-muted-foreground hover:bg-secondary/50", nowWeek === w && "ring-1 ring-inset ring-foreground/25")}>
               <span className="flex items-center justify-center gap-1 whitespace-nowrap">{isPileup(load(w)) && <AlertTriangle className="size-3" aria-hidden="true" />}Week {w}</span>
               <span className="mt-0.5 block whitespace-nowrap text-[11px] font-normal opacity-80">{weekDates(SUMMER_2027_START, w)}</span>
               <span className="block text-[11px] font-normal">{nowWeek === w && "Now · "}{load(w) > 0 ? `${load(w)} due` : "Clear"}</span>
@@ -168,9 +171,13 @@ function Semester() {
       </div>
       {j.draftCourses.some(code => skillCourses.find(c => c.code === code)?.termId === term.id) && <section className="mt-6"><h2 className="font-semibold">Draft courses from your role plan</h2><p className="mt-1 text-xs text-muted-foreground">Saved to your plan.</p><ul className="surface mt-3 divide-y px-5">{j.draftCourses.map(code => skillCourses.find(c => c.code === code)).filter(c => c?.termId === term.id).map(c => c && <li key={c.code} className="flex items-center gap-3 py-4"><SubjectIcon course={c.code} /><div className="min-w-0 flex-1"><span className="text-sm font-medium"><CourseLink course={c.code} /> · {c.title}</span></div><span className="rounded-full bg-secondary px-3 py-1 text-xs">Draft · {c.units}</span></li>)}</ul></section>}
       <OutsideClass termId={term.id} />
-      <section className="mt-12">
-        <h2 className="text-sm font-medium">Past terms</h2>
-        <div className="stagger mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="mt-10">
+        <h2 className="mb-3 text-lg font-semibold">Degree requirements</h2>
+        <Requirements />
+      </section>
+      <details className="mt-10 rounded-2xl border bg-card p-5">
+        <summary className="cursor-pointer text-sm font-medium">Completed terms · {terms.filter((t) => t.status === "done").length}</summary>
+        <div className="stagger mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {terms.filter((t) => t.status === "done").map((t) => (
             <article key={t.id} className="surface lift p-5">
               <div className="flex items-center gap-2"><TermIcon term={t.name} /><span className="font-medium">{t.name}</span><span className="ml-auto"><SchoolLogo school={t.school} className="size-6" /></span></div>
@@ -180,7 +187,7 @@ function Semester() {
             </article>
           ))}
         </div>
-      </section>
+      </details>
     </div>
   );
 }

@@ -86,6 +86,8 @@ type State = {
   agentRun: AgentRun | null;
   evidenceId: string | null;
   guide: boolean;
+  /** Path Agent has found the full section so she can join its waitlist herself. */
+  waitlistGuide: boolean;
   startedAt: number;
 };
 
@@ -121,6 +123,7 @@ const initial: State = {
   agentRun: null,
   evidenceId: null,
   guide: false,
+  waitlistGuide: false,
   whatIf: NO_CHANGE,
   eventAccounts: eventAccountsFor("filled"),
   eventChecks: {},
@@ -165,6 +168,7 @@ type Ctx = State & {
   backToOptions: () => void;
   markAdded: () => void;
   joinWaitlist: () => void;
+  setWaitlistGuide: (b: boolean) => void;
   setDraft: (s: string) => void;
   approve: () => void;
   counselorDecide: (d: "confirmed" | "declined") => void;
@@ -413,6 +417,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         set((p) => ({
           ...p,
           waitlisted: true,
+          waitlistGuide: false,
           decisions: [...p.decisions, log(`Joined the waitlist for ${waitlist.course}`, [waitlist.sourceId], "Optional: Bayview allows one waitlist spot while you're in a backup class.", "You joined it yourself (simulated). I didn't waitlist you.")],
         })),
       approve: () =>
@@ -440,6 +445,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         })),
       setDraft: (d) => set((p) => ({ ...p, draft: d })),
       setGuide: (b) => set((p) => ({ ...p, guide: b })),
+      setWaitlistGuide: (b) => set((p) => ({ ...p, waitlistGuide: b })),
       setPanelOpen: (b) => set((p) => ({ ...p, panelOpen: b })),
       setWatchingRegistration: (b) => set((p) => (p.watchingRegistration === b ? p : { ...p, watchingRegistration: b })),
       setPaused: (b) => set((p) => ({ ...p, paused: b, panelOpen: b ? false : p.panelOpen })),

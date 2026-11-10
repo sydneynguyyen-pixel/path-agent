@@ -2,7 +2,7 @@ const NS = "http://www.w3.org/2000/svg";
 
 export const calm = () => typeof window === "undefined" || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** One hidden SVG holds every shared filter: the watercolor edge and each glass lens. */
+/** One hidden SVG holds every shared filter: each glass lens. */
 export function svgDefs(): SVGDefsElement {
   const known = document.getElementById("pa-defs");
   if (known) return known as unknown as SVGDefsElement;
@@ -13,7 +13,6 @@ export function svgDefs(): SVGDefsElement {
   svg.style.position = "absolute";
   const defs = document.createElementNS(NS, "defs");
   defs.id = "pa-defs";
-  defs.innerHTML = `<filter id="pa-watercolor" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency=".022" numOctaves="3" seed="7" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="58"/><feGaussianBlur stdDeviation="2.5"/></filter>`;
   svg.append(defs);
   document.body.append(svg);
   return defs;
@@ -91,26 +90,4 @@ export function flyTo(from: HTMLElement | null, href: string) {
 
 function catchAt(target: HTMLElement) {
   target.animate({ scale: [1, 1.04, 1] }, { duration: 320, easing: "ease-out" });
-}
-
-/** Paint blooming on wet paper, centered on whatever just happened. Plays once and removes itself. */
-export function bloom(at: Element | null, size = 260) {
-  if (calm() || !at) return;
-  svgDefs();
-  const r = at.getBoundingClientRect();
-  const el = document.createElement("div");
-  el.className = "bloom";
-  el.setAttribute("aria-hidden", "true");
-  el.style.cssText = `left:${r.left + r.width / 2 - size / 2}px;top:${r.top + r.height / 2 - size / 2}px;width:${size}px;height:${size}px;`;
-  el.innerHTML = "<i></i><i></i><i></i>";
-  document.body.append(el);
-  setTimeout(() => el.remove(), 1700);
-}
-
-const played = new Set<string>();
-/** For moments that can re-render: runs only the first time this key is seen. */
-export function once(key: string, run: () => void) {
-  if (played.has(key)) return;
-  played.add(key);
-  run();
 }

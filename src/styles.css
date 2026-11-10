@@ -663,14 +663,8 @@ html[data-vt] .app-page, html[data-vt] .app-header { view-transition-name: none;
 html[data-vt="theme"]::view-transition-old(root) { display: block; animation: none; }
 html[data-vt="theme"]::view-transition-new(root) { animation: none; }
 
-/* The picture that arcs into a tab, and paint blooming on wet paper. */
+/* The picture that arcs into a tab. */
 .flight { position: fixed; top: 0; left: 0; z-index: 9999; margin: 0; overflow: hidden; border-radius: 18px; offset-anchor: center; offset-rotate: 0deg; pointer-events: none; box-shadow: 0 16px 34px -12px rgb(30 70 90 / .45); }
-.bloom { position: fixed; z-index: 9998; pointer-events: none; mix-blend-mode: multiply; filter: url(#pa-watercolor); animation: pa-bloom 1.6s var(--ease-out-soft) both; }
-.bloom i { position: absolute; border-radius: 50%; }
-.bloom i:nth-child(1) { inset: 16%; background: radial-gradient(circle, var(--ink-a), transparent 70%); }
-.bloom i:nth-child(2) { left: 0; top: 24%; width: 56%; height: 56%; background: radial-gradient(circle, var(--ink-b), transparent 70%); }
-.bloom i:nth-child(3) { right: 0; top: 10%; width: 50%; height: 50%; background: radial-gradient(circle, var(--ink-c), transparent 70%); }
-@keyframes pa-bloom { 0% { transform: scale(.25); opacity: 0; } 16% { opacity: .85; } 58% { opacity: .62; } 100% { transform: scale(1.14); opacity: 0; } }
 
 /* The agent working: replaces every spinner in Path Agent's own interface. */
 .ink { position: relative; display: inline-block; border-radius: 46% 54% 58% 42% / 48% 44% 56% 52%; background: conic-gradient(from 20deg, var(--ink-a), var(--ink-b), var(--ink-c), var(--ink-a)); animation: pa-ink-turn 2.4s linear infinite, pa-ink-shape 3.2s ease-in-out infinite alternate; }
@@ -685,6 +679,8 @@ html[data-vt="theme"]::view-transition-new(root) { animation: none; }
 @keyframes pa-wash { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 
 /* The recovery moment. */
+.my-pick { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 9999px; font-size: 13px; font-weight: 600; color: var(--foreground); background: linear-gradient(100deg, var(--ink-a), var(--ink-b)); }
+.agent-note .agent-avatar { width: 30px; height: 30px; }
 .nudge { animation: pa-rise .4s var(--ease-out-soft) backwards, pa-nudge .5s ease-in-out .28s; }
 @keyframes pa-nudge { 20% { transform: translateX(-4px); } 45% { transform: translateX(3.5px); } 70% { transform: translateX(-2px); } }
 .deal > * { animation: pa-deal .42s var(--settle) backwards; }

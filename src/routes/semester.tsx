@@ -62,7 +62,7 @@ function OutsideClass({ termId }: { termId: string }) {
                   <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-3 py-1 text-xs"><Check className="size-3" aria-hidden="true" />{doneLabel(o)}</span>
                   <Button size="sm" variant="ghost" onClick={() => j.undoWent(o.id)}>Undo</Button>
                 </> : <>
-                  {canConfirm(o, terms, SCRIPT_TODAY) ? <Button size="sm" variant="outline" onClick={(e) => confirm(o, e.currentTarget)}>{confirmLabel(o)}</Button> : <span className="rounded-full bg-secondary px-3 py-1 text-xs">Planned</span>}
+                  {canConfirm(o, terms, SCRIPT_TODAY) ? <Button size="sm" variant="outline" onClick={() => confirm(o)}>{confirmLabel(o)}</Button> : <span className="rounded-full bg-secondary px-3 py-1 text-xs">Planned</span>}
                   <Button size="icon" variant="ghost" className="size-8" aria-label={`Remove ${o.title} from your plan`} onClick={() => j.toggleSavedOpportunity(o.id)}><X className="size-4" aria-hidden="true" /></Button>
                 </>}
               </div>

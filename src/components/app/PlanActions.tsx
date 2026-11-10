@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { terms, type Opportunity } from "@/data/scenario";
 import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
 import { doneToast, planTermId } from "@/lib/opportunities";
-import { bloom, flyTo } from "@/lib/motion";
+import { flyTo } from "@/lib/motion";
 
 /** Saves a listing, or takes it back off the plan if it's already there. */
 export function useSaveToPlan() {
@@ -24,9 +24,8 @@ export function useSaveToPlan() {
 export function useConfirmWent() {
   const j = useJourney();
   const navigate = useNavigate();
-  return (o: Opportunity, from?: HTMLElement) => {
+  return (o: Opportunity) => {
     j.confirmWent(o.id);
-    bloom(from ?? null, 300);
     toast(doneToast(o), { action: { label: "See Skills", onClick: () => navigate({ to: "/skills" }) }, cancel: { label: "Undo", onClick: () => j.undoWent(o.id) } });
   };
 }

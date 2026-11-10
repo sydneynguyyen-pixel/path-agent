@@ -97,7 +97,7 @@ function NextOutsideClass() {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {upcoming ? <>
-          <Button variant="outline" onClick={(e) => confirm(o, e.currentTarget)}>{confirmLabel(o)}</Button>
+          <Button variant="outline" onClick={() => confirm(o)}>{confirmLabel(o)}</Button>
           <Button variant="ghost" asChild><Link to="/semester" search={{ term: planTermId(o, terms, SCRIPT_TODAY) }}>See your plan</Link></Button>
         </> : <>
           <Button variant="outline" onClick={(e) => save(o, e.currentTarget)}>Add to my plan</Button>

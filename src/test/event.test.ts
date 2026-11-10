@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { symposiumEvent } from "@/data/event";
 import { people } from "@/data/people";
 import { experiences, postings } from "@/data/scenario";
-import { eventPlanFor, filledEventPlan, freshEventPlan, followUp, inviteDraft, promiseId, nextCard, nextStep, notesFor, recall, toMeet, visibleClassmates } from "@/lib/event";
+import { eventAccountsFor, eventPlanFor, pathBuiltFor, filledEventPlan, freshEventPlan, followUp, inviteDraft, promiseId, nextCard, nextStep, notesFor, recall, toMeet, visibleClassmates } from "@/lib/event";
 import { evidenceFor } from "@/lib/skills";
 import { ledgerSkills } from "@/data/scenario";
 
@@ -84,6 +84,17 @@ describe("people you've met", () => {
 });
 
 describe("demo fill", () => {
+  it("always has a built path when filled, and only a path she built when fresh", () => {
+    expect(pathBuiltFor("filled", false)).toBe(true);
+    expect(pathBuiltFor("fresh", false)).toBe(false);
+    expect(pathBuiltFor("fresh", true)).toBe(true);
+  });
+
+  it("connects the personal event accounts only when filled", () => {
+    expect(eventAccountsFor("filled")).toEqual(["luma", "eventbrite"]);
+    expect(eventAccountsFor("fresh")).toEqual([]);
+  });
+
   it("starts fresh with nothing answered", () => {
     expect(eventPlanFor("fresh")).toBe(freshEventPlan);
     expect(nextCard(order, freshEventPlan.deck)).toBe("reyes");

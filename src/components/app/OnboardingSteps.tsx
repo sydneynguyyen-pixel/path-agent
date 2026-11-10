@@ -1,13 +1,16 @@
 import { useEffect, useId, useState } from "react";
-import { Check, Lock, Search, UserCheck } from "lucide-react";
+import { Check, FileText, Lock, Search } from "lucide-react";
+import jennaPhoto from "@/assets/jenna.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEMO_SIGNUP_CODE, setupDirectory, student, type DirectoryEntry } from "@/data/scenario";
+import { DEMO_SIGNUP_CODE, setupDirectory, student, UPLOAD_ORDER, uploadSamples, type DirectoryEntry, type UploadKey } from "@/data/scenario";
+import { useJourney } from "@/lib/journey";
 import { searchDirectory } from "@/lib/onboarding";
 import { cn } from "@/lib/utils";
 import { SchoolLogo } from "./SchoolLogo";
 import { connectedSources, schoolSignIns, type SchoolSignIn } from "./sourcesData";
+import { UploadFlow } from "./UploadFlow";
 
 type SchoolId = SchoolSignIn["id"];
 const isSchool = (id: string): id is SchoolId => id === "bayview" || id === "northgate";
@@ -134,7 +137,35 @@ function SchoolSignInPage({ school, onCancel, onAllow }: { school: SchoolSignIn;
           </div>
         </div>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">You sign in on your school's own page, so Path Agent never sees your password. The sign-in is simulated here.</p>
+      <p className="mt-3 text-xs text-muted-foreground">You'll sign in on your school's own site. Path Agent never sees your password.</p>
+    </div>
+  );
+}
+
+/** The same setup without a school sign-in: the student brings the documents instead. */
+function ManualSetup({ onConnected }: { onConnected: (id: SchoolId) => void }) {
+  const j = useJourney();
+  const [open, setOpen] = useState<UploadKey | null>(null);
+  if (open) {
+    const sample = uploadSamples[open];
+    return <div className="tour-swap mt-6"><h2 className="mb-3 font-medium">{sample.title}</h2><UploadFlow upload={sample} onCancel={() => setOpen(null)} onDone={() => { j.addUpload(open); if (sample.required) onConnected(sample.school); setOpen(null); }} /></div>;
+  }
+  return (
+    <div className="tour-swap">
+      <div className="mt-6 space-y-2">
+        {UPLOAD_ORDER.map((k) => {
+          const s = uploadSamples[k];
+          return (
+            <div key={k} className="flex items-center gap-3 rounded-2xl border p-3">
+              <span className="grid size-11 shrink-0 place-items-center rounded-full bg-secondary"><FileText className="size-5" /></span>
+              <div className="min-w-0 flex-1"><div className="text-sm font-medium">{s.title}</div><div className="text-xs text-muted-foreground">{s.required ? (s.school === "bayview" ? "Bayview" : "Northgate") : "Optional"} · {s.why}</div></div>
+              {j.uploads.includes(k) ? <span className="flex items-center gap-1 text-sm font-medium text-mark-yes"><Check className="size-4" /> Added</span>
+                : <Button variant="outline" size="sm" onClick={() => setOpen(k)}>{s.action}</Button>}
+            </div>
+          );
+        })}
+      </div>
+      <button type="button" className="mt-3 text-xs text-muted-foreground underline underline-offset-2" onClick={() => j.setSetupMethod("school")}>Sign in to my schools instead</button>
     </div>
   );
 }
@@ -142,6 +173,8 @@ function SchoolSignInPage({ school, onCancel, onAllow }: { school: SchoolSignIn;
 export function ConnectStep({ connected, onConnected }: { connected: SchoolId[]; onConnected: (id: SchoolId) => void }) {
   const [signingIn, setSigningIn] = useState<SchoolSignIn | null>(null);
   const [reading, setReading] = useState<SchoolId | null>(null);
+  const j = useJourney();
+  const manual = j.setupMethod === "manual";
 
   useEffect(() => {
     if (!reading) return;
@@ -152,8 +185,10 @@ export function ConnectStep({ connected, onConnected }: { connected: SchoolId[];
   return (
     <div>
       <h1 className="text-2xl font-medium">Connect your schools</h1>
-      <p className="mt-2 text-muted-foreground">Sign in to each school so I can read your records. You can change this anytime in Agent controls.</p>
-      {signingIn ? (
+      <p className="mt-2 text-muted-foreground">{manual ? "Add your records yourself. Your transcript and degree audit are all I need to start." : "Sign in to each school so I can read your records. You can change this anytime in Controls."}</p>
+      {manual ? (
+        <ManualSetup onConnected={onConnected} />
+      ) : signingIn ? (
         <SchoolSignInPage school={signingIn} onCancel={() => setSigningIn(null)} onAllow={() => { setReading(signingIn.id); setSigningIn(null); }} />
       ) : (
         <>
@@ -171,7 +206,7 @@ export function ConnectStep({ connected, onConnected }: { connected: SchoolId[];
               </div>
             ))}
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">Transfer rules come from ASSIST, which is public, so there's nothing to sign in to.</p>
+          <button type="button" className="mt-3 text-xs text-muted-foreground underline underline-offset-2" onClick={() => j.setSetupMethod("manual")}>Can't sign in? Upload your records instead</button>
         </>
       )}
     </div>
@@ -179,24 +214,25 @@ export function ConnectStep({ connected, onConnected }: { connected: SchoolId[];
 }
 
 const found = [
-  { school: "bayview" as const, name: "Bayview Community College", detail: "Current student · quarter system · Associate in Arts", from: "Found in your Bayview student system" },
-  { school: "northgate" as const, name: "Northgate State University", detail: "Admitted for Fall 2027 · semester system · Psychology B.A.", from: "Found in your Northgate degree audit" },
+  { school: "bayview" as const, name: "Bayview Community College", detail: "Current student · quarter system · Associate in Arts", upload: "transcript" as const, from: "Found in your Bayview student system", uploaded: "Found in the transcript you uploaded" },
+  { school: "northgate" as const, name: "Northgate State University", detail: "Admitted for Fall 2027 · semester system · Psychology B.A.", upload: "audit" as const, from: "Found in your Northgate degree audit", uploaded: "Found in the degree audit you uploaded" },
 ];
 
 export function ConfirmStep() {
+  const j = useJourney();
   return (
     <div>
       <h1 className="text-2xl font-medium">Here's what your schools have on file</h1>
       <p className="mt-2 text-muted-foreground">Does this look right?</p>
-      <div className="mt-6 space-y-3">
+      <div className="found-you stagger mt-6 space-y-3">
         {found.map((f) => (
           <div key={f.school} className="flex items-center gap-4 rounded-2xl border p-4">
             <SchoolLogo school={f.school} className="size-11" />
-            <div className="flex-1"><div className="font-medium">{f.name}</div><div className="text-sm text-muted-foreground">{f.detail}</div><div className="mt-1 text-xs text-muted-foreground">{f.from}</div></div>
+            <div className="flex-1"><div className="font-medium">{f.name}</div><div className="text-sm text-muted-foreground">{f.detail}</div><div className="mt-1 text-xs text-muted-foreground">{j.uploads.includes(f.upload) ? f.uploaded : f.from}</div></div>
           </div>
         ))}
         <div className="flex items-center gap-4 rounded-2xl border p-4">
-          <span className="grid size-11 place-items-center rounded-full bg-secondary"><UserCheck className="size-5" /></span>
+          <img src={jennaPhoto} alt="" width={44} height={44} className="size-11 shrink-0 rounded-full object-cover" />
           <div className="flex-1"><div className="font-medium">{student.counselor}</div><div className="text-sm text-muted-foreground">Your transfer counselor</div><div className="mt-1 text-xs text-muted-foreground">Found in your Northgate degree audit</div></div>
         </div>
       </div>

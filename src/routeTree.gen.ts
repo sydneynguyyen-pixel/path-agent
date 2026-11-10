@@ -14,6 +14,7 @@ import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as CounselorRouteImport } from './routes/counselor'
 import { Route as CourseSkillsRouteImport } from './routes/course-skills'
 import { Route as DecisionsRouteImport } from './routes/decisions'
+import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as PermissionsRouteImport } from './routes/permissions'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -23,6 +24,8 @@ import { Route as SkillsRouteImport } from './routes/skills'
 import { Route as SkillsExportRouteImport } from './routes/skills-export'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as WhatIfRouteImport } from './routes/what-if'
+import { Route as ApiAgentRecoverRouteImport } from './routes/api/agent-recover'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -47,6 +50,11 @@ const CourseSkillsRoute = CourseSkillsRouteImport.update({
 const DecisionsRoute = DecisionsRouteImport.update({
   id: '/decisions',
   path: '/decisions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExploreRoute = ExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PermissionsRoute = PermissionsRouteImport.update({
@@ -94,6 +102,16 @@ const WelcomeRoute = WelcomeRouteImport.update({
   path: '/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WhatIfRoute = WhatIfRouteImport.update({
+  id: '/what-if',
+  path: '/what-if',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentRecoverRoute = ApiAgentRecoverRouteImport.update({
+  id: '/api/agent-recover',
+  path: '/api/agent-recover',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
+  '/explore': typeof ExploreRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
   '/profile': typeof ProfileRoute
@@ -110,6 +129,8 @@ export interface FileRoutesByFullPath {
   '/skills-export': typeof SkillsExportRoute
   '/sources': typeof SourcesRoute
   '/welcome': typeof WelcomeRoute
+  '/what-if': typeof WhatIfRoute
+  '/api/agent-recover': typeof ApiAgentRecoverRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -117,6 +138,7 @@ export interface FileRoutesByTo {
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
+  '/explore': typeof ExploreRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
   '/profile': typeof ProfileRoute
@@ -126,6 +148,8 @@ export interface FileRoutesByTo {
   '/skills-export': typeof SkillsExportRoute
   '/sources': typeof SourcesRoute
   '/welcome': typeof WelcomeRoute
+  '/what-if': typeof WhatIfRoute
+  '/api/agent-recover': typeof ApiAgentRecoverRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +158,7 @@ export interface FileRoutesById {
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
+  '/explore': typeof ExploreRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
   '/profile': typeof ProfileRoute
@@ -143,6 +168,8 @@ export interface FileRoutesById {
   '/skills-export': typeof SkillsExportRoute
   '/sources': typeof SourcesRoute
   '/welcome': typeof WelcomeRoute
+  '/what-if': typeof WhatIfRoute
+  '/api/agent-recover': typeof ApiAgentRecoverRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -152,6 +179,7 @@ export interface FileRouteTypes {
     | '/counselor'
     | '/course-skills'
     | '/decisions'
+    | '/explore'
     | '/permissions'
     | '/portal'
     | '/profile'
@@ -161,6 +189,8 @@ export interface FileRouteTypes {
     | '/skills-export'
     | '/sources'
     | '/welcome'
+    | '/what-if'
+    | '/api/agent-recover'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -168,6 +198,7 @@ export interface FileRouteTypes {
     | '/counselor'
     | '/course-skills'
     | '/decisions'
+    | '/explore'
     | '/permissions'
     | '/portal'
     | '/profile'
@@ -177,6 +208,8 @@ export interface FileRouteTypes {
     | '/skills-export'
     | '/sources'
     | '/welcome'
+    | '/what-if'
+    | '/api/agent-recover'
   id:
     | '__root__'
     | '/'
@@ -184,6 +217,7 @@ export interface FileRouteTypes {
     | '/counselor'
     | '/course-skills'
     | '/decisions'
+    | '/explore'
     | '/permissions'
     | '/portal'
     | '/profile'
@@ -193,6 +227,8 @@ export interface FileRouteTypes {
     | '/skills-export'
     | '/sources'
     | '/welcome'
+    | '/what-if'
+    | '/api/agent-recover'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -201,6 +237,7 @@ export interface RootRouteChildren {
   CounselorRoute: typeof CounselorRoute
   CourseSkillsRoute: typeof CourseSkillsRoute
   DecisionsRoute: typeof DecisionsRoute
+  ExploreRoute: typeof ExploreRoute
   PermissionsRoute: typeof PermissionsRoute
   PortalRoute: typeof PortalRoute
   ProfileRoute: typeof ProfileRoute
@@ -210,6 +247,8 @@ export interface RootRouteChildren {
   SkillsExportRoute: typeof SkillsExportRoute
   SourcesRoute: typeof SourcesRoute
   WelcomeRoute: typeof WelcomeRoute
+  WhatIfRoute: typeof WhatIfRoute
+  ApiAgentRecoverRoute: typeof ApiAgentRecoverRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -247,6 +286,13 @@ declare module '@tanstack/react-router' {
       path: '/decisions'
       fullPath: '/decisions'
       preLoaderRoute: typeof DecisionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explore': {
+      id: '/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/permissions': {
@@ -312,6 +358,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/what-if': {
+      id: '/what-if'
+      path: '/what-if'
+      fullPath: '/what-if'
+      preLoaderRoute: typeof WhatIfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agent-recover': {
+      id: '/api/agent-recover'
+      path: '/api/agent-recover'
+      fullPath: '/api/agent-recover'
+      preLoaderRoute: typeof ApiAgentRecoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -321,6 +381,7 @@ const rootRouteChildren: RootRouteChildren = {
   CounselorRoute: CounselorRoute,
   CourseSkillsRoute: CourseSkillsRoute,
   DecisionsRoute: DecisionsRoute,
+  ExploreRoute: ExploreRoute,
   PermissionsRoute: PermissionsRoute,
   PortalRoute: PortalRoute,
   ProfileRoute: ProfileRoute,
@@ -330,6 +391,8 @@ const rootRouteChildren: RootRouteChildren = {
   SkillsExportRoute: SkillsExportRoute,
   SourcesRoute: SourcesRoute,
   WelcomeRoute: WelcomeRoute,
+  WhatIfRoute: WhatIfRoute,
+  ApiAgentRecoverRoute: ApiAgentRecoverRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

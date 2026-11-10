@@ -17,6 +17,8 @@ export function skillsSummary(skills: Skill[], reviews: Record<string, SkillRevi
   const [strongestTheme, strongestCount] = [...applied].reduce<[string | null, number]>((best, entry) => entry[1] > best[1] ? entry : best, [null, 0]);
   return { total: visible.length, ready, toCheck: visible.length - ready, strongestTheme, strongestCount };
 }
+/** Skills safe to confirm in one click. Low-confidence ones still get checked one at a time. */
+export function confirmableSkills(skills: Skill[], reviews: Record<string, SkillReview>) { return skills.filter(s => s.confidence !== "Low" && !reviews[s.id]?.confirmed && !reviews[s.id]?.hidden); }
 export function canExport(checked: boolean, count: number) { return checked && count > 0; }
 export function orderRoles(interests: string[], interested: string[]) { return [...careerRoles].sort((a,b) => Number(interested.includes(b.id))-Number(interested.includes(a.id)) || b.interests.filter(i=>interests.includes(i)).length-a.interests.filter(i=>interests.includes(i)).length); }
 export function courseCode(value: string) { return value.replace(/^BCC\s+/, "").match(/^[A-Z]+\s+[0-9]+[A-Z]?/)?.[0] ?? value; }

@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Fragment, useState } from "react";
 import { CheckCircle2, ArrowRight, AlertTriangle, CalendarClock, CalendarDays, CalendarPlus, Sparkles, ChevronDown } from "lucide-react";
-import { requirements, options, student, terms, progress, schools, outsideSchool, DROP_DEADLINE, type ReqStatus, type Term } from "@/data/scenario";
+import { requirements, options, student, terms, progress, schools, outsideSchool, DROP_DEADLINE, careerRoles, freeTime, opportunities, type ReqStatus, type Term } from "@/data/scenario";
+import { canConfirm, confirmLabel, gapProgress, goalFor, nextSuggestion, planTermId, suggestionWhy, hostLine } from "@/lib/opportunities";
+import { useConfirmWent, useSaveToPlan } from "@/components/app/PlanActions";
 import { recoveryPath } from "@/lib/confidence";
 import { BlankHome } from "@/components/app/BlankState";
-import { useJourney } from "@/lib/journey";
+import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
 import { ConfidenceBadge, SourceChip, StatusBadge } from "@/components/app/bits";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,8 +15,9 @@ import { TermIcon, SubjectIcon, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
 import { seasonFor } from "@/components/app/Brand";
 import { defaultSelectedTermId, selectTerm } from "@/lib/term-selection";
-import valleyHome from "@/assets/valley-home.jpg";
-import { SkillsHomeCard } from "@/components/app/SkillsBits";
+import sceneHome from "@/assets/scene-home.jpg";
+import { Flyer } from "@/components/app/Flyer";
+import { photoUrl } from "@/lib/photos";
 import { Spot } from "@/components/app/Illustrations";
 
 export const Route = createFileRoute("/")({
@@ -22,9 +25,9 @@ export const Route = createFileRoute("/")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { title: "Home — Academic Path Agent" },
+      { title: "Home — Path Agent" },
       { name: "description", content: "Maya's full transfer path from Bayview to Northgate, with what needs attention now." },
-      { property: "og:title", content: "Home — Academic Path Agent" },
+      { property: "og:title", content: "Home — Path Agent" },
       { property: "og:description", content: "Your whole degree path, every term through graduation, with sources on every claim." },
     ],
   }),
@@ -36,8 +39,8 @@ function Attention() {
   const chosen = options.find((o) => o.id === j.chosenId);
   let icon = <AgentAvatar agent="backup" bare />;
   let title = "Summer 2027 registration is open";
-  let body = "Register as usual in your school portal. I'll watch for problems like full sections and help you recover.";
-  let action = <Button asChild><Link to="/portal">Go to registration <ArrowRight className="size-4" /></Link></Button>;
+  let body = "Closes Jun 18. If a class is full, I'll find you a backup.";
+  let action = <Button asChild><Link to="/portal" search={{ start: true }}>Go to registration <ArrowRight className="size-4" /></Link></Button>;
   if (j.atRisk) {
     icon = <AgentAvatar agent="backup" bare />;
     title = j.counselor === "declined" ? "Your counselor declined that course" : "Statistics needs a new plan";
@@ -47,7 +50,7 @@ function Attention() {
     icon = <AgentAvatar agent="planner" bare />;
     const hold = recoveryPath(chosen) === "hold";
     title = hold ? `You hold a seat in ${chosen.course}` : `You're set with ${chosen.course}`;
-    body = hold ? `Counselor confirmation is pending. Drop by ${DROP_DEADLINE} if not confirmed.` : "It clearly counts toward Statistics. The agent didn't register anything — you did.";
+    body = hold ? `Counselor confirmation is pending. Drop by ${DROP_DEADLINE} if not confirmed.` : "It counts toward Statistics.";
     action = <Button variant="outline" asChild><Link to="/activity" search={{ tab: "decisions" }}>View your decisions</Link></Button>;
   } else if (j.counselor === "confirmed" && chosen) {
     icon = <AgentAvatar agent="planner" bare />;
@@ -56,14 +59,50 @@ function Attention() {
     action = <Button variant="outline" asChild><Link to="/semester">See your terms</Link></Button>;
   }
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-5 shadow-frame">
+    <div className="surface flex flex-wrap items-center gap-4 p-5">
       <div className="grid place-items-center">{icon}</div>
       <div className="min-w-0 flex-1">
-        <div className="aqua-chip inline-flex rounded-full px-3 py-1 text-xs font-semibold">Needs your attention</div>
+        <div className="aqua-chip mb-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold">Needs your attention</div>
         <div className="font-medium">{title}</div>
         <div className="text-sm text-muted-foreground">{body}</div>
       </div>
       {action}
+    </div>
+  );
+}
+
+/** Brings up one thing outside class: a check-in if something's on the plan, otherwise a suggestion. */
+function NextOutsideClass() {
+  const j = useJourney();
+  const save = useSaveToPlan();
+  const confirm = useConfirmWent();
+  const saved = opportunities.filter((o) => j.savedOpportunities.includes(o.id));
+  const went = Object.keys(j.wentTo);
+  const upcoming = saved.filter((o) => !went.includes(o.id) && canConfirm(o, terms, SCRIPT_TODAY)).sort((a, b) => a.startsOn.localeCompare(b.startsOn))[0];
+  const goal = goalFor(careerRoles, j.interestedRoles);
+  const open = goal.missing.filter((g) => { const p = gapProgress(g, saved, went); return !p || p.stage === "planned"; });
+  const pick = upcoming || !j.agentOn.planner || j.paused ? undefined : nextSuggestion(opportunities, open, freeTime, [...j.savedOpportunities, ...j.skippedSuggestions], SCRIPT_TODAY);
+  const o = upcoming ?? pick;
+  if (!o) return null;
+  return (
+    <div data-plan-card className="surface flex flex-wrap items-center gap-4 p-5">
+      {o.flyer && <Flyer flyer={o.flyer} photo={photoUrl(o.photo, 300)} className="size-24 shrink-0 rounded-xl" />}
+      <div className="min-w-0 flex-1 basis-60">
+        <div className="aqua-chip mb-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold">{upcoming ? "On your plan" : `For your ${goal.title} goal`}</div>
+        <div className="font-medium">{o.title}</div>
+        <div className="text-xs text-muted-foreground">{hostLine(o)} · {o.when}</div>
+        {!upcoming && <p className="mt-1.5 text-sm text-muted-foreground">{suggestionWhy(o, open, goal.title)}</p>}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {upcoming ? <>
+          <Button variant="outline" onClick={(e) => confirm(o, e.currentTarget)}>{confirmLabel(o)}</Button>
+          <Button variant="ghost" asChild><Link to="/semester" search={{ term: planTermId(o, terms, SCRIPT_TODAY) }}>See your plan</Link></Button>
+        </> : <>
+          <Button variant="outline" onClick={(e) => save(o, e.currentTarget)}>Add to my plan</Button>
+          <Button variant="ghost" asChild><Link to="/explore" search={{ open: o.id }}>See details</Link></Button>
+          <Button variant="ghost" onClick={() => j.skipSuggestion(o.id)}>Not for me</Button>
+        </>}
+      </div>
     </div>
   );
 }
@@ -83,7 +122,7 @@ function TransferReadiness() {
   const ip = pre.filter((r) => r.status === "in_progress" || r.status === "pending").length;
   const left = pre.length - done - ip;
   return (
-    <div className="mb-3 flex items-center gap-6 rounded-2xl border bg-card p-4">
+    <div className="surface mb-3 flex items-center gap-6 p-5">
       <div className="min-w-0 flex-1">
       <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
         <b className="font-medium">Ready to transfer: {done} of {pre.length} Bayview requirements</b>
@@ -105,21 +144,22 @@ function OutsideClass() {
   const o = outsideSchool;
   return (
     <section>
+      <h2 className="mb-3 text-sm font-medium">A class from another school that counts</h2>
       <div className="mb-3 flex items-center gap-3">
-        <div className="grid size-9 place-items-center rounded-xl border bg-card text-xs font-semibold">LCC</div>
+        <SchoolLogo school="lakeshore" className="size-9" />
         <div>
           <div className="font-medium">{o.name}</div>
           <div className="text-xs text-muted-foreground">{o.note} · {o.system}</div>
         </div>
       </div>
       <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-stretch">
-        <div className="rounded-2xl border bg-card p-4">
+        <div className="surface flex flex-col justify-center p-5">
           <div className="text-xs text-muted-foreground">{o.course.term}</div>
           <div className="mt-1 font-medium">{o.course.code} <span className="font-normal text-muted-foreground">{o.course.title}</span></div>
           <div className="mt-2 text-xs text-muted-foreground">{o.course.units} · {o.course.reason}</div>
         </div>
         <ArrowRight className="hidden size-5 self-center text-muted-foreground md:block" aria-hidden="true" />
-        <div className="rounded-2xl border bg-card p-4">
+        <div className="surface p-5">
           <div className="flex items-center justify-between gap-2 text-xs"><span className="aqua-chip rounded-full px-2 py-0.5 font-medium">{o.transfer.verdict}</span><span className="text-muted-foreground">{Math.round(o.transfer.confidence * 100)}% confident</span></div>
           <div className="mt-2 font-medium">{o.transfer.lands}</div>
           <div className="mt-1 text-xs text-muted-foreground">{o.transfer.units}</div>
@@ -141,7 +181,7 @@ function PathTimeline() {
   const isOpen = (_t: Term) => true;
   return (
     <div className="stagger space-y-8">
-      <TransferReadiness />
+      <OutsideClass />
       <section>
         <h2 className="mb-3 text-sm font-medium">Happening now</h2>
         <div className="grid items-start gap-3 sm:grid-cols-2">
@@ -179,7 +219,7 @@ function PathTimeline() {
                     );
                   })}
                 </ul>}
-                {selectedId === t.id && <div className="term-selected-footer"><span>Selected</span><Button size="sm" className="h-8 font-semibold" asChild onClick={(event) => event.stopPropagation()}><Link to={t.status === "registering" ? "/portal" : "/semester"} search={t.status === "registering" ? {} : { term: t.id }}>{termAction[t.status]}</Link></Button></div>}
+                {selectedId === t.id && <div className="term-selected-footer"><span>Selected</span><Button size="sm" className="h-8 font-semibold" asChild onClick={(event) => event.stopPropagation()}><Link to={t.status === "registering" ? "/portal" : "/semester"} search={t.status === "registering" ? { start: true } : { term: t.id }}>{termAction[t.status]}</Link></Button></div>}
               </article>
           ))}
         </div>
@@ -187,7 +227,6 @@ function PathTimeline() {
           See all terms: {past} completed, {planned} planned <ArrowRight className="size-3.5" />
         </Link>
       </section>
-      <OutsideClass />
     </div>
   );
 }
@@ -196,7 +235,7 @@ function Requirements() {
   const j = useJourney();
   const chosen = options.find((o) => o.id === j.chosenId);
   return (
-      <div className="divide-y rounded-2xl border bg-card shadow-soft">
+      <div className="surface divide-y">
         {requirements.map((r) => {
           let status: ReqStatus = r.status;
           let detail = r.detail;
@@ -213,7 +252,7 @@ function Requirements() {
             status = hold ? "pending" : "in_progress";
             detail = hold
               ? `Seat held: ${chosen.course} §${chosen.section} · awaiting ${student.counselor} · drop by ${DROP_DEADLINE} if not confirmed`
-              : `Enrolled (by you): ${chosen.course} §${chosen.section} · Summer 2027`;
+              : `Enrolled: ${chosen.course} §${chosen.section} · Summer 2027`;
             src = chosen.sourceIds[0]!;
             conf = chosen.confidence;
             conflict = !!chosen.conflict;
@@ -263,7 +302,7 @@ function Conversion() {
             ["Bayview CC policy", "1 quarter unit = 0.667 semester units", "bcc-units"],
             ["Northgate State policy", "5 quarter units → 3.3 semester units (rounded)", "nsu-units"],
           ] as const).map(([h, rule, id]) => (
-            <div key={id} className="rounded-xl border bg-card p-5">
+            <div key={id} className="surface p-5">
               <div className="text-xs text-muted-foreground">{h}</div>
               <div className="mt-1 font-serif text-lg">{rule}</div>
               <div className="mt-3 flex gap-2"><SourceChip id={id} /><ConfidenceBadge score={0.97} /></div>
@@ -282,7 +321,7 @@ function Home() {
   return (
     <div className="space-y-8">
       <div className="home-cover">
-      <img src={valleyHome} alt="" className="home-cover-art" width={1376} height={768} />
+      <img src={sceneHome} alt="" className="home-cover-art" width={1376} height={768} />
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <h1 className="home-greeting font-semibold">Hi {student.name.split(" ")[0]}, you're on track.</h1>
@@ -303,12 +342,14 @@ function Home() {
               <div className="bar-fill absolute inset-y-0 left-0 rounded-full aqua-chip" style={{ width: `${pct}%` }} />
             </div>
           </div>
-          <div className="mt-1.5 text-xs text-muted-foreground">{pct}% complete · {progress.inProgress} su in progress</div>
+          <div className="mt-1.5 text-xs text-muted-foreground">{pct}% complete · {progress.inProgress} semester units in progress</div>
         </div>
       </div>
 
       <div className="home-cover-card"><Attention /></div>
       </div>
+
+      <NextOutsideClass />
 
       <Tabs defaultValue="path">
         <TabsList className="rounded-full">
@@ -316,8 +357,8 @@ function Home() {
           <TabsTrigger value="reqs" className="rounded-full">Requirements</TabsTrigger>
           <TabsTrigger value="units" className="rounded-full">How units convert</TabsTrigger>
         </TabsList>
-        <TabsContent value="path" className="mt-6"><PathTimeline /><SkillsHomeCard /></TabsContent>
-        <TabsContent value="reqs" className="mt-6"><Requirements /></TabsContent>
+        <TabsContent value="path" className="mt-6"><PathTimeline /></TabsContent>
+        <TabsContent value="reqs" className="mt-6"><TransferReadiness /><Requirements /></TabsContent>
         <TabsContent value="units" className="mt-6"><Conversion /></TabsContent>
       </Tabs>
     </div>

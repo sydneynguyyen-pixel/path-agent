@@ -18,7 +18,7 @@ export function ConfidenceBadge({ score, conflict }: { score: number; conflict?:
         level === "medium" && "border-info/30 bg-info-soft text-info",
         level === "low" && "border-warning/40 bg-warning-soft text-warning",
       )}
-      title={`How sure the assistant is: ${Math.round(score * 100)}%`}
+      title={`How sure Path Agent is: ${Math.round(score * 100)}%`}
     >
       <Icon className="size-3.5" aria-hidden />
       {label}

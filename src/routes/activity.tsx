@@ -24,10 +24,10 @@ export const Route = createFileRoute("/activity")({
   }),
   head: () => ({
     meta: [
-      { title: "Activity — Academic Path Agent" },
-      { name: "description", content: "What your assistant did for you, step by step, and what it left for you to decide." },
-      { property: "og:title", content: "Activity — Academic Path Agent" },
-      { property: "og:description", content: "A plain-language timeline of everything your assistant read, suggested and handed back to you." },
+      { title: "Activity — Path Agent" },
+      { name: "description", content: "What Path Agent did for you, step by step, and what it left for you to decide." },
+      { property: "og:title", content: "Activity — Path Agent" },
+      { property: "og:description", content: "A plain-language timeline of everything Path Agent read, suggested and handed back to you." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -36,17 +36,17 @@ export const Route = createFileRoute("/activity")({
 });
 
 export const helperInfo: Record<AgentId, { name: string; plain: string }> = {
-  reader: { name: "Reader", plain: "Reads your documents and shows where each answer came from." },
-  planner: { name: "Planner", plain: "Works out what counts toward your degree and how heavy your term is." },
-  backup: { name: "Backup finder", plain: "Looks for other classes that still count when one is full." },
-  drafter: { name: "Drafter", plain: "Writes emails for you to review. Never sends on its own." },
+  reader: { name: "Read records", plain: "Reads your documents and shows where each answer came from." },
+  planner: { name: "Check your degree", plain: "Works out what counts toward your degree and how heavy your term is." },
+  backup: { name: "Find open classes", plain: "Looks for other classes that still count when one is full." },
+  drafter: { name: "Draft emails", plain: "Writes emails for you to review." },
 };
 
 function Activity() {
   const { tab, helper } = Route.useSearch();
   return (
     <div className="w-full min-w-0">
-      <PageHeader title="Activity" sub="Here's what your assistant did for you, and what it left for you to decide." right={<Spot name="journal" className="hidden w-32 sm:block" />} />
+      <PageHeader title="Activity" sub="Everything Path Agent has done for you." right={<Spot name="journal" className="hidden w-32 sm:block" />} />
       <div role="tablist" className="mb-6 inline-flex rounded-full border bg-card p-1 text-sm">
         {([["timeline", "Timeline"], ["decisions", "Your decisions"]] as const).map(([k, l]) => {
           const active = (tab ?? "timeline") === k;
@@ -58,7 +58,6 @@ function Activity() {
         })}
       </div>
       {tab === "decisions" ? <Decisions /> : <Timeline helper={helper} />}
-      <CanCantStrip />
     </div>
   );
 }
@@ -82,8 +81,8 @@ function Timeline({ helper }: { helper?: AgentId | undefined }) {
           <Input aria-label="Search activity" placeholder="Search activity, classes, or sources…" value={query} onChange={e => setQuery(e.target.value)} className="bg-card pl-9" />
         </div>
         <Select value={helper ?? "all"} onValueChange={value => navigate({ to: "/activity", search: value === "all" ? {} : { helper: value as AgentId } })}>
-          <SelectTrigger aria-label="Filter by helper" className="w-[160px] bg-card"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">All helpers</SelectItem>{HELPERS.map(h => <SelectItem key={h} value={h}>{helperInfo[h].name}</SelectItem>)}</SelectContent>
+          <SelectTrigger aria-label="Filter by task" className="w-[160px] bg-card"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="all">All tasks</SelectItem>{HELPERS.map(h => <SelectItem key={h} value={h}>{helperInfo[h].name}</SelectItem>)}</SelectContent>
         </Select>
         <Select value={status} onValueChange={value => setStatus(value as ActivityFilters["status"])}>
           <SelectTrigger aria-label="Filter by status" className="w-[190px] bg-card"><SelectValue /></SelectTrigger>
@@ -101,11 +100,11 @@ function Timeline({ helper }: { helper?: AgentId | undefined }) {
       {shown.length === 0 ? (
         <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground">
           <Spot name="rocks" className="mx-auto mb-3 w-28" />
-          {filtered ? "No activity matches your search or filters." : "Nothing has happened yet. Your assistant’s work will appear here."}
+          {filtered ? "No activity matches your search or filters." : "No activity yet."}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border bg-card">
-          <div className="hidden grid-cols-[120px_minmax(0,1fr)_180px_180px_24px] gap-4 border-b bg-secondary px-5 py-3 text-xs font-medium text-muted-foreground lg:grid"><span>Time</span><span>Activity</span><span>Helpers</span><span>Status</span><span /></div>
+        <div className="surface overflow-hidden">
+          <div className="hidden grid-cols-[120px_minmax(0,1fr)_180px_180px_24px] gap-4 border-b bg-secondary px-5 py-3 text-xs font-medium text-muted-foreground lg:grid"><span>Time</span><span>Activity</span><span>Tasks</span><span>Status</span><span /></div>
           <ol>{shown.map((e, i) => {
             const date = e.at.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
             const previous = shown[i - 1];
@@ -115,9 +114,9 @@ function Timeline({ helper }: { helper?: AgentId | undefined }) {
         </div>
       )}
 
-      <details className="group mt-8 rounded-2xl border bg-card shadow-soft">
+      <details className="surface group mt-8">
         <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl p-4 font-medium focus-visible:ring-2 focus-visible:ring-ring">
-          Who does what <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+          What Path Agent does <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
         </summary>
         <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2">
           {HELPERS.map((h) => {
@@ -128,7 +127,7 @@ function Timeline({ helper }: { helper?: AgentId | undefined }) {
                 <p className="mt-1 text-sm">{helperInfo[h].plain}</p>
                 <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                   <span>{!j.agentOn[h] ? "Off" : t ? `Last active ${fmtStamp(t)}` : "Not active yet"}</span>
-                  <Link to="/activity" search={{ helper: h }} className="text-primary underline">See their steps</Link>
+                  <Link to="/activity" search={{ helper: h }} className="text-primary underline">See steps</Link>
                 </div>
               </div>
             );
@@ -146,6 +145,7 @@ function EventCard({ e, now, helper, dateLabel }: { e: ActivityEvent; now: numbe
     if (!e.action) return;
     if (e.action.kind === "portal") { j.setGuide(true); navigate({ to: "/portal" }); }
     else if (e.action.kind === "counselor") navigate({ to: "/counselor" });
+    else if (e.action.kind === "explore") navigate({ to: "/explore" });
     else j.setPanelOpen(true);
   };
   const steps = helper ? e.steps.filter((s) => s.helper === helper) : e.steps;
@@ -168,7 +168,7 @@ function EventCard({ e, now, helper, dateLabel }: { e: ActivityEvent; now: numbe
           <li key={i} className={cn("flex flex-wrap items-center gap-x-3 gap-y-1 text-sm", s.skipped && "text-muted-foreground line-through")}>
             <AgentAvatar agent={s.helper} />
             <time className="w-16 shrink-0 font-mono text-xs text-muted-foreground" title={fmtStampSec(s.at)}>{fmtClock(s.at)}</time>
-            <span className="min-w-0 flex-1">{s.text}{s.skipped && <span className="ml-1 no-underline">(skipped — {helperInfo[s.helper].name} is off)</span>}</span>
+            <span className="min-w-0 flex-1">{s.text}{s.skipped && <span className="ml-1 no-underline">(skipped, this task is off)</span>}</span>
             <PermChip p={s.perm} />
           </li>
         ))}
@@ -180,7 +180,7 @@ function EventCard({ e, now, helper, dateLabel }: { e: ActivityEvent; now: numbe
         <Outcome title="What I did NOT do" items={e.didNot} icon="no" />
       </div>
 
-      {e.handoff && <p className="mt-4 rounded-xl bg-warning-soft p-3 text-sm"><b>I stopped here. This part is yours.</b> Registering is a click only you can make.</p>}
+      {e.handoff && <p className="mt-4 rounded-xl bg-warning-soft p-3 text-sm"><b>Your turn.</b> Add the class in your school's portal.</p>}
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {e.action && <Button size="sm" onClick={act}>{e.action.label} <ArrowRight className="size-4" /></Button>}
@@ -235,18 +235,18 @@ function Decisions() {
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">This is your record of what you chose. The assistant never decides for you.</p>
+        <p className="text-sm text-muted-foreground">Choices you've made.</p>
         <Button size="sm" variant="outline" disabled={!decisions.length} onClick={() => toast("Record exported (simulated)", { description: "Demo only: no file was created or shared." })}>
           <Download className="size-4" /> Export record
         </Button>
       </div>
       {decisions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground"><Spot name="flowers" className="mx-auto mb-3 w-24" />You haven't decided anything yet. Your choices will be recorded here.</div>
+        <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground"><Spot name="flowers" className="mx-auto mb-3 w-24" />No decisions yet.</div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border bg-card shadow-soft">
+        <div className="surface overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-secondary text-left text-xs text-muted-foreground">
-              <tr><th className="p-3">When</th><th className="p-3">You decided</th><th className="p-3">What the assistant had suggested</th><th className="p-3">What happened next</th></tr>
+              <tr><th className="p-3">When</th><th className="p-3">You decided</th><th className="p-3">What Path Agent suggested</th><th className="p-3">What happened next</th></tr>
             </thead>
             <tbody>
               {decisions.map((d) => (
@@ -265,14 +265,3 @@ function Decisions() {
   );
 }
 
-export function CanCantStrip() {
-  return (
-    <div className="sticky bottom-4 z-30 mt-8 rounded-2xl border bg-card/95 px-4 py-2.5 text-xs shadow-frame backdrop-blur">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span><Check className="mr-1 inline size-3.5 text-mark-yes" /><b>Can:</b> read your files, suggest classes, draft emails, say how sure it is.</span>
-        <span><Ban className="mr-1 inline size-3.5 text-mark-no" /><b>Can't:</b> register you, send anything without your OK, change your degree record, see anything you haven't shared.</span>
-        <Link to="/permissions" className="text-primary underline">Change what it's allowed to do</Link>
-      </div>
-    </div>
-  );
-}

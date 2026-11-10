@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { student } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { cn } from "@/lib/utils";
-import valleyHome from "@/assets/valley-home.jpg";
+import sceneHome from "@/assets/scene-home.jpg";
 import { AgentAvatar } from "./Brand";
 import { PathLoader, Spot } from "./Illustrations";
+import { Ink } from "./Ink";
 import { SchoolLogo } from "./SchoolLogo";
 
 type BlankPageContent = { spot: ComponentProps<typeof Spot>["name"]; title: string; body: string };
@@ -17,11 +18,13 @@ const noSkills: BlankPageContent = { spot: "books", title: "No skills yet", body
 /** What each data-driven page shows before the student's path exists. */
 export const blankPages: Partial<Record<string, BlankPageContent>> = {
   "/semester": { spot: "bridge", title: "Your terms will appear here", body: "Build your path to see every term from now until you graduate." },
-  "/portal": { spot: "signpost", title: "Build your path first", body: "I need to know what counts toward your transfer before I can help when a class is full." },
+  "/what-if": { spot: "bridge", title: "Nothing to test yet", body: "Build your path, then try changes without touching it." },
+  "/portal": { spot: "signpost", title: "Build your path first", body: "Build your path first, and I'll be ready when a class is full." },
   "/skills": noSkills,
   "/skills-export": noSkills,
   "/course-skills": noSkills,
-  "/activity": { spot: "journal", title: "Nothing has happened yet", body: "Everything your helpers do will be recorded here." },
+  "/explore": { spot: "flowers", title: "Explore opens once you have a path", body: "Build your path to see classes, clubs, internships and events that fit." },
+  "/activity": { spot: "journal", title: "Nothing has happened yet", body: "Everything Path Agent does will show up here." },
 };
 
 export function BlankPage({ spot, title, body }: BlankPageContent) {
@@ -58,7 +61,7 @@ export function BlankHome() {
   return (
     <div className="space-y-8">
       <div className="home-cover">
-        <img src={valleyHome} alt="" className="home-cover-art" width={1376} height={768} />
+        <img src={sceneHome} alt="" className="home-cover-art" width={1376} height={768} />
         <div>
           <h1 className="home-greeting font-semibold">Hi {student.name.split(" ")[0]}, let's map your path.</h1>
           <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
@@ -69,7 +72,7 @@ export function BlankHome() {
         </div>
         <div className="home-cover-card">
           {finished === null ? (
-            <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-5 shadow-frame">
+            <div className="surface flex flex-wrap items-center gap-4 p-5">
               <AgentAvatar agent="reader" bare />
               <div className="min-w-0 flex-1">
                 <div className="aqua-chip inline-flex rounded-full px-3 py-1 text-xs font-semibold">Start here</div>
@@ -79,12 +82,12 @@ export function BlankHome() {
               <Button onClick={() => setFinished(0)}>Build my path <ArrowRight className="size-4" /></Button>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 rounded-2xl border bg-card p-5 shadow-frame" role="status">
+            <div className="surface flex flex-wrap items-center justify-center gap-x-10 gap-y-4 p-5" role="status">
               <PathLoader />
               <ul className="space-y-2 text-sm">
                 {BUILD_STEPS.map((label, i) => (
                   <li key={label} className={cn("flex items-center gap-2 transition-colors", i > finished && "text-muted-foreground/50", i === finished && "font-medium")}>
-                    <Check className={cn("size-4 text-mark-yes transition-opacity", i < finished ? "opacity-100" : "opacity-0")} />
+                    {i === finished ? <Ink /> : <Check className={cn("size-4 text-mark-yes", i < finished ? "check-pop" : "opacity-0")} />}
                     {label}
                   </li>
                 ))}

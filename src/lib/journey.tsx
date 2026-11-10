@@ -1,7 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { options, student, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist } from "@/data/scenario";
+import type { UploadKey } from "@/data/scenario";
+import { recover } from "@/lib/agent/client";
+import { applyAgentEvent, newRun, type AgentEvent, type AgentRun } from "@/lib/agent/loop";
+import { goTogetherEvent, options, student, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
+import { helloDraft } from "@/lib/opportunities";
 import type { SkillReview } from "@/lib/skills";
+import { NO_CHANGE, type WhatIf } from "@/lib/whatif";
 
 export type Stage = "idle" | "failed" | "chosen";
 
@@ -10,6 +15,8 @@ export type Decision = { id: string; who: string; what: string; when: Date; evid
 /** Scripted demo clock: the story starts at Nov 7, 2026 · 7:30:50 PM (Pacific). Every timestamp is
  *  SCRIPT_START + time since the demo (re)started, so all pages agree and Reset demo restores them. */
 export const SCRIPT_START = Date.UTC(2026, 10, 8, 3, 30, 50);
+/** The scripted "today", for anything that depends on what's coming up. */
+export const SCRIPT_TODAY = new Date(SCRIPT_START).toISOString().slice(0, 10);
 const TZ = "America/Los_Angeles";
 export const fmtStamp = (d: Date) =>
   `${d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: TZ })} · ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: TZ })}`;
@@ -27,14 +34,29 @@ export function fmtAgo(d: Date, now: number) {
 export type AgentId = "reader" | "planner" | "backup" | "drafter";
 export type AccessKey = "registration" | "canvas" | "sis" | "audit" | "articulation" | "handshake" | "email";
 
+/** Going together to the one Explore event. The agent can draft; only the student can send. */
+export type GoTogether = { showMe: boolean; shownAt: Date | null; draftTo: string | null; draft: string; draftedAt: Date | null; sentTo: string[]; sentAt: Date | null };
+const noGoTogether: GoTogether = { showMe: false, shownAt: null, draftTo: null, draft: "", draftedAt: null, sentTo: [], sentAt: null };
+
 type State = {
+  savedOpportunities: string[];
+  savedAt: Record<string, Date>;
+  /** Only the student can add to this. The agent never assumes they went. */
+  wentTo: Record<string, Date>;
+  skippedSuggestions: string[];
+  goTogether: GoTogether;
   skillReviews: Record<string, SkillReview>;
   draftCourses: string[];
+  /** The sandbox on the What if page. Nothing reads it as the real plan. */
+  whatIf: WhatIf;
   interestedRoles: string[];
   dismissedRoles: string[];
   careerInterests: string[];
   agentOn: Record<AgentId, boolean>;
   access: Record<AccessKey, boolean>;
+  uploads: UploadKey[];
+  /** A student is either connected through their school or adds records by hand, so no page shows both. */
+  setupMethod: "school" | "manual";
   notify: { email: boolean; push: boolean; digest: boolean };
   stage: Stage;
   chosenId: string | null;
@@ -46,13 +68,21 @@ type State = {
   decisions: Decision[];
   panelOpen: boolean;
   paused: boolean;
+  /** True only while the student has the registration flow open and connected. */
+  watchingRegistration: boolean;
   agentTimes: Record<string, Date>;
+  agentRun: AgentRun | null;
   evidenceId: string | null;
   guide: boolean;
   startedAt: number;
 };
 
 const initial: State = {
+  savedOpportunities: [],
+  savedAt: {},
+  wentTo: {},
+  skippedSuggestions: [],
+  goTogether: noGoTogether,
   skillReviews: { observation: { confirmed: true } },
   draftCourses: [],
   interestedRoles: [],
@@ -60,6 +90,8 @@ const initial: State = {
   careerInterests: [],
   agentOn: { reader: true, planner: true, backup: true, drafter: true },
   access: { registration: true, canvas: true, sis: true, audit: true, articulation: true, handshake: true, email: true },
+  uploads: [],
+  setupMethod: "school",
   notify: { email: true, push: false, digest: true },
   stage: "idle",
   chosenId: null,
@@ -71,13 +103,25 @@ const initial: State = {
   decisions: [],
   panelOpen: false,
   paused: false,
+  watchingRegistration: false,
   agentTimes: {},
+  agentRun: null,
   evidenceId: null,
   guide: false,
+  whatIf: NO_CHANGE,
   startedAt: 0,
 };
 
 type Ctx = State & {
+  toggleSavedOpportunity: (id: string) => void;
+  confirmWent: (id: string) => void;
+  undoWent: (id: string) => void;
+  skipSuggestion: (id: string) => void;
+  setShowMeGoing: (on: boolean) => void;
+  startHello: (peerId: string) => void;
+  setHelloDraft: (text: string) => void;
+  cancelHello: () => void;
+  sendHello: () => void;
   reviewSkill: (id: string, review: SkillReview) => void;
   addDraftCourse: (code: string) => void;
   toggleCareerInterest: (interest: string) => void;
@@ -94,7 +138,9 @@ type Ctx = State & {
   setPanelOpen: (b: boolean) => void;
   setPaused: (b: boolean) => void;
   openEvidence: (id: string | null) => void;
+  setWhatIf: (w: WhatIf) => void;
   reset: () => void;
+  setWatchingRegistration: (b: boolean) => void;
   setGuide: (b: boolean) => void;
   /** Current scripted time in ms. */
   scriptNow: () => number;
@@ -102,11 +148,14 @@ type Ctx = State & {
   onboarded: boolean | null;
   finishOnboarding: () => void;
   replayOnboarding: () => void;
+  skipToDemo: () => void;
   /** Whether the student has built their path yet. Null until hydrated. False is the blank first-run app. */
   pathBuilt: boolean | null;
   finishBuild: () => void;
   setAgentOn: (id: AgentId, on: boolean) => void;
   setAccess: (k: AccessKey, on: boolean) => void;
+  addUpload: (k: UploadKey) => void;
+  setSetupMethod: (m: "school" | "manual") => void;
   setNotify: (k: keyof State["notify"], on: boolean) => void;
 };
 
@@ -149,13 +198,29 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     setPathBuilt(window.localStorage.getItem("pa-path-built") === "1");
   }, []);
 
+  const latest = useRef(s);
+  latest.current = s;
+  const runControl = useRef<AbortController | null>(null);
+
   const failAdd = useCallback((openSheet = true) => {
     const t0 = scriptNow();
+    const { paused, access, agentOn } = latest.current;
+    const allowed = !paused && access.registration;
+    if (allowed) {
+      runControl.current?.abort();
+      const control = new AbortController();
+      runControl.current = control;
+      const apply = (e: AgentEvent) => {
+        if (!control.signal.aborted) set((p) => ({ ...p, agentRun: applyAgentEvent(p.agentRun, e, new Date(scriptNow())) }));
+      };
+      void recover(agentOn, apply, control.signal);
+    }
     set((p) => ({
       ...p,
       stage: "failed",
       panelOpen: openSheet,
       agentTimes: { reader: new Date(t0), planner: new Date(t0 + 1400), backup: new Date(t0 + 2800) },
+      agentRun: allowed ? newRun() : null,
     }));
   }, []);
 
@@ -182,6 +247,41 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     const chosen = options.find((o) => o.id === s.chosenId);
     return {
       ...s,
+      toggleSavedOpportunity: (id) => set((p) => {
+        if (!p.savedOpportunities.includes(id)) return { ...p, savedOpportunities: [...p.savedOpportunities, id], savedAt: { ...p.savedAt, [id]: new Date(scriptNow()) } };
+        const { [id]: _saved, ...savedAt } = p.savedAt;
+        const { [id]: _went, ...wentTo } = p.wentTo;
+        return { ...p, savedOpportunities: p.savedOpportunities.filter((x) => x !== id), savedAt, wentTo };
+      }),
+      confirmWent: (id) => set((p) => ({ ...p, wentTo: { ...p.wentTo, [id]: new Date(scriptNow()) } })),
+      undoWent: (id) => set((p) => {
+        const { [id]: _went, ...wentTo } = p.wentTo;
+        return { ...p, wentTo };
+      }),
+      skipSuggestion: (id) => set((p) => ({ ...p, skippedSuggestions: [...p.skippedSuggestions, id] })),
+      setShowMeGoing: (on) => set((p) => ({
+        ...p,
+        goTogether: on
+          ? { ...p.goTogether, showMe: true, shownAt: new Date(scriptNow()) }
+          : { ...p.goTogether, showMe: false, draftTo: null, draft: "", draftedAt: null },
+      })),
+      startHello: (peerId) => set((p) => {
+        const peer = goTogetherEvent.visiblePeers.find((x) => x.id === peerId)!;
+        const drafted = p.agentOn.drafter;
+        return { ...p, goTogether: { ...p.goTogether, draftTo: peerId, draft: drafted ? helloDraft(peer.name, goTogetherEvent.shortName, student.name) : "", draftedAt: drafted ? new Date(scriptNow()) : null } };
+      }),
+      setHelloDraft: (text) => set((p) => ({ ...p, goTogether: { ...p.goTogether, draft: text } })),
+      cancelHello: () => set((p) => ({ ...p, goTogether: { ...p.goTogether, draftTo: null, draft: "", draftedAt: null } })),
+      sendHello: () => set((p) => {
+        const peer = goTogetherEvent.visiblePeers.find((x) => x.id === p.goTogether.draftTo);
+        if (!peer) return p;
+        const drafted = p.goTogether.draftedAt !== null;
+        return {
+          ...p,
+          goTogether: { ...p.goTogether, draftTo: null, draft: "", draftedAt: null, sentTo: [...p.goTogether.sentTo, peer.id], sentAt: new Date(scriptNow()) },
+          decisions: [...p.decisions, log(`Sent ${peer.name} a note about going to the ${goTogetherEvent.shortName} together`, [], drafted ? "I drafted it. You could edit anything first." : "You wrote this one yourself.", "You sent it yourself. Demo only: no message went out.")],
+        };
+      }),
       reviewSkill: (id, review) => set(p => ({ ...p, skillReviews: { ...p.skillReviews, [id]: { ...p.skillReviews[id], ...review } } })),
       addDraftCourse: (code) => set(p => ({ ...p, draftCourses: p.draftCourses.includes(code) ? p.draftCourses : [...p.draftCourses, code] })),
       toggleCareerInterest: (interest) => set(p => ({ ...p, careerInterests: p.careerInterests.includes(interest) ? p.careerInterests.filter(i => i !== interest) : [...p.careerInterests, interest] })),
@@ -229,17 +329,26 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       setDraft: (d) => set((p) => ({ ...p, draft: d })),
       setGuide: (b) => set((p) => ({ ...p, guide: b })),
       setPanelOpen: (b) => set((p) => ({ ...p, panelOpen: b })),
+      setWatchingRegistration: (b) => set((p) => (p.watchingRegistration === b ? p : { ...p, watchingRegistration: b })),
       setPaused: (b) => set((p) => ({ ...p, paused: b, panelOpen: b ? false : p.panelOpen })),
       openEvidence: (id) => set((p) => ({ ...p, evidenceId: id })),
+      setWhatIf: (w) => set((p) => ({ ...p, whatIf: w })),
       reset: () => {
         clockRef.startedAt = Date.now();
-        set((p) => ({ ...initial, startedAt: clockRef.startedAt, agentOn: p.agentOn, access: p.access, notify: p.notify }));
+        runControl.current?.abort();
+        set((p) => ({ ...initial, startedAt: clockRef.startedAt, agentOn: p.agentOn, access: p.access, notify: p.notify, watchingRegistration: p.watchingRegistration }));
       },
       scriptNow,
       onboarded,
       finishOnboarding: () => {
         window.localStorage.setItem("pa-onboarded", "1");
         setOnboarded(true);
+      },
+      skipToDemo: () => {
+        window.localStorage.setItem("pa-onboarded", "1");
+        window.localStorage.setItem("pa-path-built", "1");
+        setOnboarded(true);
+        setPathBuilt(true);
       },
       replayOnboarding: () => {
         window.localStorage.removeItem("pa-onboarded");
@@ -254,6 +363,8 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       },
       setAgentOn: (id, on) => set((p) => ({ ...p, agentOn: { ...p.agentOn, [id]: on } })),
       setAccess: (k, on) => set((p) => ({ ...p, access: { ...p.access, [k]: on } })),
+      setSetupMethod: (m) => set((p) => ({ ...p, setupMethod: m })),
+      addUpload: (k) => set((p) => (p.uploads.includes(k) ? p : { ...p, uploads: [...p.uploads, k] })),
       setNotify: (k, on) => set((p) => ({ ...p, notify: { ...p.notify, [k]: on } })),
     };
   }, [s, failAdd, choose, onboarded, pathBuilt]);

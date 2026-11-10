@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 export function useEvents() {
   const j = useJourney();
-  return useMemo(() => (j.pathBuilt ? buildEvents(j) : []), [j.pathBuilt, j.stage, j.chosenId, j.seatHeld, j.emailSent, j.counselor, j.agentOn, j.agentTimes, j.decisions, j.startedAt]);
+  return useMemo(() => (j.pathBuilt ? buildEvents(j) : []), [j.pathBuilt, j.savedAt, j.wentTo, j.stage, j.chosenId, j.seatHeld, j.emailSent, j.counselor, j.agentOn, j.agentTimes, j.agentRun, j.decisions, j.goTogether, j.startedAt]);
 }
 
 /** Scripted "now", ticking. Null until hydrated so SSR matches. */

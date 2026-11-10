@@ -52,7 +52,7 @@ function Settings() {
       </Section>
 
       <Section title="Demo">
-        <Row title="Event demo" desc="Filled opens the symposium plan partway through. Fresh starts it empty."><DemoFillPicker /></Row>
+        <Row title="Demo data" desc="Filled opens Maya's built path, events and notes. Fresh starts a new student with nothing built. Switching restarts the demo."><DemoFillPicker /></Row>
         <Row title="Replay onboarding" desc="See the first-time setup again."><Button variant="outline" size="sm" onClick={() => { j.replayOnboarding(); navigate({ to: "/welcome" }); }}>Replay</Button></Row>
         <Row title="Reset demo" desc="Put the registration story back to the start."><Button variant="outline" size="sm" onClick={() => { j.reset(); toast("Demo reset."); }}>Reset</Button></Row>
       </Section>
@@ -63,9 +63,9 @@ function Settings() {
 function DemoFillPicker() {
   const j = useJourney();
   return (
-    <div role="group" aria-label="Event demo" className="flex shrink-0 gap-1 rounded-full bg-secondary p-1">
+    <div role="group" aria-label="Demo data" className="flex shrink-0 gap-1 rounded-full bg-secondary p-1">
       {(["filled", "fresh"] as const).map((fill) => (
-        <button key={fill} type="button" aria-pressed={j.demoFill === fill} onClick={() => { if (j.demoFill !== fill) { j.setDemoFill(fill); toast(fill === "filled" ? "Event demo filled in." : "Event demo starts empty."); } }} className={cn("rounded-full px-3 py-1 text-xs capitalize text-muted-foreground", j.demoFill === fill && "glass-active font-medium text-foreground")}>
+        <button key={fill} type="button" aria-pressed={j.demoFill === fill} onClick={() => { if (j.demoFill !== fill) { j.setDemoFill(fill); toast(fill === "filled" ? "Showing Maya's filled demo." : "Showing a fresh start."); } }} className={cn("rounded-full px-3 py-1 text-xs capitalize text-muted-foreground", j.demoFill === fill && "glass-active font-medium text-foreground")}>
           {fill}
         </button>
       ))}

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useState, type CSSProperties } from "react";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -10,7 +10,6 @@ import { useJourney } from "@/lib/journey";
 import { isSignupCode } from "@/lib/onboarding";
 import { BrandLogo, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
-import { bloom } from "@/lib/motion";
 import valleyHero from "@/assets/valley-hero.jpg";
 
 export const Route = createFileRoute("/welcome")({
@@ -44,10 +43,8 @@ function Welcome() {
   const [choices, setChoices] = useState<SchoolChoices>({ college: null, transfer: null, major: null });
   const [connected, setConnected] = useState<SchoolSignIn["id"][]>([]);
   const step = STEPS[index]!;
-  const cardRef = useRef<HTMLDivElement>(null);
   const back = () => setIndex((i) => i - 1);
   const finish = () => {
-    bloom(cardRef.current, 760);
     j.finishOnboarding();
     navigate({ to: "/" });
   };
@@ -66,7 +63,7 @@ function Welcome() {
   return (
     <div className="brand-app welcome-scene flex min-h-screen items-center justify-center p-4 pb-[36vh] md:pb-4">
       <img src={valleyHero} alt="" className="welcome-art" width={1920} height={1088} />
-      <div ref={cardRef} className={cn("welcome-card w-full rounded-[1.75rem] border bg-card p-8 shadow-frame transition-[max-width] duration-500 md:p-10", step === "Tour" ? "max-w-4xl" : "max-w-xl")}>
+      <div className={cn("welcome-card w-full rounded-[1.75rem] border bg-card p-8 shadow-frame transition-[max-width] duration-500 md:p-10", step === "Tour" ? "max-w-4xl" : "max-w-xl")}>
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BrandLogo />

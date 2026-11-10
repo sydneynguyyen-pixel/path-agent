@@ -10,11 +10,11 @@ import type { SkillReview } from "@/lib/skills";
 import { NO_CHANGE, type WhatIf } from "@/lib/whatif";
 import { symposiumEvent } from "@/data/event";
 import { people } from "@/data/people";
-import { callName, eventPlanFor, filledEventPlan, followUp, inviteDraft, type DeckChoice, type DemoFill, type EventPlan } from "@/lib/event";
+import { callName, eventAccountsFor, eventPlanFor, filledEventPlan, followUp, pathBuiltFor, inviteDraft, type DeckChoice, type DemoFill, type EventPlan } from "@/lib/event";
 
 export type Stage = "idle" | "failed" | "chosen";
 
-export type Decision = { id: string; who: string; what: string; when: Date; evidence: string[]; suggested?: string | undefined; next?: string | undefined; /** Set on event-flow decisions so switching the event demo can clear them. */ area?: "event" | undefined };
+export type Decision = { id: string; who: string; what: string; when: Date; evidence: string[]; suggested?: string | undefined; next?: string | undefined; };
 
 /** Scripted demo clock: the story starts at Nov 7, 2026 · 7:30:50 PM (Pacific). Every timestamp is
  *  SCRIPT_START + time since the demo (re)started, so all pages agree and Reset demo restores them. */
@@ -122,7 +122,7 @@ const initial: State = {
   evidenceId: null,
   guide: false,
   whatIf: NO_CHANGE,
-  eventAccounts: [],
+  eventAccounts: eventAccountsFor("filled"),
   eventChecks: {},
   profilePicks: [],
   profileLink: false,
@@ -144,7 +144,7 @@ type Ctx = State & {
   toggleCareerInterest: (interest: string) => void;
   setRoleInterest: (id: string, interested: boolean) => void;
   dismissRole: (id: string, dismissed: boolean) => void;
-  /** Whether the event flow opens partway through or empty. */
+  /** Whether the demo opens with Maya's built path or as a new student. */
   demoFill: DemoFill;
   setDemoFill: (fill: DemoFill) => void;
   setEventGoal: (goal: string) => void;
@@ -234,16 +234,32 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
   const [demoFill, setDemoFillState] = useState<DemoFill>("filled");
   useEffect(() => {
     setOnboarded(window.localStorage.getItem("pa-onboarded") === "1");
-    setPathBuilt(window.localStorage.getItem("pa-path-built") === "1");
-    if (window.localStorage.getItem("pa-demo-fill") === "fresh") {
+    const fill: DemoFill = window.localStorage.getItem("pa-demo-fill") === "fresh" ? "fresh" : "filled";
+    setPathBuilt(pathBuiltFor(fill, window.localStorage.getItem("pa-path-built") === "1"));
+    if (fill === "fresh") {
       setDemoFillState("fresh");
-      set((p) => ({ ...p, event: eventPlanFor("fresh") }));
+      set((p) => ({ ...p, event: eventPlanFor("fresh"), eventAccounts: eventAccountsFor("fresh") }));
     }
   }, []);
 
   const latest = useRef(s);
   latest.current = s;
   const runControl = useRef<AbortController | null>(null);
+
+  /** Back to the start of a demo, keeping the student's helper, access and notification choices. */
+  const restart = useCallback((fill: DemoFill) => {
+    clockRef.startedAt = Date.now();
+    runControl.current?.abort();
+    set((p) => ({ ...initial, event: eventPlanFor(fill), eventAccounts: eventAccountsFor(fill), startedAt: clockRef.startedAt, agentOn: p.agentOn, access: p.access, notify: p.notify, watchingRegistration: p.watchingRegistration }));
+  }, []);
+  const applyFill = useCallback((fill: DemoFill) => {
+    window.localStorage.setItem("pa-demo-fill", fill);
+    if (fill === "filled") window.localStorage.setItem("pa-path-built", "1");
+    else window.localStorage.removeItem("pa-path-built");
+    setDemoFillState(fill);
+    setPathBuilt(pathBuiltFor(fill, false));
+    restart(fill);
+  }, [restart]);
 
   const failAdd = useCallback((openSheet = true) => {
     const t0 = scriptNow();
@@ -331,15 +347,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       setRoleInterest: (id, interested) => set(p => ({ ...p, interestedRoles: interested ? [...new Set([...p.interestedRoles, id])] : p.interestedRoles.filter(i => i !== id), dismissedRoles: p.dismissedRoles.filter(i => i !== id) })),
       dismissRole: (id, dismissed) => set(p => ({ ...p, dismissedRoles: dismissed ? [...new Set([...p.dismissedRoles, id])] : p.dismissedRoles.filter(i => i !== id) })),
       demoFill,
-      setDemoFill: (fill) => {
-        window.localStorage.setItem("pa-demo-fill", fill);
-        setDemoFillState(fill);
-        // Only the event flow changes. Its skill update and logged decisions go with it.
-        set((p) => {
-          const { practiced: _practiced, ...review } = p.skillReviews[symposiumEvent.skillId] ?? {};
-          return { ...p, event: eventPlanFor(fill), skillReviews: { ...p.skillReviews, [symposiumEvent.skillId]: review }, decisions: p.decisions.filter((d) => d.area !== "event") };
-        });
-      },
+      setDemoFill: applyFill,
       setEventGoal: (goal) => set((p) => ({ ...p, event: { ...p.event, goal } })),
       answerCard: (personId, choice) => set((p) => {
         const { [personId]: _old, ...deck } = p.event.deck;
@@ -358,7 +366,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         return {
           ...p,
           event: { ...p.event, invite: { to: null, draft: "", sent: [...p.event.invite.sent, c.id] } },
-          decisions: [...p.decisions, { ...log(`Asked ${c.name} to go to the ${symposiumEvent.shortName} together`, [], p.agentOn.drafter ? "Drafter wrote it. You could edit anything first." : "You wrote this one yourself.", "You sent it yourself. Demo only: no message went out."), area: "event" }],
+          decisions: [...p.decisions, log(`Asked ${c.name} to go to the ${symposiumEvent.shortName} together`, [], p.agentOn.drafter ? "Drafter wrote it. You could edit anything first." : "You wrote this one yourself.", "You sent it yourself. Demo only: no message went out.")],
         };
       }),
       markTalked: (id, on) => set((p) => ({ ...p, event: { ...p.event, talked: on ? [...new Set([...p.event.talked, id])] : p.event.talked.filter((x) => x !== id) } })),
@@ -388,7 +396,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
           ...p,
           event: { ...p.event, followUp: { to: null, draft: "", copied: [...new Set([...p.event.followUp.copied, person.id])] } },
           skillReviews: { ...p.skillReviews, [sk]: { ...p.skillReviews[sk], practiced: true } },
-          decisions: [...p.decisions, { ...log(`Copied a follow-up to ${callName(person.name)} to send yourself`, [], "Drafted only from your own note.", "Interviewing basics now shows Practiced on Skills. Demo only: nothing was sent."), area: "event" }],
+          decisions: [...p.decisions, log(`Copied a follow-up to ${callName(person.name)} to send yourself`, [], "Drafted only from your own note.", "Interviewing basics now shows Practiced on Skills. Demo only: nothing was sent.")],
         };
       }),
       atRisk: (s.stage !== "idle" && !s.seatHeld) || s.counselor === "declined",
@@ -445,11 +453,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       }),
       toggleProfilePick: (id) => set((p) => ({ ...p, profilePicks: p.profilePicks.includes(id) ? p.profilePicks.filter((x) => x !== id) : [...p.profilePicks, id] })),
       setProfileLink: (on) => set((p) => ({ ...p, profileLink: on, decisions: [...p.decisions, log(on ? "Turned on a private link to your experience profile" : "Turned off your profile link", [], on ? "Only people you give the link to can see what you picked." : "The link stopped working.")] })),
-      reset: () => {
-        clockRef.startedAt = Date.now();
-        runControl.current?.abort();
-        set((p) => ({ ...initial, event: eventPlanFor(demoFill), startedAt: clockRef.startedAt, agentOn: p.agentOn, access: p.access, notify: p.notify, watchingRegistration: p.watchingRegistration }));
-      },
+      reset: () => restart(demoFill),
       scriptNow,
       onboarded,
       finishOnboarding: () => {
@@ -458,15 +462,14 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       },
       skipToDemo: () => {
         window.localStorage.setItem("pa-onboarded", "1");
-        window.localStorage.setItem("pa-path-built", "1");
         setOnboarded(true);
-        setPathBuilt(true);
+        applyFill("filled");
       },
       replayOnboarding: () => {
         window.localStorage.removeItem("pa-onboarded");
         window.localStorage.removeItem("pa-path-built");
         setOnboarded(false);
-        setPathBuilt(false);
+        setPathBuilt(pathBuiltFor(demoFill, false));
       },
       pathBuilt,
       finishBuild: () => {
@@ -479,7 +482,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       addUpload: (k) => set((p) => (p.uploads.includes(k) ? p : { ...p, uploads: [...p.uploads, k] })),
       setNotify: (k, on) => set((p) => ({ ...p, notify: { ...p.notify, [k]: on } })),
     };
-  }, [s, failAdd, choose, onboarded, pathBuilt, demoFill]);
+  }, [s, failAdd, choose, onboarded, pathBuilt, demoFill, applyFill, restart]);
 
   return <JourneyCtx.Provider value={value}>{children}</JourneyCtx.Provider>;
 }

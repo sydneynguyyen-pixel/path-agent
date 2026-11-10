@@ -1,4 +1,5 @@
 import { symposiumEvent, type Classmate } from "@/data/event";
+import type { EventPlatform } from "@/data/scenario";
 import { pastNotes, type PastNote, type Person } from "@/data/people";
 
 /** Her answer on each deck card. Nothing is shared with the person either way. */
@@ -20,7 +21,7 @@ export type EventPlan = {
   reminders: string[];
   followUp: { to: string | null; draft: string; copied: string[] };
 };
-/** Which demo the event flow opens with. */
+/** Which demo the app opens with: Maya's built path, or a new student with nothing yet. */
 export type DemoFill = "filled" | "fresh";
 
 export const freshEventPlan: EventPlan = { goal: symposiumEvent.goals[0]!, deck: {}, invite: { to: null, draft: "", sent: [] }, talked: [], notes: [], promises: [], reminders: [], followUp: { to: null, draft: "", copied: [] } };
@@ -35,6 +36,10 @@ export const filledEventPlan: EventPlan = {
   promises: [{ id: `reyes-${symposiumEvent.date}`, personId: "reyes", text: reyesNote.promise, done: false }],
 };
 export const eventPlanFor = (fill: DemoFill) => (fill === "filled" ? filledEventPlan : freshEventPlan);
+/** The personal event accounts each demo starts with. Handshake comes through the school either way. */
+export const eventAccountsFor = (fill: DemoFill): EventPlatform[] => (fill === "filled" ? ["luma", "eventbrite"] : []);
+/** Filled always has a built path. Fresh has one only once the student builds it. */
+export const pathBuiltFor = (fill: DemoFill, builtBefore: boolean) => fill === "filled" || builtBefore;
 
 /** The next card she hasn't answered, in the agent's suggested order. */
 export function nextCard(order: string[], deck: Deck): string | null {

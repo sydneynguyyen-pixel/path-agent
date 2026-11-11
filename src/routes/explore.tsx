@@ -171,7 +171,7 @@ const INDUSTRIES = menu((o) => [o.industry]);
 /** Your goal, what's left to build for it, and each gap as a one-tap filter. */
 function GoalBar({ goalId, title, gaps, skill, onRole, onSkill }: { goalId: string; title: string; gaps: string[]; skill: string | null; onRole: (id: string) => void; onSkill: (s: string | null) => void }) {
   return (
-    <section aria-label="Your goal" className="surface flex flex-wrap items-center gap-x-3 gap-y-2.5 p-4">
+    <section aria-label="Your goal" className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted-foreground">Aiming for</span>
         <Select value={goalId} onValueChange={onRole}>
@@ -183,7 +183,7 @@ function GoalBar({ goalId, title, gaps, skill, onRole, onSkill }: { goalId: stri
       <div className="flex flex-wrap items-center gap-1.5">
         {gaps.map((g) => <button key={g} type="button" aria-pressed={skill === g} onClick={() => onSkill(skill === g ? null : g)} className={cn("rounded-full px-3 py-1.5 text-xs", skill === g ? "glass-active font-medium" : "bg-secondary text-foreground hover:bg-secondary/70")}>{g}</button>)}
       </div>
-      <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <Link to="/explore" search={{ view: "careers" }} className="underline-offset-4 hover:text-foreground hover:underline">Other roles</Link>
         <Link to="/explore" search={{ view: "plan", role: goalId }} className="underline-offset-4 hover:text-foreground hover:underline">Plan toward it</Link>
       </div>
@@ -330,6 +330,7 @@ function Explore() {
           <div>
             <h1 className="text-3xl font-semibold md:text-[2rem]">What do you want to try next?</h1>
             <p className="mt-1 text-sm text-muted-foreground">Classes, clubs, events and internships picked for you.</p>
+            <div className="mt-3"><GoalBar goalId={goal.id} title={goal.title} gaps={gaps} skill={local.skill} onRole={setRole} onSkill={(skill) => update({ skill })} /></div>
           </div>
           <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
@@ -337,28 +338,25 @@ function Explore() {
           </div>
         </header>
 
-        <GoalBar goalId={goal.id} title={goal.title} gaps={gaps} skill={local.skill} onRole={setRole} onSkill={(skill) => update({ skill })} />
-
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* One toolbar: what kind, narrow it, how to view it. */}
+          <div className="flex flex-wrap items-center gap-2 border-y py-2">
             <PillGroup>
               <Pill active={local.kind === "all"} onClick={() => update({ kind: "all" })}>All <span className="text-xs opacity-70"><Roll value={allCount} /></span></Pill>
               {ORDER.map((k) => <Pill key={k} active={local.kind === k} onClick={() => update({ kind: k })}>{KIND[k].tab} <span className="text-xs opacity-70"><Roll value={countFor(k)} /></span></Pill>)}
             </PillGroup>
-            <PillGroup className="rounded-full border bg-card p-1">
+            {!eventsBoard && (
+              <button type="button" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)} className={cn("inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm text-muted-foreground hover:text-foreground", (filtersOpen || activeFilters > 0) && "glass-active font-medium text-foreground")}>
+                <SlidersHorizontal className="size-3.5" aria-hidden="true" />Filters{activeFilters > 0 && <span className="grid size-5 place-items-center rounded-full count-badge text-[10px]">{activeFilters}</span>}
+              </button>
+            )}
+            {!eventsBoard && fillsSlot && <button type="button" onClick={clearFills} className="glass-active inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium">Classes for your {fillsSlot.need.toLowerCase()} <X className="size-3.5" aria-hidden="true" /></button>}
+            {!eventsBoard && hasFilters && <button type="button" onClick={clear} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><X className="size-3.5" aria-hidden="true" /> Clear</button>}
+            <PillGroup className="ml-auto rounded-full border bg-card p-1">
               <Pill active={view === "browse"} onClick={() => setView("browse")}><LayoutGrid className="size-3.5" aria-hidden="true" /> Browse</Pill>
               <Pill active={view === "calendar"} onClick={() => setView("calendar")}><CalendarDays className="size-3.5" aria-hidden="true" /> {byDeadline ? "Deadlines" : "Calendar"}</Pill>
             </PillGroup>
           </div>
-          {!eventsBoard && (
-            <div className="flex flex-wrap items-center gap-2">
-              <button type="button" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)} className={cn("inline-flex items-center gap-1.5 rounded-full border bg-card px-4 py-2 text-sm", (filtersOpen || activeFilters > 0) && "glass-active border-transparent font-medium")}>
-                <SlidersHorizontal className="size-3.5" aria-hidden="true" />Filters{activeFilters > 0 && <span className="grid size-5 place-items-center rounded-full count-badge text-[10px]">{activeFilters}</span>}
-              </button>
-              {fillsSlot && <button type="button" onClick={clearFills} className="glass-active inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium">Classes for your {fillsSlot.need.toLowerCase()} <X className="size-3.5" aria-hidden="true" /></button>}
-              {hasFilters && <button type="button" onClick={clear} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><X className="size-3.5" aria-hidden="true" /> Clear</button>}
-            </div>
-          )}
           <div className={cn("flex flex-wrap items-center gap-2 rounded-2xl bg-secondary/60 p-3", (eventsBoard || !filtersOpen) && "hidden")}>
             <FilterMenu label="Filter by skill" any="Any skill" value={local.skill} options={SKILLS} onChange={(skill) => update({ skill })} />
             <FilterMenu label="Filter by subject" any="Any subject" value={local.subject} options={SUBJECTS} onChange={(subject) => update({ subject })} />

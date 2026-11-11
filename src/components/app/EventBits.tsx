@@ -134,7 +134,7 @@ export function Via({ e }: { e: Found }) {
 
 /** Events the student's accounts show are still ahead. */
 /** compact: one dated list with no photos, for a side column. */
-export function ComingUp({ compact = false }: { compact?: boolean }) {
+export function ComingUp({ compact = false, limit }: { compact?: boolean; limit?: number }) {
   const j = useJourney();
   const found = useFound();
   const { upcoming } = timeline(found, SCRIPT_TODAY);
@@ -142,17 +142,17 @@ export function ComingUp({ compact = false }: { compact?: boolean }) {
   if (upcoming.length === 0) return null;
   return (
     <section className={compact ? "" : "mt-10"}>
-      <div className="mb-3 flex items-baseline justify-between gap-3"><h2 className="font-semibold">Coming up{compact && <span className="font-normal text-muted-foreground"> · {upcoming.length}</span>}</h2><Link to="/explore" search={{ calendar: true }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">All events <ArrowRight className="size-3" aria-hidden="true" /></Link></div>
+      <div className="mb-3 flex items-baseline justify-between gap-3"><h2 className="font-semibold">Coming up{compact && <span className="font-normal text-muted-foreground"> · {upcoming.length}</span>}</h2><Link to="/explore" search={{ calendar: true }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">{limit && upcoming.length > limit ? `All ${upcoming.length} events` : "All events"} <ArrowRight className="size-3" aria-hidden="true" /></Link></div>
       {compact ? (
         <ol className="surface stagger divide-y px-4">
-          {upcoming.map((e) => (
-            <li key={e.id} className="flex gap-3 py-4">
+          {upcoming.slice(0, limit ?? upcoming.length).map((e) => (
+            <li key={e.id} className="flex gap-3 py-3">
               <DateBlock date={e.date} className="shrink-0 self-start" />
               <div className="min-w-0 flex-1 space-y-1.5">
                 <h3 className="text-sm font-medium leading-snug">{e.title}</h3>
                 <p className="text-xs text-muted-foreground">{e.host} · {e.time} · {e.place}</p>
                 {e.id === symposiumEvent.id && <Button asChild size="sm" className="w-fit"><Link to="/event">Your plan for {symposiumEvent.day} <ArrowRight className="size-3.5" /></Link></Button>}
-                {e.prep && <p className="flex items-start gap-2 text-xs"><AgentAvatar agent="planner" className="size-5 shrink-0" />{e.prep}</p>}
+                {e.prep && <p className="text-xs">{e.prep}</p>}
                 {clash[e.id] && <p className="flex items-start gap-2 rounded-xl bg-warning-soft px-3 py-1.5 text-xs"><AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warning" />Overlaps with {clash[e.id]!.title} at {clash[e.id]!.time}.</p>}
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                   <PostingLink item={e} />

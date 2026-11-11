@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
-import { ArrowLeft, RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, ChevronRight, ChevronDown, UserCheck, UserRound, Settings, BookOpenCheck, Compass, Sprout, Waypoints, GraduationCap, CalendarHeart, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ArrowLeft, RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, ChevronRight, ChevronDown, UserCheck, UserRound, Settings, BookOpenCheck, Compass, Sprout, Waypoints, GraduationCap, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { sources, student } from "@/data/scenario";
@@ -41,7 +41,6 @@ const groups = [
     label: "Grow",
     links: [
       { to: "/explore", label: "Explore", icon: Compass },
-      { to: "/events", label: "Events", icon: CalendarHeart },
       { to: "/portfolio", label: "Portfolio", icon: BookOpenCheck },
     ],
   },
@@ -55,7 +54,7 @@ type NavLink = (typeof groups)[number]["links"][number];
 const allLinks: NavLink[] = groups.flatMap((g) => [...g.links] as NavLink[]);
 /** Pages without their own nav item light up the one they belong to. */
 const sectionFor = (path: string): string => {
-  if (path === "/event") return "/events";
+  if (path === "/event") return "/semester";
   if (["/activity", "/permissions", "/decisions", "/counselor"].includes(path)) return "/agents";
   return path;
 };

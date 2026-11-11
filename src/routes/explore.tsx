@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Flyer } from "@/components/app/Flyer";
 import { OrgLogo } from "@/components/app/SchoolLogo";
 import { PageBanner } from "@/components/app/SeasonBanner";
+import { EventsBoard } from "@/components/app/EventsBoard";
 import { cn } from "@/lib/utils";
 import { Careers, GapPlan } from "@/components/app/CareerDiscovery";
 import { DETAIL_WIDTH, HostRow, KIND, Photo, SaveButton, TONE, shortTitle, type Open, type Tone } from "@/components/app/OpportunityDetails";
@@ -22,11 +23,12 @@ import { PostingLink } from "@/components/app/PostingLink";
 import sceneOpportunities from "@/assets/scene-opportunities.jpg";
 
 export const Route = createFileRoute("/explore")({
-  validateSearch: (s: Record<string, unknown>): { role?: string; open?: string; fills?: string; view?: "careers" | "plan" } => ({
+  validateSearch: (s: Record<string, unknown>): { role?: string; open?: string; fills?: string; view?: "careers" | "plan"; calendar?: boolean } => ({
     ...(typeof s["role"] === "string" ? { role: s["role"] } : {}),
     ...(typeof s["open"] === "string" ? { open: s["open"] } : {}),
     ...(typeof s["fills"] === "string" ? { fills: s["fills"] } : {}),
     ...(s["view"] === "careers" || s["view"] === "plan" ? { view: s["view"] } : {}),
+    ...(s["calendar"] === true || s["calendar"] === "true" ? { calendar: true } : {}),
   }),
   head: () => ({
     meta: [
@@ -120,7 +122,7 @@ function KindSection({ kind, items, gaps, onOpen, onSeeAll, control }: { kind: O
         <h2 className="text-xl font-semibold">{heading}</h2>
         <div className="flex flex-wrap items-center gap-3">
           {control}
-          {kind === "event" && <Link to="/events" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">All events <ArrowRight className="size-3.5" aria-hidden="true" /></Link>}
+          {kind === "event" && <Link to="/explore" search={{ calendar: true }} resetScroll={false} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">All events <ArrowRight className="size-3.5" aria-hidden="true" /></Link>}
           {items.length > 4 && <button type="button" onClick={onSeeAll} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">See all <ArrowRight className="size-3.5" aria-hidden="true" /></button>}
           {(ends.prev || ends.next) && (
             <div className="flex gap-1.5">
@@ -243,7 +245,9 @@ function Explore() {
   const j = useJourney();
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const [view, setView] = useState<"browse" | "calendar">("browse");
+  const [view, setView] = useState<"browse" | "calendar">(search.calendar ? "calendar" : "browse");
+  // "All events" links (and the old /events page) open the calendar.
+  useEffect(() => { if (search.calendar) setView("calendar"); }, [search.calendar]);
   const [local, setLocal] = useState<ExploreFilters>(() => (search.fills ? { ...NO_FILTERS, kind: "class" } : NO_FILTERS));
 
   // Links from other pages open a listing in the shared panel.
@@ -276,6 +280,8 @@ function Explore() {
   const hasFilters = !!(local.query || local.skill || local.subject || local.place || local.industry || local.freeTimeOnly || fillsSlot);
   const byDeadline = local.kind === "class" || local.kind === "internship";
   const shown = view === "calendar" && local.kind === "all" ? results.filter((o) => o.kind === "event" || o.kind === "club") : results;
+  // Events in the calendar get their own board: month calendar, timeline and details.
+  const eventsBoard = view === "calendar" && (local.kind === "all" || local.kind === "event");
   const schoolScope = <SchoolScope nearby={local.nearbySchools} onChange={(nearbySchools) => update({ nearbySchools })} />;
 
   if (search.view) {
@@ -290,7 +296,7 @@ function Explore() {
   return (
     <div>
       <PageBanner src={sceneOpportunities} position="50% 64%" />
-      <div className="mx-auto max-w-5xl space-y-8">
+      <div className={cn("mx-auto space-y-8", eventsBoard ? "max-w-7xl" : "max-w-5xl")}>
         <header className="text-center">
           <h1 className="text-3xl font-semibold md:text-4xl">What do you want to try next?</h1>
           <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Classes, clubs, events and internships picked for you.</p>
@@ -313,7 +319,7 @@ function Explore() {
               <Pill active={view === "calendar"} onClick={() => setView("calendar")}><CalendarDays className="size-3.5" aria-hidden="true" /> {byDeadline ? "Deadlines" : "Calendar"}</Pill>
             </PillGroup>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className={cn("flex flex-wrap items-center gap-2", eventsBoard && "hidden")}>
             <FilterMenu label="Filter by skill" any="Any skill" value={local.skill} options={SKILLS} onChange={(skill) => update({ skill })} />
             <FilterMenu label="Filter by subject" any="Any subject" value={local.subject} options={SUBJECTS} onChange={(subject) => update({ subject })} />
             <FilterMenu label="Filter by school or place" any="Any school or place" value={local.place} options={PLACES} onChange={(place) => update({ place })} />
@@ -329,7 +335,9 @@ function Explore() {
 
         <div aria-live="polite" className="sr-only">{results.length} results</div>
         {local.kind === "class" && <div className="flex justify-end">{schoolScope}</div>}
-        {shown.length === 0 ? (
+        {eventsBoard ? (
+          <EventsBoard query={local.query} />
+        ) : shown.length === 0 ? (
           <div className="surface p-10 text-center">
             <p className="font-medium">No matches. Try removing a filter.</p>
             <Button variant="outline" className="mt-3" onClick={clear}>Clear filters</Button>

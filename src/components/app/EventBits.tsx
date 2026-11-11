@@ -142,7 +142,7 @@ export function ComingUp({ compact = false }: { compact?: boolean }) {
   if (upcoming.length === 0) return null;
   return (
     <section className={compact ? "" : "mt-10"}>
-      <div className="mb-3 flex items-baseline justify-between gap-3"><h2 className="font-semibold">Coming up{compact && <span className="font-normal text-muted-foreground"> · {upcoming.length}</span>}</h2><Link to="/events" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">All events <ArrowRight className="size-3" aria-hidden="true" /></Link></div>
+      <div className="mb-3 flex items-baseline justify-between gap-3"><h2 className="font-semibold">Coming up{compact && <span className="font-normal text-muted-foreground"> · {upcoming.length}</span>}</h2><Link to="/explore" search={{ calendar: true }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">All events <ArrowRight className="size-3" aria-hidden="true" /></Link></div>
       {compact ? (
         <ol className="surface stagger divide-y px-4">
           {upcoming.map((e) => (

@@ -120,6 +120,7 @@ function KindSection({ kind, items, gaps, onOpen, onSeeAll, control }: { kind: O
         <h2 className="text-xl font-semibold">{heading}</h2>
         <div className="flex flex-wrap items-center gap-3">
           {control}
+          {kind === "event" && <Link to="/events" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">All events <ArrowRight className="size-3.5" aria-hidden="true" /></Link>}
           {items.length > 4 && <button type="button" onClick={onSeeAll} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">See all <ArrowRight className="size-3.5" aria-hidden="true" /></button>}
           {(ends.prev || ends.next) && (
             <div className="flex gap-1.5">

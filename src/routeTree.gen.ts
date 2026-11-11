@@ -17,6 +17,7 @@ import { Route as CourseSkillsRouteImport } from './routes/course-skills'
 import { Route as DecisionsRouteImport } from './routes/decisions'
 import { Route as DegreeRouteImport } from './routes/degree'
 import { Route as EventRouteImport } from './routes/event'
+import { Route as EventsRouteImport } from './routes/events'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as GrowRouteImport } from './routes/grow'
 import { Route as MapRouteImport } from './routes/map'
@@ -71,6 +72,11 @@ const DegreeRoute = DegreeRouteImport.update({
 const EventRoute = EventRouteImport.update({
   id: '/event',
   path: '/event',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsRoute = EventsRouteImport.update({
+  id: '/events',
+  path: '/events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExploreRoute = ExploreRouteImport.update({
@@ -158,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/decisions': typeof DecisionsRoute
   '/degree': typeof DegreeRoute
   '/event': typeof EventRoute
+  '/events': typeof EventsRoute
   '/explore': typeof ExploreRoute
   '/grow': typeof GrowRoute
   '/map': typeof MapRoute
@@ -183,6 +190,7 @@ export interface FileRoutesByTo {
   '/decisions': typeof DecisionsRoute
   '/degree': typeof DegreeRoute
   '/event': typeof EventRoute
+  '/events': typeof EventsRoute
   '/explore': typeof ExploreRoute
   '/grow': typeof GrowRoute
   '/map': typeof MapRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/decisions': typeof DecisionsRoute
   '/degree': typeof DegreeRoute
   '/event': typeof EventRoute
+  '/events': typeof EventsRoute
   '/explore': typeof ExploreRoute
   '/grow': typeof GrowRoute
   '/map': typeof MapRoute
@@ -236,6 +245,7 @@ export interface FileRouteTypes {
     | '/decisions'
     | '/degree'
     | '/event'
+    | '/events'
     | '/explore'
     | '/grow'
     | '/map'
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/decisions'
     | '/degree'
     | '/event'
+    | '/events'
     | '/explore'
     | '/grow'
     | '/map'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/decisions'
     | '/degree'
     | '/event'
+    | '/events'
     | '/explore'
     | '/grow'
     | '/map'
@@ -312,6 +324,7 @@ export interface RootRouteChildren {
   DecisionsRoute: typeof DecisionsRoute
   DegreeRoute: typeof DegreeRoute
   EventRoute: typeof EventRoute
+  EventsRoute: typeof EventsRoute
   ExploreRoute: typeof ExploreRoute
   GrowRoute: typeof GrowRoute
   MapRoute: typeof MapRoute
@@ -385,6 +398,13 @@ declare module '@tanstack/react-router' {
       path: '/event'
       fullPath: '/event'
       preLoaderRoute: typeof EventRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events': {
+      id: '/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof EventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/explore': {
@@ -504,6 +524,7 @@ const rootRouteChildren: RootRouteChildren = {
   DecisionsRoute: DecisionsRoute,
   DegreeRoute: DegreeRoute,
   EventRoute: EventRoute,
+  EventsRoute: EventsRoute,
   ExploreRoute: ExploreRoute,
   GrowRoute: GrowRoute,
   MapRoute: MapRoute,

@@ -48,7 +48,7 @@ export function timeline(found: Found[], today: string) {
   return { upcoming, seasons };
 }
 
-function minutes(time: string) {
+export function minutes(time: string) {
   const m = time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
   if (!m) return 0;
   const h = (Number(m[1]) % 12) + (m[3]!.toUpperCase() === "PM" ? 12 : 0);
@@ -56,8 +56,8 @@ function minutes(time: string) {
 }
 
 /** Upcoming events on the same day that start within three hours of each other. Maps each to the one it clashes with. */
-export function clashes(upcoming: Found[]): Record<string, Found> {
-  const out: Record<string, Found> = {};
+export function clashes<T extends { id: string; date: string; time: string }>(upcoming: T[]): Record<string, T> {
+  const out: Record<string, T> = {};
   for (const a of upcoming)
     for (const b of upcoming)
       if (a.id !== b.id && a.date === b.date && Math.abs(minutes(a.time) - minutes(b.time)) < 180 && !out[a.id]) out[a.id] = b;

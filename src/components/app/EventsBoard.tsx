@@ -143,12 +143,12 @@ export function EventsBoard({ query = "" }: { query?: string }) {
             </button>
           )}
           {days.map((d) => (
-            <div key={d} className="relative grid grid-cols-[88px_minmax(0,1fr)] gap-2 pb-2">
-              <div className="relative pt-3">
+            <div key={d} className="relative grid grid-cols-[88px_minmax(0,1fr)] gap-2 pb-1">
+              <div className="relative pt-2">
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "absolute -left-[25px] top-[18px] size-2.5 rounded-full",
+                    "absolute -left-[25px] top-[14px] size-2.5 rounded-full",
                     selected?.date === d ? "bg-foreground" : "bg-border",
                   )}
                 />
@@ -224,35 +224,39 @@ function EventRow({
       onClick={onPick}
       aria-pressed={selected}
       className={cn(
-        "-mx-3 flex items-start gap-4 rounded-[22px] px-3 py-2.5 text-left transition-colors",
+        "-mx-3 flex items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors",
         selected
           ? "bg-card shadow-[0_1px_2px_rgb(24_39_58/4%),0_10px_24px_-14px_rgb(24_39_58/16%),0_0_0_1.5px_var(--foreground)]"
           : "hover:bg-foreground/[0.03]",
       )}
     >
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {e.time}
+      <Art e={e} className="w-14" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2">
+          <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{e.time}</span>
+          <span className="truncate font-semibold">{e.title}</span>
+        </div>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            {e.host}
+            {site && <PlatformMark platform={site} className="size-3.5 rounded-[3px] border-0" />}
+          </span>
           {planned && (
-            <span className="aqua-chip rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
+            <span className="aqua-chip rounded-full px-2 py-px text-[11px] font-semibold text-foreground">
               On your plan
             </span>
           )}
+          {clashWith && (
+            <span
+              className="inline-flex items-center gap-1 text-warning"
+              title={`Overlaps with ${clashWith.title} at ${clashWith.time}`}
+            >
+              <AlertTriangle className="size-3" aria-hidden="true" />
+              Overlaps {clashWith.time}
+            </span>
+          )}
         </div>
-        <div className="font-semibold leading-snug">{e.title}</div>
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          {e.host} · {e.place}
-          {site && <PlatformMark platform={site} className="size-3.5 rounded-[3px] border-0" />}
-        </div>
-        {e.why && <div className="text-sm">{e.why}</div>}
-        {clashWith && (
-          <div className="flex items-center gap-1.5 text-xs text-warning">
-            <AlertTriangle className="size-3" aria-hidden="true" />
-            Overlaps with {clashWith.title} at {clashWith.time}
-          </div>
-        )}
       </div>
-      <Art e={e} className="w-20" />
     </button>
   );
 }
@@ -271,7 +275,7 @@ function Details({ e, planned }: { e: EventItem; planned: boolean }) {
   return (
     <aside
       aria-label={`${e.title} details`}
-      className="hidden overflow-hidden rounded-[1.75rem] bg-card shadow-soft xl:sticky xl:top-4 xl:block"
+      className="hidden overflow-hidden rounded-[1.75rem] bg-card shadow-soft xl:sticky xl:top-20 xl:block xl:max-h-[calc(100vh-6.5rem)] xl:overflow-y-auto"
     >
       <div className="relative">
         {e.opportunity?.flyer ? (

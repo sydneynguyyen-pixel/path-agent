@@ -1090,3 +1090,12 @@ html[data-vt="theme"]::view-transition-new(root) { animation: none; }
   .dg-detail-head p { margin-top: 2px; font-size: 13px; color: var(--muted-foreground); }
   .dg-detail .dg-slots { padding-bottom: 0; }
 }
+
+/* Page banners: a shorter painting that fades out at the bottom, with the page title sitting on the fade. */
+.season-banner { height: calc(clamp(150px, 15vw, 210px) + var(--top)); margin-bottom: -4.5rem; background: transparent; -webkit-mask-image: linear-gradient(#000 40%, transparent 96%); mask-image: linear-gradient(#000 40%, transparent 96%); }
+.season-banner + * { position: relative; z-index: 1; }
+.home-cover-art { -webkit-mask-image: linear-gradient(#000 45%, transparent 98%); mask-image: linear-gradient(#000 45%, transparent 98%); }
+@media (min-width: 1200px) {
+  .brand-app .home-cover { aspect-ratio: auto; height: calc(330px + var(--top)); background: transparent; }
+}
+@media (min-width: 1440px) { .brand-app .home-cover { height: calc(330px + var(--top)); } }

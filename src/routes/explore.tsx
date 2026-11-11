@@ -296,13 +296,15 @@ function Explore() {
   return (
     <div>
       <PageBanner src={sceneOpportunities} position="50% 64%" />
-      <div className={cn("mx-auto space-y-8", eventsBoard ? "max-w-7xl" : "max-w-5xl")}>
-        <header className="text-center">
-          <h1 className="text-3xl font-semibold md:text-4xl">What do you want to try next?</h1>
-          <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Classes, clubs, events and internships picked for you.</p>
-          <div className="relative mx-auto mt-5 max-w-xl">
+      <div className={cn("mx-auto space-y-6", eventsBoard ? "max-w-7xl" : "max-w-5xl")}>
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold md:text-[2rem]">What do you want to try next?</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Classes, clubs, events and internships picked for you.</p>
+          </div>
+          <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <Input value={local.query} onChange={(e) => update({ query: e.target.value })} placeholder="Search classes, clubs, skills, places…" aria-label="Search opportunities" className="h-12 rounded-full bg-card pr-4 pl-11 shadow-soft" />
+            <Input value={local.query} onChange={(e) => update({ query: e.target.value })} placeholder="Search classes, clubs, skills, places…" aria-label="Search opportunities" className="h-11 rounded-full bg-card pr-4 pl-11 shadow-soft" />
           </div>
         </header>
 

@@ -144,11 +144,13 @@ export function SkillsChart({ skills }: { skills: PortfolioSkill[] }) {
 
 /** The career she picked: skills it asks for that she already shows, and the ones still to build. */
 export function GoalFit({
+  goalId,
   title,
   have,
   missing,
   skills,
 }: {
+  goalId: string;
   title: string;
   have: string[];
   missing: string[];
@@ -189,9 +191,10 @@ export function GoalFit({
       </p>
       <Link
         to="/explore"
+        search={{ view: "plan", role: goalId }}
         className="mt-auto inline-flex items-center gap-1 pt-4 text-sm font-medium underline-offset-4 hover:underline"
       >
-        Find ways to build them <ArrowRight className="size-3.5" aria-hidden="true" />
+        See your plan toward it <ArrowRight className="size-3.5" aria-hidden="true" />
       </Link>
     </section>
   );

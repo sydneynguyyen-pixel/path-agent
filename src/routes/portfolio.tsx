@@ -116,7 +116,7 @@ function SkillsTab({ found, waiting }: { found: Found[]; waiting: number }) {
       <ProofTiles skills={visible.filter((s) => !s.unsure)} />
       <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         <SkillsChart skills={visible.filter((s) => !s.unsure)} />
-        <GoalFit title={goal.title} have={goal.why} missing={goal.missing} skills={visible} />
+        <GoalFit goalId={goal.id} title={goal.title} have={goal.why} missing={goal.missing} skills={visible} />
       </div>
       {waiting > 0 && <Link to="/portfolio" search={{ tab: "timeline" }} className="flex items-center justify-between gap-3 rounded-xl bg-warning-soft px-5 py-3 text-sm">{waiting} past {waiting === 1 ? "event needs" : "events need"} your answer first <ArrowRight className="size-4" aria-hidden="true" /></Link>}
       <div className="flex flex-wrap items-center justify-between gap-3">

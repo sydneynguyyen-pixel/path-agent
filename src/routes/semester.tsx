@@ -109,7 +109,7 @@ function Semester() {
   return (
     <div>
       <PageBanner src={sceneTerms} position="50% 86%" />
-      <PageHeader title="Your terms" sub="Your plan through graduation." right={<Button variant="outline" size="sm" asChild><Link to="/degree" search={{ view: "tree", try: true }}>Try a change</Link></Button>} />
+      <PageHeader title="Your terms" sub="Your plan through graduation." />
       {/* The padding gives shadows room inside the scroller; the negative margins keep the row in place. */}
       <div ref={containerRef} className="term-tabs relative -mx-3 -mt-3 mb-3 flex gap-2 overflow-x-auto px-3 py-3">
         <span ref={pillRef} className="sliding-pill liquid" aria-hidden="true" />

@@ -122,7 +122,8 @@ function PathTimeline() {
   const now = terms.filter((t) => t.status === "in_progress" || t.status === "registering");
   const past = terms.filter((t) => t.status === "done").length;
   const planned = terms.filter((t) => t.status === "planned").length;
-  const isOpen = (_t: Term) => true;
+  // Home only says where you are; the class lists live on Terms.
+  const isOpen = (_t: Term) => false;
   return (
     <div className="stagger space-y-8">
       <section>

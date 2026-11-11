@@ -2,11 +2,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowRight, Check, CheckCheck, Copy, Download, EyeOff, Link2, Lock, MoreHorizontal, Paperclip, Pencil, Search, Undo2 } from "lucide-react";
-import { eventPlatforms, ledgerSkills, opportunities, student, type EventPlatform } from "@/data/scenario";
+import { careerRoles, eventPlatforms, ledgerSkills, opportunities, student, type EventPlatform } from "@/data/scenario";
 import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
 import { attendance, sharedProfile, skillsFromEvents, timeline, wentTo, type Attendance, type Found } from "@/lib/experiences";
 import { canExport, exportableSkills, resumeBullet } from "@/lib/skills";
-import { skillsFromDoing } from "@/lib/opportunities";
+import { goalFor, skillsFromDoing } from "@/lib/opportunities";
 import { portfolioSkills, type PortfolioSkill, type SkillSource } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,7 +19,9 @@ import { PageHeader } from "@/components/app/bits";
 import { Accounts, ConnectDialog, DateBlock, PROOF_LINE, useFound, Via } from "@/components/app/EventBits";
 import { PostingLink } from "@/components/app/PostingLink";
 import { photoUrl } from "@/lib/photos";
-import { Spot } from "@/components/app/Illustrations";
+import { PageBanner } from "@/components/app/SeasonBanner";
+import { GoalFit, ProofTiles, SkillsChart } from "@/components/app/SkillsOverview";
+import sceneSkills from "@/assets/scene-skills.jpg";
 import { CourseLink, EvidenceIndicator } from "@/components/app/SkillsBits";
 import { cn } from "@/lib/utils";
 import mayaPhoto from "@/assets/maya.jpg";
@@ -61,7 +63,8 @@ function Portfolio() {
 
   return (
     <div className={cn("mx-auto", tab === "skills" ? "max-w-7xl" : "max-w-4xl")}>
-      <PageHeader title="Portfolio" sub="What you've done, and what it proves. Only you can see this." right={<Spot name="seedling" className="hidden w-28 sm:block" />} />
+      <PageBanner src={sceneSkills} position="50% 60%" />
+      <PageHeader title="Portfolio" sub="What you've done, and what it proves. Only you can see this." />
       <Tabs value={tab} onValueChange={(t) => navigate({ to: "/portfolio", search: t === "skills" ? {} : { tab: t as Tab }, replace: true, state: true })} className="mt-6">
         <TabsList className="rounded-full">
           <TabsTrigger value="skills" className="rounded-full">Skills</TabsTrigger>
@@ -99,8 +102,8 @@ function SkillsTab({ found, waiting }: { found: Found[]; waiting: number }) {
   const unsure = visible.filter((s) => matches(s) && s.unsure);
   const hidden = skills.filter((s) => s.hidden);
   const themes = [...new Set(shown.map((s) => s.theme))];
-  const confirmed = visible.filter((s) => s.confirmed).length;
   const confirmable = visible.filter((s) => !s.confirmed && !s.unsure);
+  const goal = goalFor(careerRoles, j.interestedRoles);
 
   const confirmAll = () => {
     const keys = confirmable.flatMap((s) => s.reviewKeys);
@@ -110,18 +113,17 @@ function SkillsTab({ found, waiting }: { found: Found[]; waiting: number }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid items-stretch gap-4 lg:grid-cols-2">
-      <div className="surface flex flex-wrap items-center gap-x-4 gap-y-3 p-5">
-        <div className="min-w-48 flex-1">
-          <h2 className="font-semibold">{confirmed} of {visible.length} skills confirmed</h2>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Skills confirmed" aria-valuemin={0} aria-valuemax={visible.length} aria-valuenow={confirmed}><div className="meter-fill aqua-chip h-full rounded-full" style={{ width: `${visible.length ? (confirmed / visible.length) * 100 : 0}%` }} /></div>
-        </div>
-        {confirmable.length > 0 && <Button size="sm" variant="outline" onClick={confirmAll}><CheckCheck className="size-3" />Confirm all</Button>}
+      <ProofTiles skills={visible.filter((s) => !s.unsure)} />
+      <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+        <SkillsChart skills={visible.filter((s) => !s.unsure)} />
+        <GoalFit title={goal.title} have={goal.why} missing={goal.missing} skills={visible} />
       </div>
       {waiting > 0 && <Link to="/portfolio" search={{ tab: "timeline" }} className="flex items-center justify-between gap-3 rounded-xl bg-warning-soft px-5 py-3 text-sm">{waiting} past {waiting === 1 ? "event needs" : "events need"} your answer first <ArrowRight className="size-4" aria-hidden="true" /></Link>}
-      </div>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Where the proof comes from">
-        {SOURCES.map((f) => <Button key={f.id} size="sm" variant={f.id === source ? "default" : "outline"} aria-pressed={f.id === source} onClick={() => setSource(f.id)}>{f.label}</Button>)}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Where the proof comes from">
+          {SOURCES.map((f) => <Button key={f.id} size="sm" variant={f.id === source ? "default" : "outline"} aria-pressed={f.id === source} onClick={() => setSource(f.id)}>{f.label}</Button>)}
+        </div>
+        {confirmable.length > 0 && <Button size="sm" variant="outline" onClick={confirmAll}><CheckCheck className="size-3" />Confirm all {confirmable.length}</Button>}
       </div>
       <div key={source} className="stagger grid items-start gap-4 md:grid-cols-2 xl:grid-cols-4">
         {themes.map((t) => (

@@ -1106,3 +1106,6 @@ html[data-vt="theme"]::view-transition-new(root) { animation: none; }
 }
 /* Explore on wide screens: two types side by side, each row scrolls sideways with about two cards in view. */
 @media (min-width: 1280px) { .explore-pair .explore-row { grid-auto-columns: calc((100% - 32px) / 2.4); } }
+/* Degree audit: the same fading watercolor header as the other pages, behind the title. */
+.dg-banner { position: absolute; top: 0; left: 0; right: 0; width: 100%; height: 260px; object-fit: cover; object-position: 50% 82%; mix-blend-mode: multiply; pointer-events: none; -webkit-mask-image: linear-gradient(#000 35%, transparent 95%); mask-image: linear-gradient(#000 35%, transparent 95%); }
+.dg-sheet { position: relative; }

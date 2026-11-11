@@ -1,4 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { PageBanner } from "@/components/app/SeasonBanner";
+import sceneOpportunities from "@/assets/scene-opportunities.jpg";
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Bookmark, Check, Copy, MapPin, Pencil, Pin, RotateCcw, Send, Users, X } from "lucide-react";
@@ -39,6 +41,8 @@ function EventPage() {
   const { step = "before" } = Route.useSearch();
   const navigate = useNavigate();
   return (
+    <>
+    <PageBanner src={sceneOpportunities} position="50% 64%" />
     <div className="mx-auto max-w-md lg:max-w-6xl">
       <Link to="/semester" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Terms</Link>
       <h1 className="mt-3 text-3xl font-medium">{step === "after" ? "After the symposium" : `Your plan for ${ev.day}`}</h1>
@@ -56,6 +60,7 @@ function EventPage() {
         {step === "after" && <After />}
       </div>
     </div>
+    </>
   );
 }
 

@@ -94,7 +94,6 @@ function Semester() {
   const [localSel, setSel] = useState<string>();
   const [pickedWeek, setPickedWeek] = useState<number>();
   const { containerRef, pillRef } = useSlidingPill<HTMLDivElement>('[aria-pressed="true"]');
-  const weekPill = useSlidingPill<HTMLDivElement>('[aria-pressed="true"]');
   const sel = localSel ?? search.term ?? "su27";
   const term = terms.find((t) => t.id === sel);
   if (!term) return null;
@@ -156,15 +155,37 @@ function Semester() {
         <Link to="/portal" className="text-xs text-muted-foreground underline-offset-4 hover:underline">Registration closes Jun 18</Link>
       </div>
       <div className="surface overflow-hidden">
-        <div ref={weekPill.containerRef} className="week-strip relative grid grid-cols-4 gap-1.5 border-b p-3 xl:grid-cols-8">
-          <span ref={weekPill.pillRef} className="sliding-pill liquid" aria-hidden="true" />
-          {weeks.map((w) => (
-            <button key={w} type="button" aria-pressed={week === w} aria-current={nowWeek === w ? "date" : undefined} aria-label={`Week ${w}, ${weekDates(SUMMER_2027_START, w)}${nowWeek === w ? ", this week" : ""}: ${load(w)} due${isPileup(load(w)) ? ", pile-up" : ""}`} onClick={() => setPickedWeek(w)} className={cn("rounded-xl px-1 py-2 text-center text-xs outline-offset-2 transition-colors", isPileup(load(w)) ? "week-pileup font-semibold text-alert" : load(w) > 0 ? "bg-secondary font-medium hover:bg-secondary/70" : "text-muted-foreground hover:bg-secondary/50", nowWeek === w && "ring-1 ring-inset ring-foreground/25")}>
-              <span className="flex items-center justify-center gap-1 whitespace-nowrap">{isPileup(load(w)) && <AlertTriangle className="size-3" aria-hidden="true" />}Week {w}</span>
-              <span className="mt-0.5 block whitespace-nowrap text-[11px] font-normal opacity-80">{weekDates(SUMMER_2027_START, w)}</span>
-              <span className="block text-[11px] font-normal">{nowWeek === w && "Now · "}{load(w) > 0 ? `${load(w)} due` : "Clear"}</span>
-            </button>
-          ))}
+        {/* A calendar: one row per term week, Monday to Sunday, with what's due that week. */}
+        <div role="group" aria-label="Summer 2027 weeks" className="border-b p-3 text-xs">
+          <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))_56px] gap-1 px-1 pb-1.5 text-[11px] text-muted-foreground" aria-hidden="true">
+            <span />
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <span key={d} className="text-center">{d}</span>)}
+            <span className="text-right">Due</span>
+          </div>
+          <div className="space-y-1">
+            {weeks.map((w) => {
+              const n = load(w);
+              const pile = isPileup(n);
+              const due = rows.flatMap((r) => r.items.filter((i) => i.week === w).map((i) => `${r.course} ${i.label}`));
+              return (
+                <button key={w} type="button" aria-pressed={week === w} aria-current={nowWeek === w ? "date" : undefined} aria-label={`Week ${w}, ${weekDates(SUMMER_2027_START, w)}${nowWeek === w ? ", this week" : ""}: ${n} due${pile ? ", pile-up" : ""}`} onClick={() => setPickedWeek(w)}
+                  className={cn("grid w-full grid-cols-[64px_repeat(7,minmax(0,1fr))_56px] items-center gap-1 rounded-xl px-1 py-1.5 text-left transition-colors", week === w ? "glass-active" : pile ? "week-pileup" : "hover:bg-secondary/60", nowWeek === w && "ring-1 ring-inset ring-foreground/25")}>
+                  <span className={cn("flex items-center gap-1 font-medium", pile && "text-alert")}>{pile && <AlertTriangle className="size-3" aria-hidden="true" />}Week {w}</span>
+                  {Array.from({ length: 7 }, (_, d) => {
+                    const day = new Date(Date.parse(`${SUMMER_2027_START}T12:00:00Z`) + ((w - 1) * 7 + d) * 86_400_000);
+                    const first = day.getUTCDate() === 1 || (w === 1 && d === 0);
+                    return <span key={d} className={cn("text-center tabular-nums", d >= 5 ? "text-muted-foreground" : "")}>{first ? day.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : day.getUTCDate()}</span>;
+                  })}
+                  <span className={cn("text-right", n ? "font-semibold" : "text-muted-foreground")}>{n ? n : "–"}</span>
+                  {due.length > 0 && (
+                    <span className="col-span-7 col-start-2 flex flex-wrap gap-1 pt-1">
+                      {due.map((t) => <span key={t} className={cn("rounded-full px-2 py-0.5 text-[11px]", pile ? "bg-card text-alert" : "bg-secondary")}>{t}</span>)}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div key={week} className="swap-enter p-4 sm:px-5">
           {isPileup(load(week)) && <div className="mb-3 flex items-start gap-2 rounded-xl bg-alert-soft p-3 text-sm"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-alert" aria-hidden="true" /><span><b className="font-semibold text-alert">Pile-up.</b> {pileupLine(week, weeks, load)}</span></div>}

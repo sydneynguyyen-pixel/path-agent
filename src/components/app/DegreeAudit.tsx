@@ -6,6 +6,7 @@ import { DegreeMark } from "@/components/app/DegreeMark";
 import { CourseLink } from "@/components/app/SkillsBits";
 import { outsideSchool, requirements } from "@/data/scenario";
 import { useDegreeAudit } from "@/hooks/use-degree-audit";
+import sceneRegistration from "@/assets/scene-registration.jpg";
 import { useJourney } from "@/lib/journey";
 import { formatCredits, transferReadiness, type AuditCategory, type AuditRule, type AuditSlot, type DegreeAudit, type TransferItem } from "@/lib/degree";
 
@@ -45,6 +46,7 @@ export function DegreeAuditView({ audit, row, slot }: { audit: DegreeAudit; row?
 
   return (
     <div ref={root} className="dg-audit">
+      <img src={sceneRegistration} alt="" aria-hidden="true" className="dg-banner" />
       <div className="dg-sheet">
         <div className="dg-head">
           <div className="dg-degree">{audit.degree} · {audit.school}</div>

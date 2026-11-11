@@ -253,12 +253,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {/* Until hydration we can't tell a new student from a returning one, so show neither. */}
               {j.pathBuilt === null && (blankPage || path === "/") ? null : j.pathBuilt === false && blankPage ? <BlankPage {...blankPage} /> : children}
             </main>
-            {!onCanvas && (
-              <footer className="px-6 pb-28 text-xs md:pb-6 text-muted-foreground md:px-10">
-                Prototype with fully synthetic data. Fictional schools and student. Path Agent proposes and drafts; it never registers, enrolls, or sends.
-                It does not give legal, financial-aid, or immigration advice.
-              </footer>
-            )}
+            {/* Room so the phone tab bar never covers the end of a page. */}
+            {!onCanvas && <div aria-hidden="true" className="h-24 md:h-6" />}
           </div>
         </div>
       </div>

@@ -6,7 +6,7 @@ import { useJourney, fmtStamp } from "@/lib/journey";
 import { AgentAvatar, SubjectIcon } from "@/components/app/Brand";
 import { Spot } from "@/components/app/Illustrations";
 import jennaPhoto from "@/assets/jenna.jpg";
-import { ConfidenceBadge, PageHeader, SimLabel, SourceChip } from "@/components/app/bits";
+import { CheckBadge, PageHeader, SimLabel, SourceChip } from "@/components/app/bits";
 
 export const Route = createFileRoute("/counselor")({
   head: () => ({
@@ -48,7 +48,7 @@ function Counselor() {
               <AgentAvatar agent="drafter" /><h2 className="mt-1 flex items-center gap-2 text-xl font-medium"><SubjectIcon course={o.course} />Does {o.course} count toward {REQUIREMENT_LABEL}?</h2>
               <p className="mt-1 text-sm text-muted-foreground">Seat already held. Student will drop by {DROP_DEADLINE} if you decline.</p>
             </div>
-            <ConfidenceBadge score={o.confidence} conflict={!!o.conflict} />
+            <CheckBadge score={o.confidence} conflict={!!o.conflict} />
           </div>
 
           {o.conflict ? (

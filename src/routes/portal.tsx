@@ -102,6 +102,7 @@ function PortalPage() {
   const [now, setNow] = useState(Date.now());
   const watching = phase === "watching" && canWatch;
   const guiding = watching && j.guide && !!chosen && !j.seatHeld;
+  const findingWaitlist = watching && j.waitlistGuide && !j.waitlisted;
 
   // The sidebar says "Watching" only for as long as this is true.
   const { setWatchingRegistration } = j;
@@ -122,8 +123,10 @@ function PortalPage() {
 
   // Agent fills the search fields letter by letter when guiding starts.
   const typedFor = useRef<string | null>(null);
+  const fillTarget = findingWaitlist ? catalog.find((c) => c.crn === FULL_CRN) : guiding ? target : undefined;
   useEffect(() => {
-    if (!guiding || !target || typedFor.current === target.crn) return;
+    if (!fillTarget || typedFor.current === fillTarget.crn) return;
+    const target = fillTarget;
     typedFor.current = target.crn;
     setTyping(true); setSubj(""); setNum("");
     const steps: [string, string][] = [];
@@ -132,9 +135,9 @@ function PortalPage() {
     const ts = steps.map(([a, b], i) => setTimeout(() => { setSubj(a); setNum(b); }, 150 * (i + 1)));
     ts.push(setTimeout(() => { setQuery({ subj: target.subj, num: target.num }); setTyping(false); }, 150 * (steps.length + 3)));
     return () => ts.forEach(clearTimeout);
-  }, [guiding, target]);
-  useEffect(() => { if (!j.guide) typedFor.current = null; }, [j.guide]);
-  useEffect(() => { if (guiding) reveal(portalRef.current); }, [guiding]);
+  }, [fillTarget]);
+  useEffect(() => { if (!j.guide && !j.waitlistGuide) typedFor.current = null; }, [j.guide, j.waitlistGuide]);
+  useEffect(() => { if (guiding || findingWaitlist) reveal(portalRef.current); }, [guiding, findingWaitlist]);
 
   const results = catalog.filter((c) => c.subj === query.subj.toUpperCase() && c.num === query.num);
   const regSections = registered.concat(cart.filter((c) => c.status === "registered").map((c) => catalog.find((x) => x.crn === c.crn)!));
@@ -279,9 +282,11 @@ function PortalPage() {
                     const inCart = cart.some((c) => c.crn === r.crn);
                     const isTarget = guiding && target?.crn === r.crn;
                     const cued = addCue && r.crn === FULL_CRN;
+                    const joinable = findingWaitlist && r.crn === FULL_CRN;
+                    const onWaitlist = j.waitlisted && r.crn === FULL_CRN;
                     return (
                       <Fragment key={r.crn}>
-                        <tr className={cn("border-b", isTarget && "bg-primary/5 outline outline-2 -outline-offset-2 outline-primary")}>
+                        <tr className={cn("border-b", (isTarget || joinable) && "bg-primary/5 outline outline-2 -outline-offset-2 outline-primary")}>
                           <td className="px-2 py-1.5"><span className="text-portal-link underline">{r.title}</span></td>
                           <td className="px-2 py-1.5">{r.subj}</td>
                           <td className="px-2 py-1.5">{r.num}</td>
@@ -292,7 +297,13 @@ function PortalPage() {
                           <td className="px-2 py-1.5">{r.mode}</td>
                           <td className="px-2 py-1.5">{full ? <b className="text-warning">FULL · WL {r.wl}</b> : <span><b>{seats(r)}</b> of {r.cap} seats remain</span>}</td>
                           <td className="sticky right-0 bg-card px-2 py-1.5 text-right">
-                            <button disabled={inCart} onClick={() => add(r.crn)} className={cn("rounded border px-3 py-0.5", isTarget || cued ? "border-primary bg-primary text-primary-foreground" : "bg-card", inCart && "opacity-50")}>{inCart ? "Added" : "Add"}</button>
+                            {joinable ? (
+                              <button onClick={j.joinWaitlist} className="rounded border border-primary bg-primary px-3 py-0.5 whitespace-nowrap text-primary-foreground">Join waitlist</button>
+                            ) : onWaitlist ? (
+                              <button disabled className="rounded border bg-card px-3 py-0.5 whitespace-nowrap opacity-50">On waitlist</button>
+                            ) : (
+                              <button disabled={inCart} onClick={() => add(r.crn)} className={cn("rounded border px-3 py-0.5", isTarget || cued ? "border-primary bg-primary text-primary-foreground" : "bg-card", inCart && "opacity-50")}>{inCart ? "Added" : "Add"}</button>
+                            )}
                           </td>
                         </tr>
                         {cued && (
@@ -300,6 +311,16 @@ function PortalPage() {
                             <td colSpan={10} className="px-2 pb-1.5 pt-0 text-[11px] sm:text-right">
                               <span className="sticky left-2 inline-flex items-center gap-1 rounded bg-primary px-2 py-0.5 font-[system-ui] font-medium text-primary-foreground">
                                 <ArrowUp className="size-3" /> Try it: this section is full. Click Add.
+                              </span>
+                            </td>
+                          </tr>
+                        )}
+                        {joinable && (
+                          <tr className="border-b">
+                            <td colSpan={10} className="px-2 pb-1.5 pt-0 text-[11px]">
+                              <span className="inline-flex items-center gap-1 rounded bg-card px-1.5 py-0.5 font-[system-ui] shadow-soft">
+                                <GraduationCap className="size-3 text-primary" />
+                                <b className="text-primary">Path Agent: here it is. Click Join waitlist when you're ready.</b>
                               </span>
                             </td>
                           </tr>

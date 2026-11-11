@@ -18,7 +18,10 @@ import { cn } from "@/lib/utils";
 import { CourseLink } from "@/components/app/SkillsBits";
 import { opportunities, skillCourses } from "@/data/scenario";
 import { useSlidingPill } from "@/hooks/use-sliding-pill";
-import { Requirements } from "@/components/app/Requirements";
+import { ComingUp } from "@/components/app/EventBits";
+import { psychologyDegree } from "@/data/degree";
+import { useDegreeAudit } from "@/hooks/use-degree-audit";
+import { placeOf } from "@/lib/degree";
 
 export const Route = createFileRoute("/semester")({
   validateSearch: (search: Record<string, unknown>): { term?: string } => {
@@ -41,7 +44,7 @@ export const Route = createFileRoute("/semester")({
 function OutsideClass({ termId }: { termId: string }) {
   const j = useJourney();
   const confirm = useConfirmWent();
-  const items = opportunities.filter((o) => j.savedOpportunities.includes(o.id) && planTermId(o, terms, SCRIPT_TODAY) === termId).sort((a, b) => a.startsOn.localeCompare(b.startsOn));
+  const items = opportunities.filter((o) => j.savedOpportunities.includes(o.id) && !(o.courseCode && j.draftCourses.includes(o.courseCode)) && planTermId(o, terms, SCRIPT_TODAY) === termId).sort((a, b) => a.startsOn.localeCompare(b.startsOn));
   if (items.length === 0) return null;
   return (
     <section className="mt-6">
@@ -53,7 +56,7 @@ function OutsideClass({ termId }: { termId: string }) {
             <li key={o.id} className="flex flex-wrap items-center gap-3 py-4">
               <OrgLogo org={o.org} club={o.club} className="size-9" />
               <div className="min-w-0 flex-1 basis-48">
-                <div className="text-sm font-medium">{o.title}</div>
+                <button type="button" onClick={() => j.openOpportunity(o.id)} className="text-left text-sm font-medium underline-offset-4 hover:underline">{o.title}</button>
                 <div className="mt-0.5 text-xs text-muted-foreground">{o.when} · {degreeLine(o)}</div>
                 <PostingLink item={o} className="mt-1" />
               </div>
@@ -62,7 +65,7 @@ function OutsideClass({ termId }: { termId: string }) {
                   <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-3 py-1 text-xs"><Check className="size-3" aria-hidden="true" />{doneLabel(o)}</span>
                   <Button size="sm" variant="ghost" onClick={() => j.undoWent(o.id)}>Undo</Button>
                 </> : <>
-                  {canConfirm(o, terms, SCRIPT_TODAY) ? <Button size="sm" variant="outline" onClick={(e) => confirm(o, e.currentTarget)}>{confirmLabel(o)}</Button> : <span className="rounded-full bg-secondary px-3 py-1 text-xs">Planned</span>}
+                  {canConfirm(o, terms, SCRIPT_TODAY) ? <Button size="sm" variant="outline" onClick={() => confirm(o)}>{confirmLabel(o)}</Button> : <span className="rounded-full bg-secondary px-3 py-1 text-xs">Planned</span>}
                   <Button size="icon" variant="ghost" className="size-8" aria-label={`Remove ${o.title} from your plan`} onClick={() => j.toggleSavedOpportunity(o.id)}><X className="size-4" aria-hidden="true" /></Button>
                 </>}
               </div>
@@ -72,6 +75,17 @@ function OutsideClass({ termId }: { termId: string }) {
       </ul>
     </section>
   );
+}
+
+/** One line tying a class to its row in the degree, or to classes that could fill an empty one. */
+function CountsToward({ termId, course }: { termId: string; course: { code: string; title: string; flag?: string | undefined } }) {
+  const { audit } = useDegreeAudit();
+  const place = placeOf(psychologyDegree, termId, course);
+  if (!place) return null;
+  const slot = audit.categories.flatMap((c) => c.slots).find((s) => s.id === place.slot);
+  const line = "block text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline";
+  if (slot?.status === "open" && place.slot !== "qr1") return <Link to="/explore" search={{ fills: place.slot }} className={line}>Find a class for this {place.need.toLowerCase()}</Link>;
+  return <Link to="/degree" search={{ row: place.row, slot: place.slot }} className={line}>Counts toward {place.need}</Link>;
 }
 
 function Semester() {
@@ -99,7 +113,7 @@ function Semester() {
   return (
     <div>
       <PageBanner src={sceneTerms} position="50% 86%" />
-      <PageHeader title="Your terms" sub="Your plan through graduation." right={<Button variant="outline" size="sm" asChild><Link to="/what-if">What if…</Link></Button>} />
+      <PageHeader title="Your terms" sub="Your plan through graduation." right={<Button variant="outline" size="sm" asChild><Link to="/degree" search={{ view: "tree", try: true }}>Try a change</Link></Button>} />
       {/* The padding gives shadows room inside the scroller; the negative margins keep the row in place. */}
       <div ref={containerRef} className="term-tabs relative -mx-3 -mt-3 mb-3 flex gap-2 overflow-x-auto px-3 py-3">
         <span ref={pillRef} className="sliding-pill liquid" aria-hidden="true" />
@@ -127,7 +141,7 @@ function Semester() {
           </div>
           <ul className="mt-5 divide-y">
             {term.courses.map((c) => (
-               <li key={c.code + c.title} className="flex items-center gap-3 py-2.5 text-sm"><SubjectIcon course={`${c.code} ${c.title}`} /><span className="min-w-0 flex-1"><b className="font-medium"><CourseLink course={c.code} /></b> <span className="text-muted-foreground">{c.title}</span></span><span className="text-muted-foreground">{c.grade ?? c.units}</span></li>
+               <li key={c.code + c.title} className="flex items-center gap-3 py-2.5 text-sm"><SubjectIcon course={`${c.code} ${c.title}`} /><span className="min-w-0 flex-1"><b className="font-medium"><CourseLink course={c.code} /></b> <span className="text-muted-foreground">{c.title}</span><CountsToward termId={term.id} course={c} /></span><span className="text-muted-foreground">{c.grade ?? c.units}</span></li>
             ))}
           </ul>
           {term.status === "planned" && <p className="mt-4 text-xs text-muted-foreground">Planned from your degree audit.</p>}
@@ -160,7 +174,7 @@ function Semester() {
           {rows.map((r) => (
             <li key={r.course} className="flex min-w-0 items-center gap-2 text-sm">
               <SubjectIcon course={r.course} />
-              <span className="min-w-0"><span className="font-medium"><CourseLink course={r.course} /></span>{r.isNew && <span className="text-xs text-muted-foreground"> · Seat held by you</span>}<span className="mt-1 block"><SourceChip id={r.sourceId} /></span></span>
+              <span className="min-w-0"><span className="font-medium"><CourseLink course={r.course} /></span>{r.isNew && <span className="text-xs text-muted-foreground"> · Seat held by you</span>}<CountsToward termId={term.id} course={term.courses.find((c) => c.code === r.course) ?? { code: r.course, title: r.course, ...(r.isNew ? { flag: "qr1" } : {}) }} /><span className="mt-1 block"><SourceChip id={r.sourceId} /></span></span>
             </li>
           ))}
         </ul>
@@ -171,10 +185,7 @@ function Semester() {
       </div>
       {j.draftCourses.some(code => skillCourses.find(c => c.code === code)?.termId === term.id) && <section className="mt-6"><h2 className="font-semibold">Draft courses from your role plan</h2><p className="mt-1 text-xs text-muted-foreground">Saved to your plan.</p><ul className="surface mt-3 divide-y px-5">{j.draftCourses.map(code => skillCourses.find(c => c.code === code)).filter(c => c?.termId === term.id).map(c => c && <li key={c.code} className="flex items-center gap-3 py-4"><SubjectIcon course={c.code} /><div className="min-w-0 flex-1"><span className="text-sm font-medium"><CourseLink course={c.code} /> · {c.title}</span></div><span className="rounded-full bg-secondary px-3 py-1 text-xs">Draft · {c.units}</span></li>)}</ul></section>}
       <OutsideClass termId={term.id} />
-      <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold">Degree requirements</h2>
-        <Requirements />
-      </section>
+      <ComingUp />
       <details className="mt-10 rounded-2xl border bg-card p-5">
         <summary className="cursor-pointer text-sm font-medium">Completed terms · {terms.filter((t) => t.status === "done").length}</summary>
         <div className="stagger mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

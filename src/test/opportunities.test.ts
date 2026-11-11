@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { careerRoles, freeTime, goTogetherEvent, opportunities, terms, type Term } from "@/data/scenario";
-import { canConfirm, degreeLine, doneLine, doneToast, gapProgress, goalFor, nextSuggestion, otherWays, planName, planTermId, skillsFromDoing, suggestionWhy, gapSignal, deadlineDate, deadlineLine, detailLine, exploreResults, fitsWeek, groupByDate, groupByGap, helloDraft, hostLine, NO_FILTERS, reasonFor, stillOpen, timeLeftLine, whoIsGoing, whyLine, type ExploreFilters } from "@/lib/opportunities";
+import { canConfirm, fillsLine, notOnPlan, degreeLine, doneLine, doneToast, gapProgress, goalFor, nextSuggestion, otherWays, planName, planTermId, skillsFromDoing, suggestionWhy, gapSignal, deadlineDate, deadlineLine, detailLine, exploreResults, fitsWeek, groupByDate, groupByGap, helloDraft, hostLine, NO_FILTERS, reasonFor, stillOpen, timeLeftLine, whoIsGoing, whyLine, type ExploreFilters } from "@/lib/opportunities";
 
 const byId = (id: string) => opportunities.find((o) => o.id === id)!;
 
@@ -226,5 +226,18 @@ describe("the loop from Explore to your plan and Skills", () => {
   it("works toward the role you marked", () => {
     expect(goalFor(careerRoles, ["museum"]).id).toBe("museum");
     expect(goalFor(careerRoles, []).id).toBe(careerRoles[0]!.id);
+  });
+});
+
+describe("Explore only shows what isn't on the plan", () => {
+  const cls = opportunities.find((o) => o.kind === "class" && o.courseCode)!;
+  it("drops saved items and draft classes", () => {
+    expect(notOnPlan(cls, [], [])).toBe(true);
+    expect(notOnPlan(cls, [cls.id], [])).toBe(false);
+    expect(notOnPlan(cls, [], [cls.courseCode!])).toBe(false);
+  });
+  it("only says what classes fill", () => {
+    const other = opportunities.find((o) => o.kind !== "class")!;
+    expect(fillsLine(other)).toBeUndefined();
   });
 });

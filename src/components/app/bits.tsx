@@ -1,4 +1,4 @@
-import { CheckCircle2, CircleDot, AlertTriangle, Circle, ArrowRightLeft, FileText, ShieldCheck, ShieldQuestion, Shield, Hourglass } from "lucide-react";
+import { CheckCircle2, CircleDot, AlertTriangle, Circle, ArrowRightLeft, FileText, ShieldQuestion, Hourglass } from "lucide-react";
 import { confidenceLevel } from "@/lib/confidence";
 import { sources, type ReqStatus } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
@@ -27,7 +27,7 @@ export function SourceChip({ id }: { id: string }) {
     <button
       title={`${s.doc} — ${s.section}`}
       onClick={() => openEvidence(id)}
-      className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+      className="inline-flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
     >
       <FileText className="size-3" aria-hidden />
       {plainSource(id)}
@@ -44,25 +44,11 @@ const statusMap: Record<ReqStatus, { label: string; icon: typeof Circle; cls: st
   pending: { label: "Pending counselor", icon: Hourglass, cls: "bg-info-soft text-info" },
 };
 
-export function ConfidenceBadge({ score, conflict }: { score: number; conflict?: boolean }) {
-  const level = conflict ? "low" : confidenceLevel(score);
-  const Icon = level === "high" ? ShieldCheck : level === "medium" ? Shield : ShieldQuestion;
-  const label = level === "high" ? "Sure" : level === "medium" ? "Fairly sure" : "Check with your counselor";
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
-        `confidence-${level}`,
-        level === "high" && "border-success/30 bg-success-soft text-success",
-        level === "medium" && "border-info/30 bg-info-soft text-info",
-        level === "low" && "border-warning/40 bg-warning-soft text-warning",
-      )}
-      title={`How sure Path Agent is: ${Math.round(score * 100)}%`}
-    >
-      <Icon className="size-3.5" aria-hidden />
-      {label}
-    </span>
-  );
+/** Only speaks up when a counselor should look. No scores. */
+export function CheckBadge({ score, conflict, plain = false }: { score: number; conflict?: boolean; plain?: boolean }) {
+  if (!conflict && confidenceLevel(score) !== "low") return null;
+  if (plain) return <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground"><ShieldQuestion className="size-3.5" aria-hidden />Check with your counselor</span>;
+  return <span className="confidence-low inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning"><ShieldQuestion className="size-3.5" aria-hidden />Check with your counselor</span>;
 }
 
 export function StatusBadge({ status }: { status: ReqStatus }) {

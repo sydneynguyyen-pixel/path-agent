@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { explain, NO_CHANGE, parseWhatIf, project, statsFromSeat, SUMMER_CLASSES, termsMoved, type WhatIf } from "@/lib/whatif";
+import { changedSlots, explain, NO_CHANGE, OFF_TERM, parseWhatIf, project, statsFromSeat, SUMMER_CLASSES, termsMoved, type WhatIf } from "@/lib/whatif";
 
 const base = project(NO_CHANGE, "stat2");
 const run = (patch: Partial<WhatIf>) => project({ ...NO_CHANGE, ...patch }, "stat2");
@@ -105,5 +105,21 @@ describe("typed changes", () => {
   it("admits when it can't test something", () => {
     expect(parseWhatIf("change my major to dance", NO_CHANGE)).toBeNull();
     expect(parseWhatIf("   ", NO_CHANGE)).toBeNull();
+  });
+});
+
+describe("changedSlots", () => {
+  const slots = [{ id: "a", code: "BIO 12", termName: "Summer 2027" }, { id: "b", code: "PSYC 1", termName: OFF_TERM }, { id: "c", code: "PSYC 9", termName: "Last" }];
+  it("marks nothing when nothing changed", () => {
+    expect([...changedSlots(NO_CHANGE, slots, false, false, "Last")]).toEqual([]);
+  });
+  it("marks a dropped class", () => {
+    expect([...changedSlots({ ...NO_CHANGE, dropped: ["BIO 12"] }, slots, false, false, "Last")]).toEqual(["a"]);
+  });
+  it("marks a term off, finishing early, statistics and the finish", () => {
+    expect(changedSlots({ ...NO_CHANGE, termOff: true }, slots, false, false, "Last").has("b")).toBe(true);
+    expect(changedSlots({ ...NO_CHANGE, early: true }, slots, false, false, "Last").has("c")).toBe(true);
+    const moved = changedSlots(NO_CHANGE, slots, true, true, "Last");
+    expect(moved.has("qr1") && moved.has("graduate")).toBe(true);
   });
 });

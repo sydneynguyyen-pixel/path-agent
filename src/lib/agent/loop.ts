@@ -98,7 +98,7 @@ export const scriptedModel: Model = async (messages, defs) => {
     ["read_portal_error", {}],
     ["find_courses_that_count", {}],
     ["search_open_sections", {}],
-    ...(top ? ([["check_week_fit", { option_id: top.id }], [SUBMIT_TOOL, { option_id: top.id, why: `${top.course.replace("BCC ", "")} section ${top.section} has ${top.seatsOpen} open seats and ranks first for your statistics requirement.` }]] as [string, Record<string, unknown>][]) : []),
+    ...(top ? ([["check_week_fit", { option_id: top.id }], [SUBMIT_TOOL, { option_id: top.id, why: `${top.course.replace("BCC ", "")} section ${top.section} has ${top.seatsOpen} open seats and fits your statistics requirement best.` }]] as [string, Record<string, unknown>][]) : []),
   ];
   const next = plan.find(([name]) => available.includes(name) && !done.includes(name));
   if (!next) return { content: "I can't go further with these tasks off.", toolCalls: [] };

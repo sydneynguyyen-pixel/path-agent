@@ -15,11 +15,14 @@ import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as CounselorRouteImport } from './routes/counselor'
 import { Route as CourseSkillsRouteImport } from './routes/course-skills'
 import { Route as DecisionsRouteImport } from './routes/decisions'
+import { Route as DegreeRouteImport } from './routes/degree'
 import { Route as EventRouteImport } from './routes/event'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as GrowRouteImport } from './routes/grow'
+import { Route as MapRouteImport } from './routes/map'
 import { Route as PermissionsRouteImport } from './routes/permissions'
 import { Route as PortalRouteImport } from './routes/portal'
+import { Route as PortfolioRouteImport } from './routes/portfolio'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SemesterRouteImport } from './routes/semester'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -60,6 +63,11 @@ const DecisionsRoute = DecisionsRouteImport.update({
   path: '/decisions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DegreeRoute = DegreeRouteImport.update({
+  id: '/degree',
+  path: '/degree',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EventRoute = EventRouteImport.update({
   id: '/event',
   path: '/event',
@@ -75,6 +83,11 @@ const GrowRoute = GrowRouteImport.update({
   path: '/grow',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PermissionsRoute = PermissionsRouteImport.update({
   id: '/permissions',
   path: '/permissions',
@@ -83,6 +96,11 @@ const PermissionsRoute = PermissionsRouteImport.update({
 const PortalRoute = PortalRouteImport.update({
   id: '/portal',
   path: '/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortfolioRoute = PortfolioRouteImport.update({
+  id: '/portfolio',
+  path: '/portfolio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -138,11 +156,14 @@ export interface FileRoutesByFullPath {
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
+  '/degree': typeof DegreeRoute
   '/event': typeof EventRoute
   '/explore': typeof ExploreRoute
   '/grow': typeof GrowRoute
+  '/map': typeof MapRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
+  '/portfolio': typeof PortfolioRoute
   '/profile': typeof ProfileRoute
   '/semester': typeof SemesterRoute
   '/settings': typeof SettingsRoute
@@ -160,11 +181,14 @@ export interface FileRoutesByTo {
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
+  '/degree': typeof DegreeRoute
   '/event': typeof EventRoute
   '/explore': typeof ExploreRoute
   '/grow': typeof GrowRoute
+  '/map': typeof MapRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
+  '/portfolio': typeof PortfolioRoute
   '/profile': typeof ProfileRoute
   '/semester': typeof SemesterRoute
   '/settings': typeof SettingsRoute
@@ -183,11 +207,14 @@ export interface FileRoutesById {
   '/counselor': typeof CounselorRoute
   '/course-skills': typeof CourseSkillsRoute
   '/decisions': typeof DecisionsRoute
+  '/degree': typeof DegreeRoute
   '/event': typeof EventRoute
   '/explore': typeof ExploreRoute
   '/grow': typeof GrowRoute
+  '/map': typeof MapRoute
   '/permissions': typeof PermissionsRoute
   '/portal': typeof PortalRoute
+  '/portfolio': typeof PortfolioRoute
   '/profile': typeof ProfileRoute
   '/semester': typeof SemesterRoute
   '/settings': typeof SettingsRoute
@@ -207,11 +234,14 @@ export interface FileRouteTypes {
     | '/counselor'
     | '/course-skills'
     | '/decisions'
+    | '/degree'
     | '/event'
     | '/explore'
     | '/grow'
+    | '/map'
     | '/permissions'
     | '/portal'
+    | '/portfolio'
     | '/profile'
     | '/semester'
     | '/settings'
@@ -229,11 +259,14 @@ export interface FileRouteTypes {
     | '/counselor'
     | '/course-skills'
     | '/decisions'
+    | '/degree'
     | '/event'
     | '/explore'
     | '/grow'
+    | '/map'
     | '/permissions'
     | '/portal'
+    | '/portfolio'
     | '/profile'
     | '/semester'
     | '/settings'
@@ -251,11 +284,14 @@ export interface FileRouteTypes {
     | '/counselor'
     | '/course-skills'
     | '/decisions'
+    | '/degree'
     | '/event'
     | '/explore'
     | '/grow'
+    | '/map'
     | '/permissions'
     | '/portal'
+    | '/portfolio'
     | '/profile'
     | '/semester'
     | '/settings'
@@ -274,11 +310,14 @@ export interface RootRouteChildren {
   CounselorRoute: typeof CounselorRoute
   CourseSkillsRoute: typeof CourseSkillsRoute
   DecisionsRoute: typeof DecisionsRoute
+  DegreeRoute: typeof DegreeRoute
   EventRoute: typeof EventRoute
   ExploreRoute: typeof ExploreRoute
   GrowRoute: typeof GrowRoute
+  MapRoute: typeof MapRoute
   PermissionsRoute: typeof PermissionsRoute
   PortalRoute: typeof PortalRoute
+  PortfolioRoute: typeof PortfolioRoute
   ProfileRoute: typeof ProfileRoute
   SemesterRoute: typeof SemesterRoute
   SettingsRoute: typeof SettingsRoute
@@ -334,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DecisionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/degree': {
+      id: '/degree'
+      path: '/degree'
+      fullPath: '/degree'
+      preLoaderRoute: typeof DegreeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/event': {
       id: '/event'
       path: '/event'
@@ -355,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GrowRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/permissions': {
       id: '/permissions'
       path: '/permissions'
@@ -367,6 +420,13 @@ declare module '@tanstack/react-router' {
       path: '/portal'
       fullPath: '/portal'
       preLoaderRoute: typeof PortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portfolio': {
+      id: '/portfolio'
+      path: '/portfolio'
+      fullPath: '/portfolio'
+      preLoaderRoute: typeof PortfolioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -442,11 +502,14 @@ const rootRouteChildren: RootRouteChildren = {
   CounselorRoute: CounselorRoute,
   CourseSkillsRoute: CourseSkillsRoute,
   DecisionsRoute: DecisionsRoute,
+  DegreeRoute: DegreeRoute,
   EventRoute: EventRoute,
   ExploreRoute: ExploreRoute,
   GrowRoute: GrowRoute,
+  MapRoute: MapRoute,
   PermissionsRoute: PermissionsRoute,
   PortalRoute: PortalRoute,
+  PortfolioRoute: PortfolioRoute,
   ProfileRoute: ProfileRoute,
   SemesterRoute: SemesterRoute,
   SettingsRoute: SettingsRoute,

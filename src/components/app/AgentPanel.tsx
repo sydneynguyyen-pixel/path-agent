@@ -1,27 +1,18 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
-import { AlertTriangle, CheckCircle2, Send, Scale, Info, Zap, Clock, Users, ListPlus, LogOut, Search } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckCircle2, Send, Scale, Info, Star, Zap, Clock, Users, ListPlus, LogOut, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { options, rankOptions, student, syllabi, PILEUP_THRESHOLD, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist, type Option } from "@/data/scenario";
+import { options, rankOptions, student, syllabi, terms, PILEUP_THRESHOLD, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist, type Option } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
 import { useJourney, fmtStamp } from "@/lib/journey";
-import { ConfidenceBadge, SourceChip } from "./bits";
+import { CheckBadge, SourceChip } from "./bits";
 import { AgentAvatar, SubjectIcon } from "./Brand";
 import { Spot } from "./Illustrations";
 import { cn } from "@/lib/utils";
 import { AddsSkills } from "./SkillsBits";
 import { Ink } from "./Ink";
-import { bloom, once } from "@/lib/motion";
-
-/** A paint bloom the first time this run reaches a good outcome, and never again on re-render. */
-function BloomOnce({ id }: { id: string }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => once(id, () => bloom(ref.current, 340)), [id]);
-  return <span ref={ref} className="absolute top-1/2 left-8" aria-hidden="true" />;
-}
 
 const verdictLabel = {
   counts: "Counts toward QR-1",
@@ -30,11 +21,14 @@ const verdictLabel = {
   does_not_count: "Does not count",
 };
 
+/** The term she is registering for, which is what the week-by-week check is about. */
+const planTerm = terms.find((t) => t.status === "registering")?.name ?? "term";
+
 const weekLoad = (week: number) => syllabi.reduce((n, s) => n + s.items.filter((i) => i.week === week).length, 0);
 
 function Availability({ o }: { o: Option }) {
   return (
-    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
       <span className={cn("inline-flex items-center gap-1 font-medium", o.seatsOpen > 0 ? "text-success" : "text-muted-foreground")}>
         <Users className="size-3.5" /> {o.seatsOpen > 0 ? `${o.seatsOpen} seats open` : "Full · 0 seats"}
       </span>
@@ -47,19 +41,28 @@ function Availability({ o }: { o: Option }) {
 
 function WaitlistAction() {
   const j = useJourney();
+  const onPortal = useRouterState({ select: (s) => s.location.pathname }) === "/portal";
   if (!waitlist.allowed) return null;
   return (
-    <div className="rounded-lg border border-dashed p-3 text-sm">
-      <div className="flex items-center gap-1.5 font-medium"><ListPlus className="size-4" /> Optional: also join the waitlist for {waitlist.course}</div>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Bayview allows one waitlist spot while you're enrolled in an alternate. {waitlist.spots}. <SourceChip id={waitlist.sourceId} />
-      </p>
+    <section className="swap-enter surface space-y-3 p-5 text-sm">
+      <div className="flex items-center gap-2 text-lg font-semibold"><ListPlus className="size-5 text-primary" /> Next: join the {waitlist.course} waitlist?</div>
+      <p className="text-muted-foreground">Optional. Bayview allows one waitlist spot while you're enrolled in another class. {waitlist.spots}.</p>
+      <SourceChip id={waitlist.sourceId} />
       {j.waitlisted ? (
-        <div className="mt-2 text-xs font-medium text-success">You joined the waitlist yourself (simulated).</div>
+        <div className="font-medium text-success">You joined the waitlist yourself (simulated).</div>
+      ) : j.waitlistGuide && onPortal ? (
+        <p className="flex items-center gap-1.5 text-primary"><Ink /> Waiting for you to click Join waitlist in the portal…</p>
       ) : (
-        <Button size="sm" variant="outline" className="mt-2" onClick={j.joinWaitlist}>I joined the waitlist</Button>
+        <div className="flex flex-wrap gap-2">
+          {onPortal ? (
+            <Button size="sm" onClick={() => j.setWaitlistGuide(true)}><Search className="size-4" /> Find it for me</Button>
+          ) : (
+            <Button size="sm" asChild><Link to="/portal" onClick={() => { j.setWaitlistGuide(true); j.setPanelOpen(false); }}><Search className="size-4" /> Find it for me</Link></Button>
+          )}
+          <Button size="sm" variant="outline" onClick={j.joinWaitlist}>I joined it myself</Button>
+        </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -81,7 +84,6 @@ function SelfRegisterSteps({ o }: { o: Option }) {
         ) : (
           <Button onClick={() => j.setGuide(true)}><Search className="size-4" /> Find it for me</Button>
         )}
-        <p className="text-xs text-muted-foreground">I'll fill in the search. You click Add and Submit.</p>
       </>
     );
   }
@@ -92,12 +94,47 @@ function SelfRegisterSteps({ o }: { o: Option }) {
         <li><b>Add {code}, section {o.section}</b> ({o.sectionTime}).</li>
         <li>Confirm the add went through.</li>
       </ol>
-      <p className="text-xs text-muted-foreground">Add it in your school's portal.</p>
       <div className="flex gap-2">
         <Button asChild><Link to="/portal" onClick={() => { j.setGuide(true); j.setPanelOpen(false); }}>Take me there</Link></Button>
         <Button variant="outline" onClick={j.markAdded}>I added it myself</Button>
       </div>
     </>
+  );
+}
+
+type Run = NonNullable<ReturnType<typeof useJourney>["agentRun"]>;
+
+/** One action at a time while the agent works, then the whole list folds away until she opens it. */
+function ActionsTaken({ run, skipped, picked }: { run: Run; skipped: ("reader" | "planner" | "backup")[]; picked: Option | undefined }) {
+  if (run.status === "running") {
+    const latest = run.steps.at(-1);
+    return (
+      <div aria-live="polite" className="flex min-h-11 items-center gap-2 text-sm">
+        <Ink />
+        {latest ? <span key={run.steps.length} className="step-in flex items-center gap-2"><AgentAvatar agent={latest.helper} /><span>{latest.text}</span></span> : <span className="text-muted-foreground">Getting started…</span>}
+      </div>
+    );
+  }
+  return (
+    <details aria-label="What Path Agent did" className="rounded-xl border bg-card/60 px-4 py-3 text-sm">
+      <summary className="cursor-pointer font-medium">Actions taken · {run.steps.length}</summary>
+      <div className="mt-3 space-y-2">
+        <span className="inline-block rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">{run.mode === "live" ? `Live AI${run.result?.model ? ` · ${run.result.model}` : ""}` : run.mode === "scripted" ? "Scripted run" : "Connecting"}</span>
+        {run.mode === "scripted" && run.reason && <p className="text-xs text-muted-foreground">{run.reason} These are the same checks in a fixed order, with no AI choosing them.</p>}
+        <ol className="space-y-2">
+          {run.steps.map((s, i) => (
+            <li key={i} className="flex items-center gap-2">
+              {s.ok ? <CheckCircle2 className="size-4 shrink-0 text-mark-yes" /> : <Info className="size-4 shrink-0 text-warning" />}
+              <AgentAvatar agent={s.helper} /><span>{s.text}</span>
+            </li>
+          ))}
+          {skipped.map((h) => (
+            <li key={h} className="flex items-center gap-2 text-muted-foreground"><span className="w-4 shrink-0 text-xs">Off</span><AgentAvatar agent={h} /><span>This task is off, so it was skipped.</span></li>
+          ))}
+        </ol>
+        {picked && run.result?.why && <p><span className="font-medium">Why I picked {picked.course.replace("BCC ", "")}:</span> {run.result.why}</p>}
+      </div>
+    </details>
   );
 }
 
@@ -122,33 +159,12 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
   );
   const content = (
         <div className="agent-panel space-y-6 px-4 pb-10">
-          <div className="nudge rounded-lg border border-warning/40 bg-warning-soft p-4 text-sm">
+          <div className="nudge flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning-soft p-5 text-sm">
             <div className="flex items-center gap-2 font-medium text-warning"><AlertTriangle className="size-4" /> STAT 2 is full</div>
-            <p className="mt-1 text-foreground">
-              QR-1 Statistics is now <b>at risk</b>, not lost. You don't need to wait for your counselor to act. <SourceChip id="portal-full" />
-            </p>
+            <SourceChip id="portal-full" />
           </div>
 
-          {run && (
-            <section aria-label="What Path Agent did" aria-live="polite" className="space-y-2">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="rounded-full bg-secondary px-2.5 py-1 font-medium">{run.mode === "live" ? `Live AI${run.result?.model ? ` · ${run.result.model}` : ""}` : run.mode === "scripted" ? "Scripted run" : "Connecting"}</span>
-              </div>
-              {run.mode === "scripted" && run.reason && <p className="text-xs text-muted-foreground">{run.reason} These are the same checks in a fixed order, with no AI choosing them.</p>}
-              <ol className="space-y-2 text-sm">
-                {run.steps.map((s, i) => (
-                  <li key={i} className="step-in flex items-center gap-2">
-                    {s.ok ? <CheckCircle2 className="check-pop size-4 shrink-0 text-mark-yes" /> : <Info className="size-4 shrink-0 text-warning" />}
-                    <AgentAvatar agent={s.helper} /><span>{s.text}</span>
-                  </li>
-                ))}
-                {scanning && <li className="flex items-center gap-2 text-muted-foreground"><Ink /> Working on the next step…</li>}
-                {helpersOff.map((h) => (
-                  <li key={h} className="flex items-center gap-2 text-muted-foreground"><span className="w-4 shrink-0 text-xs">Off</span><AgentAvatar agent={h} /><span>This task is off, so it was skipped.</span></li>
-                ))}
-              </ol>
-            </section>
-          )}
+          {run && <ActionsTaken run={run} skipped={helpersOff} picked={pick} />}
 
           {plannerOff && j.stage === "failed" && (
             <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
@@ -157,14 +173,8 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
           )}
           {!plannerOff && !scanning && j.stage === "failed" && (
             <section className="deal space-y-3">
-              {pick && run?.result?.why ? (
-                <div className="surface p-4 text-sm">
-                  <div className="font-semibold">My pick: {pick.course.replace("BCC ", "")}, section {pick.section}</div>
-                  <p className="mt-1">{run.result.why}</p>
-                  <p className="mt-2 text-xs text-muted-foreground">It passed the check for open seats and for counting toward your requirement. Whether to take it is up to you.</p>
-                </div>
-              ) : run?.result?.gaveUp && helpersOff.length === 0 && (
-                <p className="text-sm text-muted-foreground">I couldn't settle on one recommendation, so here's every option, ranked.</p>
+              {!pick && run?.result?.gaveUp && helpersOff.length === 0 && (
+                <p className="text-sm text-muted-foreground">I couldn't settle on one recommendation, so here's every option.</p>
               )}
               <h3 className="text-lg font-semibold">Options with open seats</h3>
               <div className="rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground xl:hidden">For the side-by-side portal and recovery view, open on desktop.</div>
@@ -172,46 +182,50 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
                 const p = recoveryPath(o);
                 const heavy = o.deadlines.some((d) => weekLoad(d.week) >= PILEUP_THRESHOLD);
                 const actionable = o.seatsOpen > 0 && o.verdict !== "does_not_count";
+                const isPick = o.id === pick?.id;
                 return (
-                  <article key={o.id} className={cn("rounded-xl border bg-card p-4 shadow-soft", !actionable && "opacity-70", actionable && (pick ? o.id === pick.id : idx === 0) && "best-option")}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-xs text-muted-foreground">#{idx + 1} · {verdictLabel[o.verdict]}</div>
-                        <div className="flex items-center gap-2 font-semibold"><SubjectIcon course={`${o.course} ${o.title}`} />{o.course}</div>
+                  <article key={o.id} className={cn("relative rounded-xl border bg-card p-5 shadow-soft", !actionable && "opacity-70", actionable && isPick && "best-option", isPick && "mt-6 pt-7")}>
+                    {isPick && <div className="my-pick absolute -top-3.5 left-5"><Star className="size-3.5" aria-hidden /> My pick</div>}
+                    <div className="flex items-center gap-3">
+                      <SubjectIcon course={`${o.course} ${o.title}`} />
+                      <div className="min-w-0">
+                        <div className="text-lg leading-tight font-semibold">{o.course}</div>
                         <div className="text-sm text-muted-foreground">{o.title}</div>
                       </div>
-                      <ConfidenceBadge score={o.confidence} conflict={!!o.conflict} />
                     </div>
                     <Availability o={o} />
-                    <AddsSkills course={o.course} />
-                    <p className="mt-2 text-sm">{o.reason}</p>
 
-                    {o.conflict && (
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                        {([["Catalog says", o.conflict.catalog], ["Articulation file says", o.conflict.articulation]] as const).map(([lbl, r]) => (
-                          <div key={lbl} className="rounded-lg border border-dashed bg-secondary p-3 text-sm">
-                            <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground"><Scale className="size-3" /> {lbl}</div>
-                            <div className="mt-1">{r.reading}</div>
-                            <div className="mt-2"><SourceChip id={r.sourceId} /></div>
-                          </div>
-                        ))}
+                    <div className="agent-note mt-4 space-y-3 border-t pt-4 text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                        <div className="flex items-center gap-2 font-medium"><AgentAvatar agent="planner" /> {verdictLabel[o.verdict]}</div>
+                        <CheckBadge score={o.confidence} conflict={!!o.conflict} plain />
                       </div>
-                    )}
-
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      Rule: {o.rule} {!o.conflict && o.sourceIds.map((s) => <SourceChip key={s} id={s} />)}
+                      <p>{o.reason}</p>
+                      {o.conflict && (
+                        <dl className="space-y-1">
+                          {([["Catalog says", o.conflict.catalog], ["Articulation file says", o.conflict.articulation]] as const).map(([lbl, r]) => (
+                            <div key={lbl}><dt className="inline font-medium">{lbl}: </dt><dd className="inline">{r.reading}</dd></div>
+                          ))}
+                        </dl>
+                      )}
+                      {o.deadlines.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-1.5 font-medium">{heavy ? <AlertTriangle className="size-4 shrink-0" aria-hidden /> : <CalendarDays className="size-4 shrink-0" aria-hidden />} Your {planTerm} plan</div>
+                          <p className="mt-0.5">{o.deadlineNote}</p>
+                        </div>
+                      )}
+                      <AddsSkills course={o.course} />
+                      <details className="text-xs text-muted-foreground">
+                        <summary className="cursor-pointer font-medium">See the rule</summary>
+                        <p className="mt-2">{o.rule}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">{(o.conflict ? [o.conflict.catalog.sourceId, o.conflict.articulation.sourceId] : o.sourceIds).map((s) => <SourceChip key={s} id={s} />)}</div>
+                      </details>
                     </div>
-                    {o.deadlines.length > 0 && (
-                      <div className={cn("mt-2 flex items-start gap-1.5 text-xs", heavy ? "text-warning" : "text-muted-foreground")}>
-                        <Info className="mt-0.5 size-3.5 shrink-0" /> Deadline check: {o.deadlineNote}
-                      </div>
-                    )}
+
                     {actionable && (
                       <>
-                        <div className="mt-2 text-xs font-medium text-muted-foreground">
-                          {p === "now" ? "Clearly counts → add it now, no email needed." : "Hold the seat now, confirm with your counselor in parallel."}
-                        </div>
-                        <Button size="sm" variant={(pick ? o.id === pick.id : idx === 0) ? "default" : "outline"} className="mt-3" onClick={() => j.choose(o.id)}>
+                        {p === "hold" && <p className="mt-3 text-xs font-medium text-muted-foreground">Hold the seat now, confirm with your counselor in parallel.</p>}
+                        <Button size="sm" variant={isPick ? "default" : "outline"} className="mt-4" onClick={() => j.choose(o.id)}>
                           Choose {o.course} §{o.section}
                         </Button>
                       </>
@@ -235,10 +249,8 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
           {chosen && path === "now" && (
             <section className="swap-enter surface space-y-3 p-5">
               <div className="flex items-center gap-2 text-lg font-semibold"><Zap className="size-5 text-primary" /> Do this now</div>
-              <div className="flex flex-wrap gap-2"><ConfidenceBadge score={chosen.confidence} />{chosen.sourceIds.map((s) => <SourceChip key={s} id={s} />)}</div>
+              <div className="flex flex-wrap gap-2"><CheckBadge score={chosen.confidence} />{chosen.sourceIds.map((s) => <SourceChip key={s} id={s} />)}</div>
               <SelfRegisterSteps o={chosen} />
-              <p className="text-xs text-muted-foreground">No counselor email needed — this course clearly counts toward {REQUIREMENT_LABEL}.</p>
-              <WaitlistAction />
               {!j.seatHeld && <Button variant="ghost" size="sm" onClick={j.backToOptions}>Back to options</Button>}
             </section>
           )}
@@ -247,7 +259,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
             <>
               <section className="surface space-y-3 p-5">
                 <div className="flex items-center gap-2 text-lg font-semibold"><Zap className="size-5 text-primary" /> Hold the seat now, confirm in parallel</div>
-                <div className="flex flex-wrap gap-2"><ConfidenceBadge score={chosen.confidence} conflict={!!chosen.conflict} /></div>
+                <div className="flex flex-wrap gap-2"><CheckBadge score={chosen.confidence} conflict={!!chosen.conflict} /></div>
                 <SelfRegisterSteps o={chosen} />
                 <div className="rounded-lg bg-secondary p-3 text-sm">
                   <div className="flex items-center gap-1.5 font-medium"><LogOut className="size-4" /> Your way out</div>
@@ -255,7 +267,6 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
                   <div className="mt-2"><SourceChip id="bcc-drop" /></div>
                   <p className="mt-2 text-xs text-muted-foreground">For refund or financial-aid questions, ask the financial aid office.</p>
                 </div>
-                <WaitlistAction />
                 {!j.seatHeld && !j.emailSent && <Button variant="ghost" size="sm" onClick={j.backToOptions}>Back to options</Button>}
               </section>
 
@@ -284,8 +295,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
           )}
 
           {chosen && j.seatHeld && (
-            <section className="success-in relative space-y-2 rounded-xl bg-success-soft p-5 text-sm">
-              <BloomOnce id={`seat-${j.startedAt}`} />
+            <section className="success-in space-y-2 rounded-xl bg-success-soft p-5 text-sm">
               <div className="flex items-center gap-2 font-semibold text-success"><CheckCircle2 className="size-5 text-mark-yes" /> {path === "hold" ? "You hold a seat." : `You're set with ${chosen.course}.`}</div>
               {path === "hold" ? (
                 <p>Counselor confirmation is pending. Drop by {DROP_DEADLINE} if not confirmed.{!j.emailSent && " Approve the email above to ask your counselor."}</p>
@@ -299,6 +309,8 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
               </div>
             </section>
           )}
+
+          {chosen && j.seatHeld && <WaitlistAction />}
         </div>
   );
   if (docked) return <div>{header}{content}</div>;

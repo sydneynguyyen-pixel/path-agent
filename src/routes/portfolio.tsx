@@ -62,7 +62,7 @@ function Portfolio() {
   const waiting = found.filter((e) => attendance(e, SCRIPT_TODAY, j.eventChecks) === "ask").length;
 
   return (
-    <div className={cn("mx-auto", tab === "skills" ? "max-w-7xl" : "max-w-4xl")}>
+    <div className="mx-auto max-w-7xl">
       <PageBanner src={sceneSkills} position="50% 60%" />
       <PageHeader title="Portfolio" sub="What you've done, and what it proves. Only you can see this." />
       <Tabs value={tab} onValueChange={(t) => navigate({ to: "/portfolio", search: t === "skills" ? {} : { tab: t as Tab }, replace: true, state: true })} className="mt-6">
@@ -125,7 +125,7 @@ function SkillsTab({ found, waiting }: { found: Found[]; waiting: number }) {
         </div>
         {confirmable.length > 0 && <Button size="sm" variant="outline" onClick={confirmAll}><CheckCheck className="size-3" />Confirm all {confirmable.length}</Button>}
       </div>
-      <div key={source} className="stagger grid items-start gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div key={source} className="stagger grid items-start gap-4 rounded-[1.75rem] md:grid-cols-2 xl:max-h-[calc(100vh-15rem)] xl:grid-cols-4 xl:overflow-y-auto xl:overscroll-contain xl:p-1">
         {themes.map((t) => (
           <section key={t} className="surface px-4 pt-4">
             <h2 className="border-b pb-3 font-semibold">{t} <span className="font-normal text-muted-foreground">· {shown.filter((s) => s.theme === t).length}</span></h2>
@@ -212,7 +212,7 @@ function Timeline({ found, focus }: { found: Found[]; focus?: string | undefined
   }, [focus]);
   if (seasons.length === 0) return <p className="py-10 text-center text-sm text-muted-foreground">Events you've been to will show up here.</p>;
   return (
-    <div className="space-y-10">
+    <div className="grid items-start gap-x-6 gap-y-10 xl:grid-cols-2">
       {seasons.map((s) => (
         <section key={s.season}>
           <h2 className="mb-3 text-sm font-medium">{s.season}</h2>
@@ -275,11 +275,11 @@ function People() {
   return (
     <section>
       <p className="mb-3 text-sm text-muted-foreground">Notes you wrote after talking to someone. They come back when you'll see that person again.</p>
-      <ul className="surface divide-y">
+      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {met.map((p) => {
           const notes = notesFor(p.id, j.event.notes);
           return (
-            <li key={p.id} className="p-4">
+            <li key={p.id} className="surface p-4">
               <div className="font-medium">{p.name}</div>
               <div className="text-xs text-muted-foreground">{p.role}</div>
               <ul className="mt-2 space-y-1.5 text-sm">

@@ -1099,3 +1099,10 @@ html[data-vt="theme"]::view-transition-new(root) { animation: none; }
   .brand-app .home-cover { aspect-ratio: auto; height: calc(330px + var(--top)); background: transparent; }
 }
 @media (min-width: 1440px) { .brand-app .home-cover { height: calc(330px + var(--top)); } }
+
+/* Wide screens: one long column scrolls on its own and stays in view while the rest of the page holds still. */
+@media (min-width: 1280px) {
+  .scroll-pane { position: sticky; top: calc(var(--top) + 0.75rem); max-height: calc(100vh - var(--top) - 1.5rem); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+}
+/* Explore on wide screens: two types side by side, each row scrolls sideways with about two cards in view. */
+@media (min-width: 1280px) { .explore-pair .explore-row { grid-auto-columns: calc((100% - 32px) / 2.4); } }

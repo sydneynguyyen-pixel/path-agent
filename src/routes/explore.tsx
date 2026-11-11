@@ -296,7 +296,7 @@ function Explore() {
   return (
     <div>
       <PageBanner src={sceneOpportunities} position="50% 64%" />
-      <div className={cn("mx-auto space-y-6", eventsBoard ? "max-w-7xl" : "max-w-5xl")}>
+      <div className={"mx-auto max-w-7xl space-y-6"}>
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-semibold md:text-[2rem]">What do you want to try next?</h1>
@@ -347,7 +347,7 @@ function Explore() {
         ) : view === "calendar" ? (
           <Calendar items={shown} gaps={goal.missing} onOpen={onOpen} byDeadline={byDeadline} showKind={local.kind === "all"} />
         ) : local.kind === "all" ? (
-          <div className="space-y-10">{ORDER.map((k) => <KindSection key={k} kind={k} items={results.filter((o) => o.kind === k)} gaps={goal.missing} onOpen={onOpen} onSeeAll={() => update({ kind: k })} {...(k === "class" ? { control: schoolScope } : {})} />)}</div>
+          <div className="explore-pair grid gap-x-8 gap-y-10 xl:grid-cols-2">{ORDER.map((k) => <KindSection key={k} kind={k} items={results.filter((o) => o.kind === k)} gaps={goal.missing} onOpen={onOpen} onSeeAll={() => update({ kind: k })} {...(k === "class" ? { control: schoolScope } : {})} />)}</div>
         ) : (
           <KindGrid items={results} gaps={goal.missing} onOpen={onOpen} />
         )}

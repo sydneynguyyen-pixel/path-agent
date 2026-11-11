@@ -275,7 +275,7 @@ function Details({ e, planned }: { e: EventItem; planned: boolean }) {
   return (
     <aside
       aria-label={`${e.title} details`}
-      className="hidden overflow-hidden rounded-[1.75rem] bg-card shadow-soft xl:sticky xl:top-20 xl:block xl:max-h-[calc(100vh-6.5rem)] xl:overflow-y-auto"
+      className="hidden overflow-hidden rounded-[1.75rem] bg-card shadow-soft scroll-pane xl:block"
     >
       <div className="relative">
         {e.opportunity?.flyer ? (

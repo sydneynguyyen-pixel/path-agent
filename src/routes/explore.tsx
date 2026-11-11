@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, CalendarClock, CalendarDays, Check, ChevronLeft, ChevronRight, GraduationCap, LayoutGrid, MapPin, Search, Sparkles, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarClock, CalendarDays, Check, GraduationCap, LayoutGrid, MapPin, Search, SlidersHorizontal, Sparkles, Users, X } from "lucide-react";
 import { careerRoles, freeTime, goTogetherEvent, opportunities, terms, type Opportunity, type OpportunityKind } from "@/data/scenario";
 import { SCRIPT_START, useJourney } from "@/lib/journey";
 import { gapSignal, goalFor, deadlineDate, deadlineLabel, detailLine, distinct, doableInFreeTime, exploreResults, fillsLine, gapProgress, goalGap, groupByDate, hostLine, matchesFilters, NO_FILTERS, notOnPlan, timeLeftLine, type ExploreFilters } from "@/lib/opportunities";
@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Flyer } from "@/components/app/Flyer";
 import { OrgLogo } from "@/components/app/SchoolLogo";
 import { PageBanner } from "@/components/app/SeasonBanner";
+import { EventsBoard } from "@/components/app/EventsBoard";
 import { cn } from "@/lib/utils";
 import { Careers, GapPlan } from "@/components/app/CareerDiscovery";
 import { DETAIL_WIDTH, HostRow, KIND, Photo, SaveButton, TONE, shortTitle, type Open, type Tone } from "@/components/app/OpportunityDetails";
@@ -22,11 +23,12 @@ import { PostingLink } from "@/components/app/PostingLink";
 import sceneOpportunities from "@/assets/scene-opportunities.jpg";
 
 export const Route = createFileRoute("/explore")({
-  validateSearch: (s: Record<string, unknown>): { role?: string; open?: string; fills?: string; view?: "careers" | "plan" } => ({
+  validateSearch: (s: Record<string, unknown>): { role?: string; open?: string; fills?: string; view?: "careers" | "plan"; calendar?: boolean } => ({
     ...(typeof s["role"] === "string" ? { role: s["role"] } : {}),
     ...(typeof s["open"] === "string" ? { open: s["open"] } : {}),
     ...(typeof s["fills"] === "string" ? { fills: s["fills"] } : {}),
     ...(s["view"] === "careers" || s["view"] === "plan" ? { view: s["view"] } : {}),
+    ...(s["calendar"] === true || s["calendar"] === "true" ? { calendar: true } : {}),
   }),
   head: () => ({
     meta: [
@@ -82,55 +84,6 @@ function OpportunityCard({ o, gaps, onOpen }: { o: Opportunity; gaps: string[]; 
         <div className="mt-auto pt-3"><div className="flex min-h-11 items-center justify-between gap-2 border-t pt-3"><div className="min-w-0"><Signals o={o} gap={goalGap(o, gaps)} tone="muted" limit={1} /></div><div className="flex shrink-0 items-center gap-1.5"><PostingLink item={o} compact /><SaveButton o={o} compact /></div></div></div>
       </div>
     </article>
-  );
-}
-
-/** One section of the All tab: exactly one row. */
-/** Tracks a horizontal row so its arrows can move it a page at a time and stop at either end. */
-function useCardRow(count: number) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [ends, setEnds] = useState({ prev: false, next: false });
-  useEffect(() => {
-    const row = ref.current;
-    if (!row) return;
-    const sync = () => setEnds({ prev: row.scrollLeft > 1, next: row.scrollLeft + row.clientWidth < row.scrollWidth - 1 });
-    sync();
-    row.addEventListener("scroll", sync, { passive: true });
-    const resize = new ResizeObserver(sync);
-    resize.observe(row);
-    return () => { row.removeEventListener("scroll", sync); resize.disconnect(); };
-  }, [count]);
-  const move = (direction: -1 | 1) => {
-    const row = ref.current;
-    if (!row) return;
-    row.scrollBy({ left: direction * row.clientWidth, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-  };
-  return { ref, ends, move };
-}
-
-const ARROW = "grid size-8 place-items-center rounded-full border bg-card text-foreground transition-colors hover:bg-secondary disabled:cursor-default disabled:text-muted-foreground/40 disabled:hover:bg-card";
-
-function KindSection({ kind, items, gaps, onOpen, onSeeAll, control }: { kind: OpportunityKind; items: Opportunity[]; gaps: string[]; onOpen: Open; onSeeAll: () => void; control?: ReactNode }) {
-  const { ref, ends, move } = useCardRow(items.length);
-  if (items.length === 0) return null;
-  const heading = KIND[kind].heading;
-  return (
-    <section>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">{heading}</h2>
-        <div className="flex flex-wrap items-center gap-3">
-          {control}
-          {items.length > 4 && <button type="button" onClick={onSeeAll} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">See all <ArrowRight className="size-3.5" aria-hidden="true" /></button>}
-          {(ends.prev || ends.next) && (
-            <div className="flex gap-1.5">
-              <button type="button" className={ARROW} disabled={!ends.prev} aria-label={`Previous: ${heading}`} onClick={() => move(-1)}><ChevronLeft className="size-4" aria-hidden="true" /></button>
-              <button type="button" className={ARROW} disabled={!ends.next} aria-label={`Next: ${heading}`} onClick={() => move(1)}><ChevronRight className="size-4" aria-hidden="true" /></button>
-            </div>
-          )}
-        </div>
-      </div>
-      <div ref={ref} className="explore-row">{items.map((o) => <OpportunityCard key={o.id} o={o} gaps={gaps} onOpen={onOpen} />)}</div>
-    </section>
   );
 }
 
@@ -218,7 +171,7 @@ const INDUSTRIES = menu((o) => [o.industry]);
 /** Your goal, what's left to build for it, and each gap as a one-tap filter. */
 function GoalBar({ goalId, title, gaps, skill, onRole, onSkill }: { goalId: string; title: string; gaps: string[]; skill: string | null; onRole: (id: string) => void; onSkill: (s: string | null) => void }) {
   return (
-    <section aria-label="Your goal" className="surface flex flex-wrap items-center gap-x-3 gap-y-2.5 p-4">
+    <section aria-label="Your goal" className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted-foreground">Aiming for</span>
         <Select value={goalId} onValueChange={onRole}>
@@ -230,7 +183,7 @@ function GoalBar({ goalId, title, gaps, skill, onRole, onSkill }: { goalId: stri
       <div className="flex flex-wrap items-center gap-1.5">
         {gaps.map((g) => <button key={g} type="button" aria-pressed={skill === g} onClick={() => onSkill(skill === g ? null : g)} className={cn("rounded-full px-3 py-1.5 text-xs", skill === g ? "glass-active font-medium" : "bg-secondary text-foreground hover:bg-secondary/70")}>{g}</button>)}
       </div>
-      <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <Link to="/explore" search={{ view: "careers" }} className="underline-offset-4 hover:text-foreground hover:underline">Other roles</Link>
         <Link to="/explore" search={{ view: "plan", role: goalId }} className="underline-offset-4 hover:text-foreground hover:underline">Plan toward it</Link>
       </div>
@@ -238,11 +191,91 @@ function GoalBar({ goalId, title, gaps, skill, onRole, onSkill }: { goalId: stri
   );
 }
 
+/** Why a listing is here, in one full line. Never cut off. */
+function reasonFor(o: Opportunity, gaps: string[]) {
+  const gap = goalGap(o, gaps);
+  if (gap) return gapSignal(o, gap);
+  return fillsLine(o) ?? (doableInFreeTime(o, freeTime) ? "Fits your free time" : undefined);
+}
+
+/** A small card for shelves: a square flyer, the title, when and where, and the reason in full. */
+function CompactCard({ o, gaps, onOpen }: { o: Opportunity; gaps: string[]; onOpen: Open }) {
+  const why = reasonFor(o, gaps);
+  return (
+    <article data-opp={o.id} className={cn(CARD, "flex gap-4 p-3")}>
+      <OpenCover o={o} onOpen={onOpen} />
+      <Art o={o} className="size-24 shrink-0 sm:size-28" />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">{KIND[o.kind].label} · {hostLine(o)}</div>
+        <h3 className="mt-1 text-[15px] leading-snug font-semibold">{shortTitle(o)}</h3>
+        <div className="mt-0.5 text-xs text-muted-foreground">{detailLine(o)}</div>
+        {why && <div className="mt-1.5 flex items-start gap-1.5 text-xs"><Sparkles className="mt-0.5 size-3 shrink-0" aria-hidden="true" />{why}</div>}
+        <div className="relative z-20 mt-auto flex justify-end gap-1.5 pt-2"><PostingLink item={o} compact /><SaveButton o={o} compact /></div>
+      </div>
+    </article>
+  );
+}
+
+/** The single best next step, shown bigger than everything else. */
+function StartHere({ o, gaps, onOpen }: { o: Opportunity; gaps: string[]; onOpen: Open }) {
+  const why = reasonFor(o, gaps);
+  return (
+    <section aria-label="Start here" className={cn(CARD, "flex flex-col gap-5 p-4 sm:flex-row sm:items-center sm:p-5")}>
+      <OpenCover o={o} onOpen={onOpen} />
+      <Art o={o} className="size-40 shrink-0 sm:size-44" />
+      <div className="min-w-0 flex-1">
+        <span className="aqua-chip inline-flex rounded-full px-3 py-1 text-xs font-semibold">Start here</span>
+        <h2 className="mt-2 text-2xl leading-tight font-semibold">{shortTitle(o)}</h2>
+        <div className="mt-1 text-sm text-muted-foreground">{KIND[o.kind].label} · {hostLine(o)} · {detailLine(o)}</div>
+        {why && <p className="mt-3 flex items-start gap-2 text-sm"><Sparkles className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{why}. It's the closest match to your goal right now.</p>}
+        <div className="relative z-20 mt-4 flex flex-wrap items-center gap-2"><SaveButton o={o} /><Button variant="ghost" onClick={() => onOpen(o.id)}>See details</Button><PostingLink item={o} /></div>
+      </div>
+    </section>
+  );
+}
+
+/** The All tab: one pick, then shelves named for what they build, three cards each. */
+function GoalShelves({ results, gaps, onOpen, onSkill, onFree }: { results: Opportunity[]; gaps: string[]; onOpen: Open; onSkill: (s: string) => void; onFree: () => void }) {
+  const [pick, ...rest] = results;
+  if (!pick) return null;
+  const used = new Set<string>([pick.id]);
+  const shelves = gaps.map((g) => {
+    const all = rest.filter((o) => o.fills.includes(g));
+    all.forEach((o) => used.add(o.id));
+    return { key: g, title: `Builds ${g.toLowerCase()}`, sub: `One of the skills UX researcher roles ask for`, all, onSeeAll: () => onSkill(g) };
+  });
+  const free = rest.filter((o) => !used.has(o.id) && doableInFreeTime(o, freeTime));
+  free.forEach((o) => used.add(o.id));
+  const more = rest.filter((o) => !used.has(o.id));
+  const all = [
+    ...shelves,
+    { key: "free", title: "Fits your free time", sub: "Tuesday and Friday afternoons, Tuesday evenings, Saturday mornings", all: free, onSeeAll: onFree },
+    { key: "more", title: "More to explore", sub: "Classes and openings beyond your current goal", all: more, onSeeAll: undefined },
+  ].filter((x) => x.all.length > 0);
+  return (
+    <div className="space-y-10">
+      <StartHere o={pick} gaps={gaps} onOpen={onOpen} />
+      {all.map((shelf) => (
+        <section key={shelf.key} aria-labelledby={`shelf-${shelf.key}`}>
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+            <div><h2 id={`shelf-${shelf.key}`} className="text-xl font-semibold">{shelf.title} <span className="text-base font-normal text-muted-foreground">· {shelf.all.length}</span></h2><p className="text-sm text-muted-foreground">{shelf.sub}</p></div>
+            {shelf.onSeeAll && shelf.all.length > 3 && <button type="button" onClick={shelf.onSeeAll} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">See all {shelf.all.length} <ArrowRight className="size-3.5" aria-hidden="true" /></button>}
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{(shelf.onSeeAll ? shelf.all.slice(0, 3) : shelf.all).map((o) => <CompactCard key={o.id} o={o} gaps={gaps} onOpen={onOpen} />)}</div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 function Explore() {
   const j = useJourney();
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const [view, setView] = useState<"browse" | "calendar">("browse");
+  const [view, setView] = useState<"browse" | "calendar">(search.calendar ? "calendar" : "browse");
+  // "All events" links (and the old /events page) open the calendar.
+  useEffect(() => { if (search.calendar) setView("calendar"); }, [search.calendar]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [local, setLocal] = useState<ExploreFilters>(() => (search.fills ? { ...NO_FILTERS, kind: "class" } : NO_FILTERS));
 
   // Links from other pages open a listing in the shared panel.
@@ -272,9 +305,12 @@ function Explore() {
   const results = exploreResults(candidates, filters, goal.missing, freeTime);
   const countFor = (kind: OpportunityKind) => candidates.filter((o) => o.kind === kind && matchesFilters(o, { ...filters, kind }, freeTime)).length;
   const allCount = candidates.filter((o) => matchesFilters(o, { ...filters, kind: "all" }, freeTime)).length;
+  const activeFilters = [local.skill, local.subject, local.place, local.industry, local.freeTimeOnly].filter(Boolean).length;
   const hasFilters = !!(local.query || local.skill || local.subject || local.place || local.industry || local.freeTimeOnly || fillsSlot);
   const byDeadline = local.kind === "class" || local.kind === "internship";
   const shown = view === "calendar" && local.kind === "all" ? results.filter((o) => o.kind === "event" || o.kind === "club") : results;
+  // Events in the calendar get their own board: month calendar, timeline and details.
+  const eventsBoard = view === "calendar" && (local.kind === "all" || local.kind === "event");
   const schoolScope = <SchoolScope nearby={local.nearbySchools} onChange={(nearbySchools) => update({ nearbySchools })} />;
 
   if (search.view) {
@@ -289,30 +325,39 @@ function Explore() {
   return (
     <div>
       <PageBanner src={sceneOpportunities} position="50% 64%" />
-      <div className="mx-auto max-w-5xl space-y-8">
-        <header className="text-center">
-          <h1 className="text-3xl font-semibold md:text-4xl">What do you want to try next?</h1>
-          <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Classes, clubs, events and internships picked for you.</p>
-          <div className="relative mx-auto mt-5 max-w-xl">
+      <div className={"mx-auto max-w-7xl space-y-6"}>
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold md:text-[2rem]">What do you want to try next?</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Classes, clubs, events and internships picked for you.</p>
+            <div className="mt-3"><GoalBar goalId={goal.id} title={goal.title} gaps={gaps} skill={local.skill} onRole={setRole} onSkill={(skill) => update({ skill })} /></div>
+          </div>
+          <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-            <Input value={local.query} onChange={(e) => update({ query: e.target.value })} placeholder="Search classes, clubs, skills, places…" aria-label="Search opportunities" className="h-12 rounded-full bg-card pr-4 pl-11 shadow-soft" />
+            <Input value={local.query} onChange={(e) => update({ query: e.target.value })} placeholder="Search classes, clubs, skills, places…" aria-label="Search opportunities" className="h-11 rounded-full bg-card pr-4 pl-11 shadow-soft" />
           </div>
         </header>
 
-        <GoalBar goalId={goal.id} title={goal.title} gaps={gaps} skill={local.skill} onRole={setRole} onSkill={(skill) => update({ skill })} />
-
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* One toolbar: what kind, narrow it, how to view it. */}
+          <div className="flex flex-wrap items-center gap-2 border-y py-2">
             <PillGroup>
               <Pill active={local.kind === "all"} onClick={() => update({ kind: "all" })}>All <span className="text-xs opacity-70"><Roll value={allCount} /></span></Pill>
               {ORDER.map((k) => <Pill key={k} active={local.kind === k} onClick={() => update({ kind: k })}>{KIND[k].tab} <span className="text-xs opacity-70"><Roll value={countFor(k)} /></span></Pill>)}
             </PillGroup>
-            <PillGroup className="rounded-full border bg-card p-1">
+            {!eventsBoard && (
+              <button type="button" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)} className={cn("inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm text-muted-foreground hover:text-foreground", (filtersOpen || activeFilters > 0) && "glass-active font-medium text-foreground")}>
+                <SlidersHorizontal className="size-3.5" aria-hidden="true" />Filters{activeFilters > 0 && <span className="grid size-5 place-items-center rounded-full count-badge text-[10px]">{activeFilters}</span>}
+              </button>
+            )}
+            {!eventsBoard && fillsSlot && <button type="button" onClick={clearFills} className="glass-active inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium">Classes for your {fillsSlot.need.toLowerCase()} <X className="size-3.5" aria-hidden="true" /></button>}
+            {!eventsBoard && hasFilters && <button type="button" onClick={clear} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><X className="size-3.5" aria-hidden="true" /> Clear</button>}
+            <PillGroup className="ml-auto rounded-full border bg-card p-1">
               <Pill active={view === "browse"} onClick={() => setView("browse")}><LayoutGrid className="size-3.5" aria-hidden="true" /> Browse</Pill>
               <Pill active={view === "calendar"} onClick={() => setView("calendar")}><CalendarDays className="size-3.5" aria-hidden="true" /> {byDeadline ? "Deadlines" : "Calendar"}</Pill>
             </PillGroup>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className={cn("flex flex-wrap items-center gap-2 rounded-2xl bg-secondary/60 p-3", (eventsBoard || !filtersOpen) && "hidden")}>
             <FilterMenu label="Filter by skill" any="Any skill" value={local.skill} options={SKILLS} onChange={(skill) => update({ skill })} />
             <FilterMenu label="Filter by subject" any="Any subject" value={local.subject} options={SUBJECTS} onChange={(subject) => update({ subject })} />
             <FilterMenu label="Filter by school or place" any="Any school or place" value={local.place} options={PLACES} onChange={(place) => update({ place })} />
@@ -321,22 +366,24 @@ function Explore() {
               <Switch checked={local.freeTimeOnly} onCheckedChange={(freeTimeOnly) => update({ freeTimeOnly })} aria-label="Only things I can do in my free time" />
               In my free time
             </label>
-            {fillsSlot && <button type="button" onClick={clearFills} className="glass-active inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium">Classes for your {fillsSlot.need.toLowerCase()} <X className="size-3.5" aria-hidden="true" /></button>}
-            {hasFilters && <button type="button" onClick={clear} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><X className="size-3.5" aria-hidden="true" /> Clear</button>}
           </div>
         </div>
 
         <div aria-live="polite" className="sr-only">{results.length} results</div>
         {local.kind === "class" && <div className="flex justify-end">{schoolScope}</div>}
-        {shown.length === 0 ? (
+        {eventsBoard ? (
+          <EventsBoard query={local.query} />
+        ) : shown.length === 0 ? (
           <div className="surface p-10 text-center">
             <p className="font-medium">No matches. Try removing a filter.</p>
             <Button variant="outline" className="mt-3" onClick={clear}>Clear filters</Button>
           </div>
         ) : view === "calendar" ? (
           <Calendar items={shown} gaps={goal.missing} onOpen={onOpen} byDeadline={byDeadline} showKind={local.kind === "all"} />
+        ) : local.kind === "all" && !hasFilters ? (
+          <GoalShelves results={results} gaps={gaps} onOpen={onOpen} onSkill={(skill) => update({ skill })} onFree={() => update({ freeTimeOnly: true })} />
         ) : local.kind === "all" ? (
-          <div className="space-y-10">{ORDER.map((k) => <KindSection key={k} kind={k} items={results.filter((o) => o.kind === k)} gaps={goal.missing} onOpen={onOpen} onSeeAll={() => update({ kind: k })} {...(k === "class" ? { control: schoolScope } : {})} />)}</div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{results.map((o) => <CompactCard key={o.id} o={o} gaps={goal.missing} onOpen={onOpen} />)}</div>
         ) : (
           <KindGrid items={results} gaps={goal.missing} onOpen={onOpen} />
         )}

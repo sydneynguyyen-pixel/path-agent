@@ -3,6 +3,8 @@ import { Activity } from "@/routes/activity";
 import { Controls } from "@/routes/permissions";
 import type { AgentId } from "@/lib/journey";
 import { cn } from "@/lib/utils";
+import { PageBanner } from "@/components/app/SeasonBanner";
+import sceneHome from "@/assets/scene-home.jpg";
 
 const HELPERS: AgentId[] = ["reader", "planner", "backup", "drafter"];
 type Search = { tab?: "timeline" | "decisions" | "controls"; helper?: AgentId | undefined };
@@ -26,6 +28,7 @@ function Agents() {
   const { tab = "timeline", helper } = Route.useSearch();
   return (
     <div className="w-full min-w-0">
+      <PageBanner src={sceneHome} position="50% 70%" />
       <div role="tablist" aria-label="Agent views" className="mb-7 inline-flex max-w-full overflow-x-auto rounded-full border bg-card p-1 text-sm">
         {([["timeline", "Activity"], ["decisions", "Your decisions"], ["controls", "Agent controls"]] as const).map(([value, label]) => (
           <Link key={value} role="tab" aria-selected={tab === value} to="/agents" search={{ tab: value }} className={cn("shrink-0 rounded-full px-4 py-1.5", tab === value ? "glass-active" : "text-muted-foreground hover:text-foreground")}>{label}</Link>

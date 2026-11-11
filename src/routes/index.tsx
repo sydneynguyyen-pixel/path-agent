@@ -122,7 +122,8 @@ function PathTimeline() {
   const now = terms.filter((t) => t.status === "in_progress" || t.status === "registering");
   const past = terms.filter((t) => t.status === "done").length;
   const planned = terms.filter((t) => t.status === "planned").length;
-  const isOpen = (_t: Term) => true;
+  // Home only says where you are; the class lists live on Terms.
+  const isOpen = (_t: Term) => false;
   return (
     <div className="stagger space-y-8">
       <section>
@@ -203,16 +204,18 @@ function Home() {
               <div className="bar-fill absolute inset-y-0 left-0 rounded-full aqua-chip" style={{ width: `${pct}%` }} />
             </div>
           </div>
-          <div className="mt-1.5 text-xs text-muted-foreground">{pct}% complete · {progress.inProgress} semester units in progress</div>
+          <div className="mt-1.5 text-xs text-muted-foreground">{progress.inProgress} semester units in progress</div>
         </Link>
       </div>
 
       <div className="home-cover-card"><Attention /></div>
       </div>
 
-      <NextOutsideClass />
-
-      <PathTimeline />
+      {/* Wide screens: the suggestion and the terms sit side by side instead of stacking. */}
+      <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+        <NextOutsideClass />
+        <PathTimeline />
+      </div>
     </div>
   );
 }

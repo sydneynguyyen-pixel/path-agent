@@ -2,11 +2,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowRight, Check, CheckCheck, Copy, Download, EyeOff, Link2, Lock, MoreHorizontal, Paperclip, Pencil, Search, Undo2 } from "lucide-react";
-import { eventPlatforms, ledgerSkills, opportunities, student, type EventPlatform } from "@/data/scenario";
+import { careerRoles, eventPlatforms, ledgerSkills, opportunities, student, type EventPlatform } from "@/data/scenario";
 import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
 import { attendance, sharedProfile, skillsFromEvents, timeline, wentTo, type Attendance, type Found } from "@/lib/experiences";
 import { canExport, exportableSkills, resumeBullet } from "@/lib/skills";
-import { skillsFromDoing } from "@/lib/opportunities";
+import { goalFor, skillsFromDoing } from "@/lib/opportunities";
 import { portfolioSkills, type PortfolioSkill, type SkillSource } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,7 +19,9 @@ import { PageHeader } from "@/components/app/bits";
 import { Accounts, ConnectDialog, DateBlock, PROOF_LINE, useFound, Via } from "@/components/app/EventBits";
 import { PostingLink } from "@/components/app/PostingLink";
 import { photoUrl } from "@/lib/photos";
-import { Spot } from "@/components/app/Illustrations";
+import { PageBanner } from "@/components/app/SeasonBanner";
+import { GoalFit, ProofTiles, SkillsChart } from "@/components/app/SkillsOverview";
+import sceneSkills from "@/assets/scene-skills.jpg";
 import { CourseLink, EvidenceIndicator } from "@/components/app/SkillsBits";
 import { cn } from "@/lib/utils";
 import mayaPhoto from "@/assets/maya.jpg";
@@ -60,8 +62,9 @@ function Portfolio() {
   const waiting = found.filter((e) => attendance(e, SCRIPT_TODAY, j.eventChecks) === "ask").length;
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <PageHeader title="Portfolio" sub="What you've done, and what it proves. Only you can see this." right={<Spot name="seedling" className="hidden w-28 sm:block" />} />
+    <div className="mx-auto max-w-7xl">
+      <PageBanner src={sceneSkills} position="50% 60%" />
+      <PageHeader title="Portfolio" sub="What you've done, and what it proves. Only you can see this." />
       <Tabs value={tab} onValueChange={(t) => navigate({ to: "/portfolio", search: t === "skills" ? {} : { tab: t as Tab }, replace: true, state: true })} className="mt-6">
         <TabsList className="rounded-full">
           <TabsTrigger value="skills" className="rounded-full">Skills</TabsTrigger>
@@ -99,8 +102,8 @@ function SkillsTab({ found, waiting }: { found: Found[]; waiting: number }) {
   const unsure = visible.filter((s) => matches(s) && s.unsure);
   const hidden = skills.filter((s) => s.hidden);
   const themes = [...new Set(shown.map((s) => s.theme))];
-  const confirmed = visible.filter((s) => s.confirmed).length;
   const confirmable = visible.filter((s) => !s.confirmed && !s.unsure);
+  const goal = goalFor(careerRoles, j.interestedRoles);
 
   const confirmAll = () => {
     const keys = confirmable.flatMap((s) => s.reviewKeys);
@@ -110,21 +113,22 @@ function SkillsTab({ found, waiting }: { found: Found[]; waiting: number }) {
 
   return (
     <div className="space-y-5">
-      <div className="surface flex flex-wrap items-center gap-x-4 gap-y-3 p-5">
-        <div className="min-w-48 flex-1">
-          <h2 className="font-semibold">{confirmed} of {visible.length} skills confirmed</h2>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Skills confirmed" aria-valuemin={0} aria-valuemax={visible.length} aria-valuenow={confirmed}><div className="meter-fill aqua-chip h-full rounded-full" style={{ width: `${visible.length ? (confirmed / visible.length) * 100 : 0}%` }} /></div>
+      <ProofTiles skills={visible.filter((s) => !s.unsure)} />
+      <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+        <SkillsChart skills={visible.filter((s) => !s.unsure)} />
+        <GoalFit goalId={goal.id} title={goal.title} have={goal.why} missing={goal.missing} skills={visible} />
+      </div>
+      {waiting > 0 && <Link to="/portfolio" search={{ tab: "timeline" }} className="flex items-center justify-between gap-3 rounded-xl bg-warning-soft px-5 py-3 text-sm">{waiting} past {waiting === 1 ? "event needs" : "events need"} your answer first <ArrowRight className="size-4" aria-hidden="true" /></Link>}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Where the proof comes from">
+          {SOURCES.map((f) => <Button key={f.id} size="sm" variant={f.id === source ? "default" : "outline"} aria-pressed={f.id === source} onClick={() => setSource(f.id)}>{f.label}</Button>)}
         </div>
-        {confirmable.length > 0 && <Button size="sm" variant="outline" onClick={confirmAll}><CheckCheck className="size-3" />Confirm all</Button>}
+        {confirmable.length > 0 && <Button size="sm" variant="outline" onClick={confirmAll}><CheckCheck className="size-3" />Confirm all {confirmable.length}</Button>}
       </div>
-      {waiting > 0 && <Link to="/portfolio" search={{ tab: "timeline" }} className="flex items-center justify-between gap-3 rounded-xl bg-warning-soft px-4 py-3 text-sm">{waiting} past {waiting === 1 ? "event needs" : "events need"} your answer first <ArrowRight className="size-4" aria-hidden="true" /></Link>}
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Where the proof comes from">
-        {SOURCES.map((f) => <Button key={f.id} size="sm" variant={f.id === source ? "default" : "outline"} aria-pressed={f.id === source} onClick={() => setSource(f.id)}>{f.label}</Button>)}
-      </div>
-      <div key={source} className="stagger space-y-5">
+      <div key={source} className="stagger grid items-start gap-4 rounded-[1.75rem] md:grid-cols-2 xl:max-h-[calc(100vh-15rem)] xl:grid-cols-4 xl:overflow-y-auto xl:overscroll-contain xl:p-1">
         {themes.map((t) => (
-          <section key={t} className="surface px-5 pt-4">
-            <h2 className="border-b pb-3 font-semibold">{t}</h2>
+          <section key={t} className="surface px-4 pt-4">
+            <h2 className="border-b pb-3 font-semibold">{t} <span className="font-normal text-muted-foreground">· {shown.filter((s) => s.theme === t).length}</span></h2>
             <ul className="divide-y">{shown.filter((s) => s.theme === t).map((s) => <PortfolioSkillRow key={s.key} skill={s} />)}</ul>
           </section>
         ))}
@@ -159,9 +163,9 @@ function PortfolioSkillRow({ skill: s }: { skill: PortfolioSkill }) {
   const review = (patch: Parameters<typeof j.reviewSkill>[1]) => s.reviewKeys.forEach((k) => j.reviewSkill(k, patch));
   const lines = s.proofs.flatMap((p) => (p.type === "class" ? [p] : []));
   return (
-    <li className="py-4">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1 basis-60">
+    <li className="py-3">
+      <div className="flex flex-wrap items-start gap-2">
+        <div className="min-w-0 flex-1 basis-36">
           <div className="flex items-center gap-2"><h3 className="font-medium">{s.name}</h3>{s.confirmed && <Check className="size-3.5 text-mark-yes" aria-label="Confirmed" />}</div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {s.proofs.map((p, i) => (
@@ -208,7 +212,7 @@ function Timeline({ found, focus }: { found: Found[]; focus?: string | undefined
   }, [focus]);
   if (seasons.length === 0) return <p className="py-10 text-center text-sm text-muted-foreground">Events you've been to will show up here.</p>;
   return (
-    <div className="space-y-10">
+    <div className="grid items-start gap-x-6 gap-y-10 xl:grid-cols-2">
       {seasons.map((s) => (
         <section key={s.season}>
           <h2 className="mb-3 text-sm font-medium">{s.season}</h2>
@@ -271,11 +275,11 @@ function People() {
   return (
     <section>
       <p className="mb-3 text-sm text-muted-foreground">Notes you wrote after talking to someone. They come back when you'll see that person again.</p>
-      <ul className="surface divide-y">
+      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {met.map((p) => {
           const notes = notesFor(p.id, j.event.notes);
           return (
-            <li key={p.id} className="p-4">
+            <li key={p.id} className="surface p-4">
               <div className="font-medium">{p.name}</div>
               <div className="text-xs text-muted-foreground">{p.role}</div>
               <ul className="mt-2 space-y-1.5 text-sm">

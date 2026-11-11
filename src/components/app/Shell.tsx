@@ -1,6 +1,6 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
-import { ArrowLeft, RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, ChevronRight, ChevronDown, UserCheck, UserRound, Settings, BookOpenCheck, Compass, Sprout, Waypoints, GraduationCap } from "lucide-react";
+import { ArrowLeft, RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, ChevronRight, ChevronDown, UserCheck, UserRound, Settings, BookOpenCheck, Compass, Sprout, Waypoints, GraduationCap, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { sources, student } from "@/data/scenario";
@@ -114,7 +114,7 @@ function AccountMenu({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function SidebarNav({ navPath }: { navPath: string }) {
+function SidebarNav({ navPath, collapsed }: { navPath: string; collapsed: boolean }) {
   const waiting = waitingCount(useEvents());
   const { containerRef, pillRef } = useSlidingPill<HTMLElement>('[aria-current="page"]');
   return (
@@ -122,19 +122,21 @@ function SidebarNav({ navPath }: { navPath: string }) {
       <span ref={pillRef} className="sliding-pill liquid" aria-hidden="true" />
       {groups.map((g) => (
         <div key={g.label}>
-          <div className="px-3 text-xs text-muted-foreground">{g.label}</div>
+          {collapsed ? <div className="mx-auto h-px w-6 bg-border" aria-hidden="true" /> : <div className="px-3 text-xs text-muted-foreground">{g.label}</div>}
           <div className="mt-2 space-y-0.5">
             {g.links.map((l) => (
               <Link
                 key={l.to}
                 to={l.to}
-                className="nav-link relative z-[1] flex items-center gap-3 rounded-full px-3 py-2 text-sm text-sidebar-foreground"
+                className={cn("nav-link relative z-[1] flex items-center gap-3 rounded-full py-2 text-sm text-sidebar-foreground", collapsed ? "justify-center px-0 py-2.5" : "px-3")}
                 aria-current={navPath === l.to ? "page" : undefined}
+                aria-label={collapsed ? l.label : undefined}
+                title={collapsed ? l.label : undefined}
               >
                 <l.icon className="size-4" />
-                {l.label}
+                {!collapsed && l.label}
                 {l.to === "/agents" && waiting > 0 && (
-                  <span title={`${waiting} thing${waiting > 1 ? "s" : ""} waiting for you`} aria-label={`${waiting} waiting for you`} className={badge}><Roll value={waiting} /></span>
+                  <span title={`${waiting} thing${waiting > 1 ? "s" : ""} waiting for you`} aria-label={`${waiting} waiting for you`} className={collapsed ? "absolute right-1.5 top-0.5 grid size-4 place-items-center rounded-full count-badge text-[9px]" : badge}><Roll value={waiting} /></span>
                 )}
               </Link>
             ))}
@@ -143,6 +145,25 @@ function SidebarNav({ navPath }: { navPath: string }) {
       ))}
     </nav>
   );
+}
+
+const NAV_KEY = "pa-nav-collapsed";
+
+/** Wide screens: the sidebar can shrink to icons. Remembered in this browser; read after hydration. */
+function useNavCollapsed() {
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem(NAV_KEY) === "1"); } catch { /* storage blocked: stay open */ }
+  }, []);
+  useEffect(() => {
+    document.documentElement.dataset["nav"] = collapsed ? "collapsed" : "open";
+  }, [collapsed]);
+  // Saved only when she toggles, so a remount can't overwrite her choice before it's read.
+  const set = (next: boolean) => {
+    setCollapsed(next);
+    try { localStorage.setItem(NAV_KEY, next ? "1" : "0"); } catch { /* ignore */ }
+  };
+  return [collapsed, set] as const;
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -155,6 +176,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const blankPage = blankPages[path];
   const onCanvas = (path === "/map" || path === "/degree") && j.pathBuilt === true;
   const welcomeOnScreen = useRouterState({ select: (s) => s.matches.some((m) => m.routeId === "/welcome") });
+  const [collapsed, setCollapsed] = useNavCollapsed();
 
   useEffect(() => {
     if (j.onboarded === false && path !== "/welcome") navigate({ to: "/welcome" });
@@ -169,16 +191,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="brand-app app-shell min-h-screen md:h-dvh md:min-h-0 md:overflow-hidden">
       <div className="relative flex min-h-screen md:h-full md:min-h-0">
-        <aside className="app-sidebar fixed bottom-3 left-3 top-3 z-30 hidden w-60 flex-col px-3 py-5 md:flex">
-          <div className="flex items-center gap-2.5 px-2">
+        <aside className={cn("app-sidebar fixed bottom-3 left-3 top-3 z-30 hidden flex-col py-5 md:flex", collapsed ? "w-[72px] px-2" : "w-60 px-3")}>
+          <div className={cn("flex items-center gap-2.5", collapsed ? "flex-col px-0" : "px-2")}>
             <BrandLogo />
-            <span className="font-semibold tracking-tight">Path Agent</span>
+            {!collapsed && <span className="font-semibold tracking-tight">Path Agent</span>}
+            <button type="button" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} className={cn("grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground", !collapsed && "ml-auto")}>
+              {collapsed ? <PanelLeftOpen className="size-4" aria-hidden="true" /> : <PanelLeftClose className="size-4" aria-hidden="true" />}
+            </button>
           </div>
 
-          <SidebarNav navPath={navPath} />
+          {/* Remounts on toggle so the sliding pill re-measures the new link sizes. */}
+          <SidebarNav key={collapsed ? "c" : "e"} navPath={navPath} collapsed={collapsed} />
 
           <div className="mt-3 space-y-4">
-            {(j.paused || j.watchingRegistration) && (
+            {!collapsed && (j.paused || j.watchingRegistration) && (
               <Link to="/agents" search={{ tab: "controls" }} className="flex items-center gap-2 rounded-full bg-secondary px-3 py-2.5 text-xs">
                 {j.paused ? (
                   <><Pause className="size-3.5" aria-hidden="true" /> Path Agent paused</>
@@ -187,7 +213,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 )}
               </Link>
             )}
-            <AccountMenu />
+            {collapsed ? <div className="flex justify-center"><AccountMenu compact /></div> : <AccountMenu />}
           </div>
         </aside>
 
@@ -227,12 +253,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {/* Until hydration we can't tell a new student from a returning one, so show neither. */}
               {j.pathBuilt === null && (blankPage || path === "/") ? null : j.pathBuilt === false && blankPage ? <BlankPage {...blankPage} /> : children}
             </main>
-            {!onCanvas && (
-              <footer className="px-6 pb-28 text-xs md:pb-6 text-muted-foreground md:px-10">
-                Prototype with fully synthetic data. Fictional schools and student. Path Agent proposes and drafts; it never registers, enrolls, or sends.
-                It does not give legal, financial-aid, or immigration advice.
-              </footer>
-            )}
+            {/* Room so the phone tab bar never covers the end of a page. */}
+            {!onCanvas && <div aria-hidden="true" className="h-24 md:h-6" />}
           </div>
         </div>
       </div>

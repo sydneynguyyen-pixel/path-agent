@@ -6,7 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { syllabi, options, terms, SUMMER_2027_START } from "@/data/scenario";
 import { OrgLogo, SchoolLogo } from "@/components/app/SchoolLogo";
 import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
-import { currentWeek, firstWeekToShow, isPileup, pileupLine, shortDate, weekDates } from "@/lib/weeks";
+import { currentWeek, isPileup, pileupLine, shortDate, weekDates } from "@/lib/weeks";
 import { canConfirm, confirmLabel, degreeLine, doneLabel, planTermId } from "@/lib/opportunities";
 import { useConfirmWent } from "@/components/app/PlanActions";
 import { PageHeader, SourceChip } from "@/components/app/bits";
@@ -92,9 +92,7 @@ function Semester() {
   const j = useJourney();
   const search = Route.useSearch();
   const [localSel, setSel] = useState<string>();
-  const [pickedWeek, setPickedWeek] = useState<number>();
   const { containerRef, pillRef } = useSlidingPill<HTMLDivElement>('[aria-pressed="true"]');
-  const weekPill = useSlidingPill<HTMLDivElement>('[aria-pressed="true"]');
   const sel = localSel ?? search.term ?? "su27";
   const term = terms.find((t) => t.id === sel);
   if (!term) return null;
@@ -107,13 +105,11 @@ function Semester() {
   const load = (w: number) => rows.reduce((n, r) => n + r.items.filter((i) => i.week === w).length, 0);
   const nowWeek = currentWeek(SUMMER_2027_START, weeks.length, SCRIPT_TODAY);
   const notStarted = SCRIPT_TODAY < SUMMER_2027_START;
-  const week = pickedWeek ?? nowWeek ?? firstWeekToShow(weeks, load);
-  const dueThisWeek = rows.flatMap((r) => r.items.filter((i) => i.week === week).map((i) => ({ course: r.course, label: i.label })));
 
   return (
     <div>
       <PageBanner src={sceneTerms} position="50% 86%" />
-      <PageHeader title="Your terms" sub="Your plan through graduation." right={<Button variant="outline" size="sm" asChild><Link to="/degree" search={{ view: "tree", try: true }}>Try a change</Link></Button>} />
+      <PageHeader title="Your terms" sub="Your plan through graduation." />
       {/* The padding gives shadows room inside the scroller; the negative margins keep the row in place. */}
       <div ref={containerRef} className="term-tabs relative -mx-3 -mt-3 mb-3 flex gap-2 overflow-x-auto px-3 py-3">
         <span ref={pillRef} className="sliding-pill liquid" aria-hidden="true" />
@@ -129,6 +125,9 @@ function Semester() {
           </Button>
         ))}
       </div>
+      {/* Wide screens: the term on the left, coming up on the right, so the page fits on one screen. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="min-w-0">
       <div key={term.id} className="swap-enter">
       {term.id !== "su27" ? (
         <div className="surface p-6">
@@ -148,44 +147,74 @@ function Semester() {
         </div>
       ) : (
       <>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm">
-        <div><b className="font-medium">Summer 2027, week by week</b>{notStarted && <span className="text-muted-foreground"> · Starts {shortDate(SUMMER_2027_START)}. You're in {terms.find((t) => t.status === "in_progress")?.name}.</span>}</div>
-        <Link to="/portal" className="text-xs text-muted-foreground underline-offset-4 hover:underline">Registration closes Jun 18</Link>
-      </div>
-      <div className="surface overflow-hidden">
-        <div ref={weekPill.containerRef} className="week-strip relative grid grid-cols-4 gap-1.5 border-b p-3 xl:grid-cols-8">
-          <span ref={weekPill.pillRef} className="sliding-pill liquid" aria-hidden="true" />
-          {weeks.map((w) => (
-            <button key={w} type="button" aria-pressed={week === w} aria-current={nowWeek === w ? "date" : undefined} aria-label={`Week ${w}, ${weekDates(SUMMER_2027_START, w)}${nowWeek === w ? ", this week" : ""}: ${load(w)} due${isPileup(load(w)) ? ", pile-up" : ""}`} onClick={() => setPickedWeek(w)} className={cn("rounded-xl px-1 py-2 text-center text-xs outline-offset-2 transition-colors", isPileup(load(w)) ? "week-pileup font-semibold text-alert" : load(w) > 0 ? "bg-secondary font-medium hover:bg-secondary/70" : "text-muted-foreground hover:bg-secondary/50", nowWeek === w && "ring-1 ring-inset ring-foreground/25")}>
-              <span className="flex items-center justify-center gap-1 whitespace-nowrap">{isPileup(load(w)) && <AlertTriangle className="size-3" aria-hidden="true" />}Week {w}</span>
-              <span className="mt-0.5 block whitespace-nowrap text-[11px] font-normal opacity-80">{weekDates(SUMMER_2027_START, w)}</span>
-              <span className="block text-[11px] font-normal">{nowWeek === w && "Now · "}{load(w) > 0 ? `${load(w)} due` : "Clear"}</span>
-            </button>
-          ))}
+      <section aria-labelledby="weeks-title" className="surface overflow-hidden">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 border-b px-5 py-4">
+          <div>
+            <h2 id="weeks-title" className="font-semibold">Summer 2027, week by week</h2>
+            {notStarted && <p className="text-xs text-muted-foreground">Starts {shortDate(SUMMER_2027_START)}. You're in {terms.find((t) => t.status === "in_progress")?.name}.</p>}
+          </div>
+          <span className="text-xs text-muted-foreground">From your 3 summer syllabi</span>
         </div>
-        <div key={week} className="swap-enter p-4 sm:px-5">
-          {isPileup(load(week)) && <div className="mb-3 flex items-start gap-2 rounded-xl bg-alert-soft p-3 text-sm"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-alert" aria-hidden="true" /><span><b className="font-semibold text-alert">Pile-up.</b> {pileupLine(week, weeks, load)}</span></div>}
-          <h3 className="text-sm font-medium">Due in Week {week} <span className="font-normal text-muted-foreground">· {weekDates(SUMMER_2027_START, week)}</span></h3>
-          {dueThisWeek.length === 0
-            ? <p className="mt-2 text-sm text-muted-foreground">Nothing due this week.</p>
-            : <ul className="mt-1 divide-y">{dueThisWeek.map((d) => <li key={d.course + d.label} className="flex items-center gap-3 py-2.5 text-sm"><SubjectIcon course={d.course} /><span className="min-w-0 flex-1"><b className="font-medium"><CourseLink course={d.course} /></b> <span className="text-muted-foreground">{d.label}</span></span></li>)}</ul>}
+        {/* A calendar: one row per term week, Monday to Sunday, with what's due that week. */}
+        <div className="p-3 text-xs">
+          <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))_40px] gap-1 px-2 pb-1.5 text-[11px] text-muted-foreground" aria-hidden="true">
+            <span />
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <span key={d} className="text-center">{d}</span>)}
+            <span className="text-right">Due</span>
+          </div>
+          <ol className="space-y-1" aria-label="Summer 2027 weeks">
+            {weeks.map((w) => {
+              const n = load(w);
+              const pile = isPileup(n);
+              const due = rows.flatMap((r) => r.items.filter((i) => i.week === w).map((i) => ({ course: r.course, label: i.label })));
+              return (
+                <li key={w} aria-current={nowWeek === w ? "date" : undefined} aria-label={`Week ${w}, ${weekDates(SUMMER_2027_START, w)}${nowWeek === w ? ", this week" : ""}: ${n} due${pile ? ", pile-up" : ""}`}
+                  className={cn("grid grid-cols-[64px_repeat(7,minmax(0,1fr))_40px] items-center gap-1 rounded-xl px-2 py-1.5", pile && "week-pileup", nowWeek === w && "ring-1 ring-inset ring-foreground/25")}>
+                  <span className={cn("flex items-center gap-1 font-medium", pile && "text-alert")}>{pile && <AlertTriangle className="size-3" aria-hidden="true" />}Week {w}</span>
+                  {Array.from({ length: 7 }, (_, d) => {
+                    const day = new Date(Date.parse(`${SUMMER_2027_START}T12:00:00Z`) + ((w - 1) * 7 + d) * 86_400_000);
+                    const first = day.getUTCDate() === 1 || (w === 1 && d === 0);
+                    return <span key={d} aria-hidden="true" className={cn("text-center tabular-nums", d >= 5 && "text-muted-foreground")}>{first ? day.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : day.getUTCDate()}</span>;
+                  })}
+                  <span className={cn("text-right", n ? "font-semibold" : "text-muted-foreground")}>{n || "–"}</span>
+                  {due.length > 0 && (
+                    <span className="col-span-7 col-start-2 flex flex-wrap items-center gap-1 pt-1">
+                      {due.map((d) => <span key={d.course + d.label} className={cn("rounded-full px-2 py-0.5 text-[11px]", pile ? "bg-card text-alert" : "bg-secondary")}><b className="font-medium"><CourseLink course={d.course} /></b> {d.label}</span>)}
+                      {pile && <span className="ml-1 text-[11px] text-alert">{pileupLine(w, weeks, load)}</span>}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
         </div>
-        <ul className="grid gap-x-6 gap-y-3 border-t p-4 sm:grid-cols-2 sm:px-5 xl:grid-cols-3">
-          {rows.map((r) => (
-            <li key={r.course} className="flex min-w-0 items-center gap-2 text-sm">
-              <SubjectIcon course={r.course} />
-              <span className="min-w-0"><span className="font-medium"><CourseLink course={r.course} /></span>{r.isNew && <span className="text-xs text-muted-foreground"> · Seat held by you</span>}<CountsToward termId={term.id} course={term.courses.find((c) => c.code === r.course) ?? { code: r.course, title: r.course, ...(r.isNew ? { flag: "qr1" } : {}) }} /><span className="mt-1 block"><SourceChip id={r.sourceId} /></span></span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      </section>
       {chosen && <p className="mt-4 text-sm text-muted-foreground">{chosen.course} added because you hold a seat. Path Agent registered nothing.</p>}
       </>
       )}
       </div>
       {j.draftCourses.some(code => skillCourses.find(c => c.code === code)?.termId === term.id) && <section className="mt-6"><h2 className="font-semibold">Draft courses from your role plan</h2><p className="mt-1 text-xs text-muted-foreground">Saved to your plan.</p><ul className="surface mt-3 divide-y px-5">{j.draftCourses.map(code => skillCourses.find(c => c.code === code)).filter(c => c?.termId === term.id).map(c => c && <li key={c.code} className="flex items-center gap-3 py-4"><SubjectIcon course={c.code} /><div className="min-w-0 flex-1"><span className="text-sm font-medium"><CourseLink course={c.code} /> · {c.title}</span></div><span className="rounded-full bg-secondary px-3 py-1 text-xs">Draft · {c.units}</span></li>)}</ul></section>}
       <OutsideClass termId={term.id} />
-      <ComingUp />
+      </div>
+      <div className="scroll-pane min-w-0 space-y-6">
+        {term.id === "su27" && (
+          <section aria-labelledby="summer-classes" className="surface p-5">
+            <div className="flex items-baseline justify-between gap-2"><h2 id="summer-classes" className="font-semibold">Summer classes</h2><span className="text-xs text-muted-foreground">Registration closes Jun 18</span></div>
+            <ul className="mt-3 divide-y">
+              {rows.map((r) => (
+                <li key={r.course} className="flex min-w-0 items-start gap-3 py-2.5 text-sm">
+                  <SubjectIcon course={r.course} />
+                  <span className="min-w-0 flex-1"><span className="font-medium"><CourseLink course={r.course} /></span>{r.isNew && <span className="text-xs text-muted-foreground"> · Seat held by you</span>}<CountsToward termId={term.id} course={term.courses.find((c) => c.code === r.course) ?? { code: r.course, title: r.course, ...(r.isNew ? { flag: "qr1" } : {}) }} /></span>
+                  <SourceChip id={r.sourceId} />
+                </li>
+              ))}
+            </ul>
+            <Button asChild className="mt-3 w-full"><Link to="/portal">Go to registration</Link></Button>
+          </section>
+        )}
+        <ComingUp compact limit={3} />
+      </div>
+      </div>
       <details className="mt-10 rounded-2xl border bg-card p-5">
         <summary className="cursor-pointer text-sm font-medium">Completed terms · {terms.filter((t) => t.status === "done").length}</summary>
         <div className="stagger mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

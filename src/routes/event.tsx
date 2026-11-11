@@ -1,4 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { PageBanner } from "@/components/app/SeasonBanner";
+import sceneOpportunities from "@/assets/scene-opportunities.jpg";
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Bookmark, Check, Copy, MapPin, Pencil, Pin, RotateCcw, Send, Users, X } from "lucide-react";
@@ -39,11 +41,13 @@ function EventPage() {
   const { step = "before" } = Route.useSearch();
   const navigate = useNavigate();
   return (
-    <div className="mx-auto max-w-md">
+    <>
+    <PageBanner src={sceneOpportunities} position="50% 64%" />
+    <div className="mx-auto max-w-md lg:max-w-6xl">
       <Link to="/semester" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Terms</Link>
       <h1 className="mt-3 text-3xl font-medium">{step === "after" ? "After the symposium" : `Your plan for ${ev.day}`}</h1>
       <p className="mt-1.5 flex items-start gap-1.5 text-sm text-muted-foreground"><MapPin className="mt-0.5 size-3.5 shrink-0" />{ev.title} · Nov 19, {ev.time} · {ev.place}</p>
-      <div role="tablist" aria-label="When" className="segmented mt-5 grid grid-cols-3 gap-1 rounded-full bg-secondary p-1">
+      <div role="tablist" aria-label="When" className="segmented mt-5 grid grid-cols-3 gap-1 rounded-full bg-secondary p-1 lg:max-w-md">
         {STEPS.map((s) => (
           <button key={s} role="tab" aria-selected={step === s} onClick={() => navigate({ to: "/event", search: s === "before" ? {} : { step: s }, replace: true })} className={cn("rounded-full py-1.5 text-xs text-muted-foreground", step === s && "glass-active font-medium text-foreground")}>
             {STEP_LABEL[s]}
@@ -56,6 +60,7 @@ function EventPage() {
         {step === "after" && <After />}
       </div>
     </div>
+    </>
   );
 }
 
@@ -66,7 +71,9 @@ function Before() {
   const order = ev.deck;
   const done = nextCard(order, j.event.deck) === null;
   return (
-    <>
+    // Wide screens: why and goal | who to meet | going together, side by side.
+    <div className={cn("grid items-start gap-6", done ? "lg:grid-cols-3" : "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]")}>
+      <div className="space-y-6">
       <section className="surface p-5">
         <h2 className="text-sm font-medium">Why this one</h2>
         <ul className="mt-2 space-y-2 text-sm">
@@ -74,9 +81,10 @@ function Before() {
         </ul>
       </section>
       <Goal />
+      </div>
       {done ? <MeetList /> : <MeetDeck />}
       {done && <GoTogether />}
-    </>
+    </div>
   );
 }
 
@@ -264,9 +272,9 @@ function During() {
           <Button asChild variant="outline" size="sm" className="mt-3 block w-fit mx-auto"><Link to="/event">Back to the plan</Link></Button>
         </div>
       ) : (
-        <ul className="space-y-3">{list.map((id) => <TalkRow key={id} person={byId(id)} />)}</ul>
+        <ul className="grid items-start gap-3 lg:grid-cols-2">{list.map((id) => <TalkRow key={id} person={byId(id)} />)}</ul>
       )}
-      {j.event.talked.length > 0 && <Button asChild className="w-full"><Link to="/event" search={{ step: "after" }}>I'm done for tonight</Link></Button>}
+      {j.event.talked.length > 0 && <Button asChild className="w-full lg:w-auto"><Link to="/event" search={{ step: "after" }}>I'm done for tonight</Link></Button>}
     </>
   );
 }
@@ -318,7 +326,8 @@ function After() {
     );
   const pending = talked.find((id) => !j.event.followUp.copied.includes(id));
   return (
-    <>
+    <div className="grid items-start gap-6 lg:grid-cols-2">
+      <div className="space-y-6">
       <section className="surface flex items-center gap-4 p-5">
         <Spot name="flowers" className="w-16 shrink-0" />
         <div>
@@ -329,6 +338,8 @@ function After() {
       {pending ? <FollowUp key={pending} personId={pending} index={talked.indexOf(pending)} total={talked.length} /> : (
         <section className="surface p-5 text-sm"><Check className="mr-1.5 inline size-4 text-mark-yes" />All follow-ups copied.</section>
       )}
+      </div>
+      <div className="space-y-6">
       {j.event.followUp.copied.length > 0 && (
         <Link to="/portfolio" className="surface flex items-center justify-between gap-3 p-4 text-sm hover:bg-foreground/[.02]">
           <span><span className="font-medium">{skill.name}</span><span className="block text-xs text-muted-foreground">From {skill.course}, now with a real conversation behind it</span></span>
@@ -342,7 +353,8 @@ function After() {
           <div className="mt-0.5 font-medium">{step}</div>
         </section>
       )}
-    </>
+      </div>
+    </div>
   );
 }
 

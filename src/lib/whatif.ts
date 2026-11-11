@@ -220,3 +220,16 @@ export function parseWhatIf(text: string, current: WhatIf): WhatIf | null {
   }
   return matched ? next : null;
 }
+
+/** Degree lines a change touches, plus "graduate" if the finish moves. The tree marks these with a dashed edge. */
+export function changedSlots(change: WhatIf, slots: { id: string; code?: string | undefined; termName?: string | undefined }[], statsChanged: boolean, graduationMoved: boolean, lastTerm: string): Set<string> {
+  const out = new Set<string>();
+  for (const s of slots) {
+    if (s.code && change.dropped.includes(s.code)) out.add(s.id);
+    if (change.termOff && s.termName === OFF_TERM) out.add(s.id);
+    if (change.early && s.termName === lastTerm) out.add(s.id);
+  }
+  if (statsChanged) out.add("qr1");
+  if (graduationMoved) out.add("graduate");
+  return out;
+}

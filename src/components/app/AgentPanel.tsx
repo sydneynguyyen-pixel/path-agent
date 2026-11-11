@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { options, rankOptions, student, syllabi, terms, PILEUP_THRESHOLD, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist, type Option } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
 import { useJourney, fmtStamp } from "@/lib/journey";
-import { ConfidenceBadge, SourceChip } from "./bits";
+import { CheckBadge, SourceChip } from "./bits";
 import { AgentAvatar, SubjectIcon } from "./Brand";
 import { Spot } from "./Illustrations";
 import { cn } from "@/lib/utils";
@@ -198,7 +198,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
                     <div className="agent-note mt-4 space-y-3 border-t pt-4 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                         <div className="flex items-center gap-2 font-medium"><AgentAvatar agent="planner" /> {verdictLabel[o.verdict]}</div>
-                        <ConfidenceBadge score={o.confidence} conflict={!!o.conflict} plain />
+                        <CheckBadge score={o.confidence} conflict={!!o.conflict} plain />
                       </div>
                       <p>{o.reason}</p>
                       {o.conflict && (
@@ -249,7 +249,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
           {chosen && path === "now" && (
             <section className="swap-enter surface space-y-3 p-5">
               <div className="flex items-center gap-2 text-lg font-semibold"><Zap className="size-5 text-primary" /> Do this now</div>
-              <div className="flex flex-wrap gap-2"><ConfidenceBadge score={chosen.confidence} />{chosen.sourceIds.map((s) => <SourceChip key={s} id={s} />)}</div>
+              <div className="flex flex-wrap gap-2"><CheckBadge score={chosen.confidence} />{chosen.sourceIds.map((s) => <SourceChip key={s} id={s} />)}</div>
               <SelfRegisterSteps o={chosen} />
               {!j.seatHeld && <Button variant="ghost" size="sm" onClick={j.backToOptions}>Back to options</Button>}
             </section>
@@ -259,7 +259,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
             <>
               <section className="surface space-y-3 p-5">
                 <div className="flex items-center gap-2 text-lg font-semibold"><Zap className="size-5 text-primary" /> Hold the seat now, confirm in parallel</div>
-                <div className="flex flex-wrap gap-2"><ConfidenceBadge score={chosen.confidence} conflict={!!chosen.conflict} /></div>
+                <div className="flex flex-wrap gap-2"><CheckBadge score={chosen.confidence} conflict={!!chosen.conflict} /></div>
                 <SelfRegisterSteps o={chosen} />
                 <div className="rounded-lg bg-secondary p-3 text-sm">
                   <div className="flex items-center gap-1.5 font-medium"><LogOut className="size-4" /> Your way out</div>

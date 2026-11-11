@@ -1,3 +1,4 @@
+import { electiveClasses } from "@/data/degree";
 import type { CareerRole, DayPart, EventPeer, Opportunity, OpportunityKind, Term, WeekDay, WeekSlot } from "@/data/scenario";
 
 const DAY: Record<WeekDay, string> = { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" };
@@ -205,4 +206,15 @@ export function degreeLine(o: Opportunity) {
 export function otherWays(o: Opportunity, skill: string, items: Opportunity[]) {
   const others = items.filter((x) => x.id !== o.id && x.kind !== o.kind && buildsSkill(x) && x.milesAway === undefined && x.fills.includes(skill));
   return [...new Set(others.map((x) => x.kind))].map((kind) => others.find((x) => x.kind === kind)!);
+}
+
+/** Explore only offers what isn't already on the plan. */
+export function notOnPlan(o: Opportunity, saved: string[], drafts: string[]): boolean {
+  return !saved.includes(o.id) && !(o.courseCode && drafts.includes(o.courseCode));
+}
+
+/** What a class would do for the degree, shown on its card. */
+export function fillsLine(o: Opportunity): string | undefined {
+  if (o.kind !== "class") return undefined;
+  return electiveClasses.some((e) => e.id === o.id) ? "Fills an Elective in your degree" : degreeLine(o);
 }

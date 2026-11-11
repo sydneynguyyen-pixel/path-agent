@@ -8,6 +8,7 @@ import { recoveryPath } from "@/lib/confidence";
 import { helloDraft } from "@/lib/opportunities";
 import type { SkillReview } from "@/lib/skills";
 import { NO_CHANGE, type WhatIf } from "@/lib/whatif";
+import { electiveClasses } from "@/data/degree";
 import { symposiumEvent } from "@/data/event";
 import { people } from "@/data/people";
 import { callName, eventAccountsFor, eventPlanFor, filledEventPlan, followUp, pathBuiltFor, inviteDraft, type DeckChoice, type DemoFill, type EventPlan } from "@/lib/event";
@@ -51,7 +52,7 @@ type State = {
   goTogether: GoTogether;
   skillReviews: Record<string, SkillReview>;
   draftCourses: string[];
-  /** The sandbox on the What if page. Nothing reads it as the real plan. */
+  /** The sandbox behind Try a change on the Degree tree. Nothing reads it as the real plan. */
   whatIf: WhatIf;
   /** Personal event accounts the student signed in to. Handshake comes through the school instead. */
   eventAccounts: EventPlatform[];
@@ -85,9 +86,17 @@ type State = {
   agentTimes: Record<string, Date>;
   agentRun: AgentRun | null;
   evidenceId: string | null;
+  /** The class whose details panel is open, on any page. */
+  classDetails: string | null;
+  /** The listing whose details panel is open, on any page. */
+  opportunityDetails: string | null;
   guide: boolean;
   /** Path Agent has found the full section so she can join its waitlist herself. */
   waitlistGuide: boolean;
+  /** The map shows an imagined master's program after graduation. */
+  mapMasters: boolean;
+  /** Path map items added to the simulated calendar. */
+  mapCalendar: string[];
   startedAt: number;
 };
 
@@ -122,8 +131,12 @@ const initial: State = {
   agentTimes: {},
   agentRun: null,
   evidenceId: null,
+  classDetails: null,
+  opportunityDetails: null,
   guide: false,
   waitlistGuide: false,
+  mapMasters: false,
+  mapCalendar: [],
   whatIf: NO_CHANGE,
   eventAccounts: eventAccountsFor("filled"),
   eventChecks: {},
@@ -137,6 +150,7 @@ type Ctx = State & {
   confirmWent: (id: string) => void;
   undoWent: (id: string) => void;
   skipSuggestion: (id: string) => void;
+  unskipSuggestion: (id: string) => void;
   setShowMeGoing: (on: boolean) => void;
   startHello: (peerId: string) => void;
   setHelloDraft: (text: string) => void;
@@ -169,12 +183,17 @@ type Ctx = State & {
   markAdded: () => void;
   joinWaitlist: () => void;
   setWaitlistGuide: (b: boolean) => void;
+  setMapMasters: (b: boolean) => void;
+  toggleMapCalendar: (id: string) => void;
   setDraft: (s: string) => void;
   approve: () => void;
   counselorDecide: (d: "confirmed" | "declined") => void;
   setPanelOpen: (b: boolean) => void;
   setPaused: (b: boolean) => void;
   openEvidence: (id: string | null) => void;
+  openClass: (code: string | null) => void;
+  openOpportunity: (id: string | null) => void;
+  removeDraftCourse: (code: string) => void;
   setWhatIf: (w: WhatIf) => void;
   linkEventAccount: (platform: EventPlatform, name: string, found: number) => void;
   unlinkEventAccount: (platform: EventPlatform, name: string) => void;
@@ -322,6 +341,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         return { ...p, wentTo };
       }),
       skipSuggestion: (id) => set((p) => ({ ...p, skippedSuggestions: [...p.skippedSuggestions, id] })),
+      unskipSuggestion: (id) => set((p) => ({ ...p, skippedSuggestions: p.skippedSuggestions.filter((s) => s !== id) })),
       setShowMeGoing: (on) => set((p) => ({
         ...p,
         goTogether: on
@@ -346,7 +366,17 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         };
       }),
       reviewSkill: (id, review) => set(p => ({ ...p, skillReviews: { ...p.skillReviews, [id]: { ...p.skillReviews[id], ...review } } })),
-      addDraftCourse: (code) => set(p => ({ ...p, draftCourses: p.draftCourses.includes(code) ? p.draftCourses : [...p.draftCourses, code] })),
+      addDraftCourse: (code) => set(p => {
+        const draftCourses = p.draftCourses.includes(code) ? p.draftCourses : [...p.draftCourses, code];
+        // An elective fills its open slot in the degree as soon as it's on the plan.
+        const elective = electiveClasses.find((e) => e.code === code);
+        if (!elective || p.savedOpportunities.includes(elective.id)) return { ...p, draftCourses };
+        return { ...p, draftCourses, savedOpportunities: [...p.savedOpportunities, elective.id], savedAt: { ...p.savedAt, [elective.id]: new Date(scriptNow()) } };
+      }),
+      removeDraftCourse: (code) => set(p => {
+        const elective = electiveClasses.find((e) => e.code === code);
+        return { ...p, draftCourses: p.draftCourses.filter((c) => c !== code), savedOpportunities: elective ? p.savedOpportunities.filter((id) => id !== elective.id) : p.savedOpportunities };
+      }),
       toggleCareerInterest: (interest) => set(p => ({ ...p, careerInterests: p.careerInterests.includes(interest) ? p.careerInterests.filter(i => i !== interest) : [...p.careerInterests, interest] })),
       setRoleInterest: (id, interested) => set(p => ({ ...p, interestedRoles: interested ? [...new Set([...p.interestedRoles, id])] : p.interestedRoles.filter(i => i !== id), dismissedRoles: p.dismissedRoles.filter(i => i !== id) })),
       dismissRole: (id, dismissed) => set(p => ({ ...p, dismissedRoles: dismissed ? [...new Set([...p.dismissedRoles, id])] : p.dismissedRoles.filter(i => i !== id) })),
@@ -446,10 +476,14 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       setDraft: (d) => set((p) => ({ ...p, draft: d })),
       setGuide: (b) => set((p) => ({ ...p, guide: b })),
       setWaitlistGuide: (b) => set((p) => ({ ...p, waitlistGuide: b })),
+      setMapMasters: (b) => set((p) => ({ ...p, mapMasters: b })),
+      toggleMapCalendar: (id) => set((p) => ({ ...p, mapCalendar: p.mapCalendar.includes(id) ? p.mapCalendar.filter((c) => c !== id) : [...p.mapCalendar, id] })),
       setPanelOpen: (b) => set((p) => ({ ...p, panelOpen: b })),
       setWatchingRegistration: (b) => set((p) => (p.watchingRegistration === b ? p : { ...p, watchingRegistration: b })),
       setPaused: (b) => set((p) => ({ ...p, paused: b, panelOpen: b ? false : p.panelOpen })),
       openEvidence: (id) => set((p) => ({ ...p, evidenceId: id })),
+      openClass: (code) => set((p) => ({ ...p, classDetails: code })),
+      openOpportunity: (id) => set((p) => ({ ...p, opportunityDetails: id })),
       setWhatIf: (w) => set((p) => ({ ...p, whatIf: w })),
       linkEventAccount: (platform, name, found) => set((p) => p.eventAccounts.includes(platform) ? p : ({ ...p, eventAccounts: [...p.eventAccounts, platform], decisions: [...p.decisions, log(`Connected ${name}, read only`, [], `Path Agent found ${found} events. It can't register you or message hosts.`)] })),
       unlinkEventAccount: (platform, name) => set((p) => ({ ...p, eventAccounts: p.eventAccounts.filter((x) => x !== platform), decisions: [...p.decisions, log(`Disconnected ${name}`, [], "Its events no longer show in Experiences.")] })),

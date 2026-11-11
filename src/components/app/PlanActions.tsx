@@ -14,9 +14,9 @@ export function useSaveToPlan() {
     if (o.courseCode) j.addDraftCourse(o.courseCode);
     else j.toggleSavedOpportunity(o.id);
     if (!adding) return;
-    flyTo(from ?? null, "/semester");
+    flyTo(from ?? null, "/map");
     const termId = planTermId(o, terms, SCRIPT_TODAY);
-    toast(`On your plan for ${terms.find((t) => t.id === termId)?.name}`, { action: { label: "See plan", onClick: () => navigate({ to: "/semester", search: { term: termId } }) } });
+    toast(`On your plan for ${terms.find((t) => t.id === termId)?.name}`, { action: { label: "See it on your Map", onClick: () => navigate({ to: "/map" }) } });
   };
 }
 
@@ -26,6 +26,6 @@ export function useConfirmWent() {
   const navigate = useNavigate();
   return (o: Opportunity) => {
     j.confirmWent(o.id);
-    toast(doneToast(o), { action: { label: "See Skills", onClick: () => navigate({ to: "/skills" }) }, cancel: { label: "Undo", onClick: () => j.undoWent(o.id) } });
+    toast(doneToast(o), { action: { label: "See Portfolio", onClick: () => navigate({ to: "/portfolio" }) }, cancel: { label: "Undo", onClick: () => j.undoWent(o.id) } });
   };
 }

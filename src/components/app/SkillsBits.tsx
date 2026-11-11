@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
-import { Check, Pencil, Paperclip, EyeOff, ArrowRight, MoreHorizontal } from "lucide-react";
+import { Check, Pencil, Paperclip, EyeOff, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +33,6 @@ export function SkillRow({ skill, actions = true }: { skill: Skill; actions?: bo
     <Dialog open={!!dialog} onOpenChange={o => !o && setDialog(null)}><DialogContent className="max-w-[calc(100vw-2rem)] bg-card sm:max-w-lg"><DialogHeader><DialogTitle>{dialog === "wording" ? "Edit skill wording" : "Attach your work"}</DialogTitle><DialogDescription>{dialog === "wording" ? "Keep it true to your coursework." : "Choose a file or paste a link."}</DialogDescription></DialogHeader>{dialog === "wording" ? <Input aria-label="Skill wording" value={wording} onChange={e => setWording(e.target.value)} /> : <><Input aria-label="Work link" placeholder="https://…" value={work} onChange={e => setWork(e.target.value)} /><Input aria-label="Work file" type="file" onChange={e => setFile(e.target.files?.[0] ?? null)} /></>}<Button disabled={dialog === "wording" ? !wording.trim() : !file && !/^https?:\/\//.test(work)} onClick={() => { j.reviewSkill(skill.id, dialog === "wording" ? { wording: wording.trim() } : { work: file?.name || work, confirmed: true }); setDialog(null); toast("Saved to your skills"); }}>Save</Button></DialogContent></Dialog>
   </div>;
 }
-/** A course name that opens what you'll learn in it. */
-export function CourseLink({ course, children }: { course: string; children?: ReactNode }) { const code = courseCode(course); return <Link to="/course-skills" search={{ course: code }} title={`What you'll learn in ${code}`} className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">{children ?? course}</Link>; }
+/** A course name that opens its details panel, on any page. */
+export function CourseLink({ course, children }: { course: string; children?: ReactNode }) { const j = useJourney(); const code = courseCode(course); return <button type="button" onClick={() => j.openClass(code)} title={`About ${code}`} className="text-left underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">{children ?? course}</button>; }
 export function AddsSkills({ course }: { course: string }) { const names = registrationSkills[courseCode(course)]; if (!names) return null; return <p className="text-xs text-muted-foreground">Adds: <span className="text-foreground">{names.join(" · ")}</span></p>; }
-export function SkillsHomeCard() { return <article className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-[28px] border bg-card p-5 shadow-soft"><div><h2 className="font-semibold">What you've learned so far</h2><div className="my-3 flex flex-wrap gap-2">{["Qualitative observation", "Source analysis", "Research writing"].map(n => <span key={n} className="rounded-full bg-secondary px-3 py-1 text-xs">{n}</span>)}</div><ReaderCredit /></div><Button asChild variant="outline"><Link to="/grow">See Grow<ArrowRight className="size-4" /></Link></Button></article>; }

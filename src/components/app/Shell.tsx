@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, ChevronRight, ChevronDown, UserCheck, UserRound, Settings, BookOpenCheck, Compass, Split, Sprout } from "lucide-react";
+import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
+import { ArrowLeft, RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, ChevronRight, ChevronDown, UserCheck, UserRound, Settings, BookOpenCheck, Compass, Sprout, Waypoints, GraduationCap } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { sources, student } from "@/data/scenario";
@@ -16,23 +16,32 @@ import { useSlidingPill } from "@/hooks/use-sliding-pill";
 import { useLiquidGlass } from "@/hooks/use-liquid-glass";
 import { cn } from "@/lib/utils";
 import { Roll } from "./Roll";
+import { ClassDetails } from "./ClassDetails";
+import { OpportunityDetails } from "./OpportunityDetails";
+
+declare module "@tanstack/history" {
+  interface HistoryState {
+    /** Set when a page was opened from the Map, so it can offer the way back. */
+    backTo?: "map";
+  }
+}
 
 const groups = [
   {
     label: "Path",
     links: [
       { to: "/", label: "Home", icon: Home },
+      { to: "/map", label: "Map", icon: Waypoints },
+      { to: "/degree", label: "Degree", icon: GraduationCap },
       { to: "/semester", label: "Terms", icon: CalendarDays },
-      { to: "/what-if", label: "What if", icon: Split },
       { to: "/portal", label: "Registration", icon: MousePointerClick },
     ],
   },
   {
     label: "Grow",
     links: [
-      { to: "/grow", label: "Experiences", icon: Sprout },
-      { to: "/skills", label: "Skills", icon: BookOpenCheck },
-      { to: "/explore", label: "Opportunities", icon: Compass },
+      { to: "/explore", label: "Explore", icon: Compass },
+      { to: "/portfolio", label: "Portfolio", icon: BookOpenCheck },
     ],
   },
   {
@@ -45,15 +54,14 @@ type NavLink = (typeof groups)[number]["links"][number];
 const allLinks: NavLink[] = groups.flatMap((g) => [...g.links] as NavLink[]);
 /** Pages without their own nav item light up the one they belong to. */
 const sectionFor = (path: string): string => {
-  if (["/course-skills", "/skills-export"].includes(path)) return "/skills";
-  if (path === "/event") return "/grow";
+  if (path === "/event") return "/semester";
   if (["/activity", "/permissions", "/decisions", "/counselor"].includes(path)) return "/agents";
   return path;
 };
 const groupOf = (navPath: string) => groups.find((g) => g.links.some((l) => l.to === navPath)) ?? groups[0];
 const tabs = [
   { label: "Path", to: "/", icon: Home, group: "Path" },
-  { label: "Grow", to: "/grow", icon: Sprout, group: "Grow" },
+  { label: "Grow", to: "/portfolio", icon: Sprout, group: "Grow" },
   { label: "Agents", to: "/agents", icon: Bot, group: "Path Agent" },
 ] as const;
 
@@ -140,9 +148,12 @@ function SidebarNav({ navPath }: { navPath: string }) {
 export function Shell({ children }: { children: React.ReactNode }) {
   const j = useJourney();
   const navigate = useNavigate();
+  const router = useRouter();
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const backTo = useRouterState({ select: (s) => s.location.state.backTo });
   const onPortal = path === "/portal";
   const blankPage = blankPages[path];
+  const onCanvas = (path === "/map" || path === "/degree") && j.pathBuilt === true;
   const welcomeOnScreen = useRouterState({ select: (s) => s.matches.some((m) => m.routeId === "/welcome") });
 
   useEffect(() => {
@@ -156,10 +167,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const ev = j.evidenceId ? (sources as Record<string, (typeof sources)[keyof typeof sources] | undefined>)[j.evidenceId] : null;
 
   return (
-    <div className="brand-app app-shell min-h-screen p-3 md:h-dvh md:min-h-0 md:overflow-hidden md:p-5">
-      <div className="relative flex min-h-[calc(100vh-2.5rem)] overflow-hidden rounded-[2rem] border bg-card shadow-frame md:h-full md:min-h-0">
-        <div className="shell-aura" aria-hidden="true" />
-        <aside className="relative z-10 hidden w-64 shrink-0 flex-col px-4 py-6 md:flex">
+    <div className="brand-app app-shell min-h-screen md:h-dvh md:min-h-0 md:overflow-hidden">
+      <div className="relative flex min-h-screen md:h-full md:min-h-0">
+        <aside className="app-sidebar fixed bottom-3 left-3 top-3 z-30 hidden w-60 flex-col px-3 py-5 md:flex">
           <div className="flex items-center gap-2.5 px-2">
             <BrandLogo />
             <span className="font-semibold tracking-tight">Path Agent</span>
@@ -181,7 +191,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <div className="app-panel relative z-[1] m-2 flex min-w-0 flex-1 flex-col rounded-[2rem] border bg-card md:ml-0 md:min-h-0 md:overflow-hidden">
+        <div className={cn("app-panel relative z-[1] flex min-w-0 flex-1 flex-col md:min-h-0 md:overflow-hidden", onCanvas && "app-panel-full")}>
           <header className="app-header flex items-center gap-2 border-b px-4 py-3 text-sm md:gap-3 md:px-6 md:py-4">
             <div className="hidden md:block">
               <GlassBar>
@@ -192,6 +202,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </span>
               </GlassBar>
             </div>
+            {backTo === "map" && path !== "/map" && (
+              <GlassBar className="back-chip">
+                <button type="button" onClick={() => router.history.back()} className="inline-flex items-center gap-1.5 text-xs font-medium"><ArrowLeft className="size-3.5" aria-hidden="true" />Back to Map</button>
+              </GlassBar>
+            )}
             <nav aria-label="Section" className="-ml-2 flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none] md:hidden">
               {groupOf(navPath).links.length > 1 && groupOf(navPath).links.map((l) => (
                 <Link key={l.to} to={l.to} className="rounded-full px-2 py-1 text-xs text-muted-foreground" activeProps={{ className: "glass-active" }} activeOptions={{ exact: true, includeSearch: false }}>
@@ -212,16 +227,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {/* Until hydration we can't tell a new student from a returning one, so show neither. */}
               {j.pathBuilt === null && (blankPage || path === "/") ? null : j.pathBuilt === false && blankPage ? <BlankPage {...blankPage} /> : children}
             </main>
-            <footer className="px-6 pb-28 text-xs md:pb-6 text-muted-foreground md:px-10">
-              Prototype with fully synthetic data. Fictional schools and student. Path Agent proposes and drafts; it never registers, enrolls, or sends.
-              It does not give legal, financial-aid, or immigration advice.
-            </footer>
+            {!onCanvas && (
+              <footer className="px-6 pb-28 text-xs md:pb-6 text-muted-foreground md:px-10">
+                Prototype with fully synthetic data. Fictional schools and student. Path Agent proposes and drafts; it never registers, enrolls, or sends.
+                It does not give legal, financial-aid, or immigration advice.
+              </footer>
+            )}
           </div>
         </div>
       </div>
 
       <BottomTabs navPath={navPath} />
       {!onPortal && <AgentPanel />}
+      <ClassDetails />
+      <OpportunityDetails />
       <Sheet open={!!ev} onOpenChange={(o) => !o && j.openEvidence(null)}>
         <SheetContent side="right" className="z-[60] sm:max-w-md">
           {ev && (

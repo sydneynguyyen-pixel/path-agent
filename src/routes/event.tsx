@@ -40,7 +40,7 @@ function EventPage() {
   const navigate = useNavigate();
   return (
     <div className="mx-auto max-w-md">
-      <Link to="/grow" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Experiences</Link>
+      <Link to="/semester" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" /> Terms</Link>
       <h1 className="mt-3 text-3xl font-medium">{step === "after" ? "After the symposium" : `Your plan for ${ev.day}`}</h1>
       <p className="mt-1.5 flex items-start gap-1.5 text-sm text-muted-foreground"><MapPin className="mt-0.5 size-3.5 shrink-0" />{ev.title} · Nov 19, {ev.time} · {ev.place}</p>
       <div role="tablist" aria-label="When" className="segmented mt-5 grid grid-cols-3 gap-1 rounded-full bg-secondary p-1">
@@ -330,7 +330,7 @@ function After() {
         <section className="surface p-5 text-sm"><Check className="mr-1.5 inline size-4 text-mark-yes" />All follow-ups copied.</section>
       )}
       {j.event.followUp.copied.length > 0 && (
-        <Link to="/skills" className="surface flex items-center justify-between gap-3 p-4 text-sm hover:bg-foreground/[.02]">
+        <Link to="/portfolio" className="surface flex items-center justify-between gap-3 p-4 text-sm hover:bg-foreground/[.02]">
           <span><span className="font-medium">{skill.name}</span><span className="block text-xs text-muted-foreground">From {skill.course}, now with a real conversation behind it</span></span>
           <span className="shrink-0 text-xs">{skill.level} → <b>{evidenceFor(skill, j.skillReviews[skill.id])}</b></span>
         </Link>

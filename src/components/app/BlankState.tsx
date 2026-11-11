@@ -18,11 +18,10 @@ const noSkills: BlankPageContent = { spot: "books", title: "No skills yet", body
 /** What each data-driven page shows before the student's path exists. */
 export const blankPages: Partial<Record<string, BlankPageContent>> = {
   "/semester": { spot: "bridge", title: "Your terms will appear here", body: "Build your path to see every term from now until you graduate." },
-  "/what-if": { spot: "bridge", title: "Nothing to test yet", body: "Build your path, then try changes without touching it." },
+  "/map": { spot: "bridge", title: "Your map starts with your path", body: "Build your path to see every class, event, club and internship in one place." },
+  "/degree": { spot: "bridge", title: "Your degree will appear here", body: "Build your path to see what you've finished and what's left." },
   "/portal": { spot: "signpost", title: "Build your path first", body: "Build your path first, and I'll be ready when a class is full." },
-  "/skills": noSkills,
-  "/skills-export": noSkills,
-  "/course-skills": noSkills,
+  "/portfolio": noSkills,
   "/explore": { spot: "flowers", title: "Explore opens once you have a path", body: "Build your path to see classes, clubs, internships and events that fit." },
   "/activity": { spot: "journal", title: "Nothing has happened yet", body: "Everything Path Agent does will show up here." },
 };

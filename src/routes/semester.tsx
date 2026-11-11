@@ -129,6 +129,9 @@ function Semester() {
           </Button>
         ))}
       </div>
+      {/* Wide screens: the term on the left, coming up on the right, so the page fits on one screen. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="min-w-0">
       <div key={term.id} className="swap-enter">
       {term.id !== "su27" ? (
         <div className="surface p-6">
@@ -185,7 +188,9 @@ function Semester() {
       </div>
       {j.draftCourses.some(code => skillCourses.find(c => c.code === code)?.termId === term.id) && <section className="mt-6"><h2 className="font-semibold">Draft courses from your role plan</h2><p className="mt-1 text-xs text-muted-foreground">Saved to your plan.</p><ul className="surface mt-3 divide-y px-5">{j.draftCourses.map(code => skillCourses.find(c => c.code === code)).filter(c => c?.termId === term.id).map(c => c && <li key={c.code} className="flex items-center gap-3 py-4"><SubjectIcon course={c.code} /><div className="min-w-0 flex-1"><span className="text-sm font-medium"><CourseLink course={c.code} /> · {c.title}</span></div><span className="rounded-full bg-secondary px-3 py-1 text-xs">Draft · {c.units}</span></li>)}</ul></section>}
       <OutsideClass termId={term.id} />
-      <ComingUp />
+      </div>
+      <div className="min-w-0 xl:sticky xl:top-4"><ComingUp compact /></div>
+      </div>
       <details className="mt-10 rounded-2xl border bg-card p-5">
         <summary className="cursor-pointer text-sm font-medium">Completed terms · {terms.filter((t) => t.status === "done").length}</summary>
         <div className="stagger mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -60,7 +60,7 @@ function Portfolio() {
   const waiting = found.filter((e) => attendance(e, SCRIPT_TODAY, j.eventChecks) === "ask").length;
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className={cn("mx-auto", tab === "skills" ? "max-w-7xl" : "max-w-4xl")}>
       <PageHeader title="Portfolio" sub="What you've done, and what it proves. Only you can see this." right={<Spot name="seedling" className="hidden w-28 sm:block" />} />
       <Tabs value={tab} onValueChange={(t) => navigate({ to: "/portfolio", search: t === "skills" ? {} : { tab: t as Tab }, replace: true, state: true })} className="mt-6">
         <TabsList className="rounded-full">
@@ -110,6 +110,7 @@ function SkillsTab({ found, waiting }: { found: Found[]; waiting: number }) {
 
   return (
     <div className="space-y-5">
+      <div className="grid items-stretch gap-4 lg:grid-cols-2">
       <div className="surface flex flex-wrap items-center gap-x-4 gap-y-3 p-5">
         <div className="min-w-48 flex-1">
           <h2 className="font-semibold">{confirmed} of {visible.length} skills confirmed</h2>
@@ -117,14 +118,15 @@ function SkillsTab({ found, waiting }: { found: Found[]; waiting: number }) {
         </div>
         {confirmable.length > 0 && <Button size="sm" variant="outline" onClick={confirmAll}><CheckCheck className="size-3" />Confirm all</Button>}
       </div>
-      {waiting > 0 && <Link to="/portfolio" search={{ tab: "timeline" }} className="flex items-center justify-between gap-3 rounded-xl bg-warning-soft px-4 py-3 text-sm">{waiting} past {waiting === 1 ? "event needs" : "events need"} your answer first <ArrowRight className="size-4" aria-hidden="true" /></Link>}
+      {waiting > 0 && <Link to="/portfolio" search={{ tab: "timeline" }} className="flex items-center justify-between gap-3 rounded-xl bg-warning-soft px-5 py-3 text-sm">{waiting} past {waiting === 1 ? "event needs" : "events need"} your answer first <ArrowRight className="size-4" aria-hidden="true" /></Link>}
+      </div>
       <div className="flex flex-wrap gap-2" role="group" aria-label="Where the proof comes from">
         {SOURCES.map((f) => <Button key={f.id} size="sm" variant={f.id === source ? "default" : "outline"} aria-pressed={f.id === source} onClick={() => setSource(f.id)}>{f.label}</Button>)}
       </div>
-      <div key={source} className="stagger space-y-5">
+      <div key={source} className="stagger grid items-start gap-4 md:grid-cols-2 xl:grid-cols-4">
         {themes.map((t) => (
-          <section key={t} className="surface px-5 pt-4">
-            <h2 className="border-b pb-3 font-semibold">{t}</h2>
+          <section key={t} className="surface px-4 pt-4">
+            <h2 className="border-b pb-3 font-semibold">{t} <span className="font-normal text-muted-foreground">· {shown.filter((s) => s.theme === t).length}</span></h2>
             <ul className="divide-y">{shown.filter((s) => s.theme === t).map((s) => <PortfolioSkillRow key={s.key} skill={s} />)}</ul>
           </section>
         ))}
@@ -159,9 +161,9 @@ function PortfolioSkillRow({ skill: s }: { skill: PortfolioSkill }) {
   const review = (patch: Parameters<typeof j.reviewSkill>[1]) => s.reviewKeys.forEach((k) => j.reviewSkill(k, patch));
   const lines = s.proofs.flatMap((p) => (p.type === "class" ? [p] : []));
   return (
-    <li className="py-4">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1 basis-60">
+    <li className="py-3">
+      <div className="flex flex-wrap items-start gap-2">
+        <div className="min-w-0 flex-1 basis-36">
           <div className="flex items-center gap-2"><h3 className="font-medium">{s.name}</h3>{s.confirmed && <Check className="size-3.5 text-mark-yes" aria-label="Confirmed" />}</div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {s.proofs.map((p, i) => (

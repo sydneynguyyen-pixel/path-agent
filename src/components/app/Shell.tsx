@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { Roll } from "./Roll";
 import { ClassDetails } from "./ClassDetails";
 import { OpportunityDetails } from "./OpportunityDetails";
+import { CardTab } from "./mobile/ShareSheet";
 
 declare module "@tanstack/history" {
   interface HistoryState {
@@ -72,10 +73,11 @@ export const desktopFirst = (path: string, search: Record<string, unknown>) =>
   DESKTOP_FIRST.includes(path) || (path === "/career" && (search["tab"] === "resume" || search["resume"] === true || "plan" in search));
 
 /**
- * Phone only: what she needs on the go. Home, Events, Sprout (the chat, with what's waiting on her)
- * and More for everything else, which is built for a bigger screen.
+ * Phone only: what she needs on the go. Home, Events, Card in the center (show her card at an event,
+ * scan or tap to connect, then follow up), Sprout (the chat, with what's waiting on her) and More
+ * for everything else, which is built for a bigger screen.
  */
-function BottomTabs({ path }: { path: string }) {
+export function BottomTabs({ path }: { path: string }) {
   const j = useJourney();
   const waiting = waitingCount(useEvents());
   const [more, setMore] = useState(false);
@@ -85,10 +87,11 @@ function BottomTabs({ path }: { path: string }) {
   const openSprout = () => (j.stage === "failed" && !j.chosenId ? j.setPanelOpen(true) : j.openChat(j.activeChat));
   const rest = allLinks.filter((l) => l.to !== "/" && l.to !== "/explore");
   return (
-    <nav aria-label="Main" className="bottom-tabs fixed inset-x-3 bottom-3 z-40 md:hidden">
-      <GlassBar className="grid w-full grid-cols-4 gap-1 p-1.5">
+    <nav aria-label="Main" className="bottom-tabs fixed inset-x-3 z-40 md:hidden">
+      <GlassBar className="grid w-full grid-cols-5 gap-1 p-1.5">
         <Link to="/" aria-current={path === "/" && !chatting ? "page" : undefined} className={tab(path === "/" && !chatting)}><Home className="size-5" aria-hidden="true" />Home</Link>
         <Link to="/explore" search={{ calendar: true }} aria-current={onEvents && !chatting ? "page" : undefined} className={tab(onEvents && !chatting)}><CalendarDays className="size-5" aria-hidden="true" />Events</Link>
+        <CardTab />
         <button type="button" onClick={openSprout} aria-pressed={chatting} className={tab(chatting)}>
           <Sprout className="size-5" aria-hidden="true" />Sprout
           {waiting > 0 && <span aria-label={`${waiting} waiting for you`} className="absolute right-[24%] top-0.5 grid size-4 place-items-center rounded-full count-badge text-[9px]">{waiting}</span>}

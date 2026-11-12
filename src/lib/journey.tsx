@@ -8,7 +8,7 @@ import { applyRunEvent, newTraceRun, recordRun, type RunEvent, type TraceRun } f
 import { FILLED_BY, NEEDS_NOTE } from "@/data/edge-runs";
 import { constraintFrom, forget, noteFrom, remember, type Constraint } from "@/lib/steer";
 import { addAsk, addReply, type Thread } from "@/lib/chat";
-import { goTogetherEvent, options, student, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist } from "@/data/scenario";
+import { goTogetherEvent, opportunities, options, student, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
 import { cleanDesk, DEFAULT_DESK, type Desk } from "@/lib/desktop";
 import { askToGo as askPeer, passAsk } from "@/lib/opportunities";
@@ -20,6 +20,8 @@ import { people } from "@/data/people";
 import { addGoal, goalsFor, makeMain, MAX_GOALS, removeGoal } from "@/lib/goals";
 import { activityId, type Activity, type SingleSkill } from "@/lib/activities";
 import { addName, blankContact, dropName, migrateJobFolders, removeApplication, removeDoc, saveApplication, saveDoc, type Application, type ResumeContact, type ResumeDoc, type ResumeFolder } from "@/lib/resume";
+import { addMeet, eventName, type Meet } from "@/components/app/mobile/atEvent";
+import type { Tier } from "@/components/app/PathCard";
 import { callName, eventAccountsFor, eventPlanFor, filledEventPlan, followUp, pathBuiltFor, inviteDraft, type DeckChoice, type DemoFill, type EventPlan } from "@/lib/event";
 
 export type Stage = "idle" | "failed" | "chosen";
@@ -157,6 +159,10 @@ type State = {
   friendIncoming: string[];
   /** Asks she sent at events other than the scripted UX night, with her note. */
   eventAsks: Record<string, { sentTo: string[]; notes: Record<string, string> }>;
+  /** People she met at an event and picked on the share sheet (Scan a card / Tap phones), with her private note. Reset demo clears them. */
+  metAt: Meet[];
+  /** Who can see her card (the card's "Who can see it"), also set from the share sheet. */
+  cardSeenBy: Tier;
   guide: boolean;
   /** Sprout has found the full section so she can join its waitlist herself. */
   waitlistGuide: boolean;
@@ -226,6 +232,8 @@ const initial: State = {
   friendSent: [],
   friendIncoming: ["mei", "devon"],
   eventAsks: {},
+  metAt: [],
+  cardSeenBy: "school",
   guide: false,
   waitlistGuide: false,
   mapMasters: false,
@@ -262,6 +270,13 @@ type Ctx = State & {
   answerFriend: (peerId: string, accept: boolean) => void;
   removeFriend: (peerId: string) => void;
   askAtEvent: (eventId: string, peerId: string, note?: string) => void;
+  /** She met someone at an event (picked them on the share sheet). Meeting them again there keeps one entry. */
+  meet: (peerId: string, eventId: string, note?: string) => void;
+  setMeetNote: (peerId: string, eventId: string, note: string) => void;
+  forgetMeet: (peerId: string, eventId: string) => void;
+  /** She sent or copied a follow-up herself. Logged in decisions; nothing goes out. */
+  followUpMeet: (peerId: string, eventId: string, how: "trellis" | "copy" | "email") => void;
+  setCardSeenBy: (tier: Tier) => void;
   notNow: (peerId: string) => void;
   reviewSkill: (id: string, review: SkillReview) => void;
   addDraftCourse: (code: string) => void;
@@ -658,6 +673,23 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         const text = note?.trim();
         return { ...p, eventAsks: { ...p.eventAsks, [eventId]: { sentTo: [...cur.sentTo, peerId], notes: text ? { ...cur.notes, [peerId]: text } : cur.notes } } };
       }),
+      meet: (peerId, eventId, note) => set((p) => ({ ...p, metAt: addMeet(p.metAt, peerId, eventId, new Date(scriptNow()), note) })),
+      setMeetNote: (peerId, eventId, note) => set((p) => ({ ...p, metAt: p.metAt.map((m) => (m.peerId === peerId && m.eventId === eventId ? { ...m, note: note.trim() ? note : undefined } : m)) })),
+      forgetMeet: (peerId, eventId) => set((p) => ({ ...p, metAt: p.metAt.filter((m) => !(m.peerId === peerId && m.eventId === eventId)) })),
+      followUpMeet: (peerId, eventId, how) => set((p) => {
+        const peer = goTogetherEvent.visiblePeers.find((x) => x.id === peerId);
+        const ev = opportunities.find((o) => o.id === eventId);
+        if (!peer) return p;
+        const name = callName(peer.name);
+        const at = ev ? ` from ${eventName(ev)}` : "";
+        const what = how === "trellis" ? `Sent a follow-up to ${name}${at} in Trellis` : how === "email" ? `Opened a follow-up to ${name}${at} in your email` : `Copied a follow-up to ${name}${at} to send yourself`;
+        return {
+          ...p,
+          metAt: p.metAt.map((m) => (m.peerId === peerId && m.eventId === eventId ? { ...m, followedUp: new Date(scriptNow()) } : m)),
+          decisions: [...p.decisions, log(what, [], p.agentOn.drafter ? "Drafter wrote it from your note. You could edit anything first." : "You wrote this one yourself.", how === "trellis" ? "You sent it yourself. Demo only: no message went out." : "Demo only: nothing was sent.")],
+        };
+      }),
+      setCardSeenBy: (tier) => set((p) => ({ ...p, cardSeenBy: tier })),
       requestFriend: (peerId) => set((p) => p.friendIncoming.includes(peerId)
         ? { ...p, friendIncoming: p.friendIncoming.filter((x) => x !== peerId), friends: [...p.friends, peerId] }
         : p.friends.includes(peerId) || p.friendSent.includes(peerId) ? p : { ...p, friendSent: [...p.friendSent, peerId] }),

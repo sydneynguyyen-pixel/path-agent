@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 // Everything on the card is synthetic, like the rest of the demo.
 
 export type Tier = "school" | "school-staff" | "everyone";
-const TIERS: { id: Tier; name: string; sub: string; note: string }[] = [
+export const TIERS: { id: Tier; name: string; sub: string; note: string }[] = [
   { id: "school", name: "Bayview students", sub: "Going to the same event", note: "Only Bayview students going to the same event see your card." },
   { id: "school-staff", name: "Bayview students and staff", sub: "Counselors, faculty, club advisors", note: "Staff can see your card. Only students can ask to go together." },
   { id: "everyone", name: "Everyone at the event", sub: "Other schools and professionals too", note: "Everyone at the event sees your card. Only students can ask to go together, and staff and professionals never see your contact info." },

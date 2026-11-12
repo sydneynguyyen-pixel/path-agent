@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Check, Copy, IdCard, Mail, Pencil, UserPlus, Users } from "lucide-react";
 import { FriendButton, useKnown } from "@/components/app/WhoGoing";
 import { tieWith } from "@/lib/going";
-import { goTogetherEvent, student, type EventPeer } from "@/data/scenario";
+import { goTogetherEvent, opportunities, student, type EventPeer } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,13 @@ import { contactHref, usePeerState } from "@/components/app/GoTogether";
 import { metStudents, people } from "@/data/people";
 import { PersonPhoto } from "@/components/app/PersonPhoto";
 import { callName, lowerFirst, notesFor, promiseEmail, promiseId } from "@/lib/event";
+import { eventName, mergeMet, type MetPerson } from "@/components/app/mobile/atEvent";
+import { FollowUpComposer } from "@/components/app/mobile/FollowUp";
+
+const metEventName = (id: string) => {
+  const o = opportunities.find((x) => x.id === id);
+  return o ? eventName(o) : "An event";
+};
 
 /** Everyone she's written a note about, with every note, newest event last. Private. */
 export function PeopleMet() {
@@ -28,7 +35,7 @@ export function PeopleMet() {
         <h2 className="text-xl font-semibold">People you've met</h2>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Notes you wrote after talking to someone, and anything you said you'd do. Only you see these. They come back before you see that person again.</p>
         <ul className="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-          {metStudents.map((m) => <MetStudentItem key={m.peerId} met={m} />)}
+          {mergeMet(metStudents, j.metAt, metEventName).map((m) => <MetStudentItem key={m.peerId} met={m} />)}
           {met.map((p) => (
             <li key={p.id} className="surface flex flex-col p-6">
               <div className="flex items-center gap-4">
@@ -46,27 +53,39 @@ export function PeopleMet() {
   );
 }
 
-/** A student she met: her note, and their card exactly as they share it. */
-function MetStudentItem({ met }: { met: { peerId: string; event: string; date: string; text: string } }) {
+/** A student she met (scripted, or picked on the phone's share sheet): each event with her note, a follow-up for the ones met with the sheet, and their card exactly as they share it. */
+function MetStudentItem({ met }: { met: MetPerson }) {
   const [open, setOpen] = useState(false);
+  const [following, setFollowing] = useState<string | null>(null);
   const peer = goTogetherEvent.visiblePeers.find((p) => p.id === met.peerId);
   if (!peer) return null;
-  const when = new Date(`${met.date}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const when = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   return (
     <li className="surface flex flex-col p-6">
       <div className="flex items-center gap-4">
         <PersonPhoto photo={peer.photo} org={peer.org} size="lg" />
         <div className="min-w-0"><div className="font-semibold">{peer.name}</div><div className="text-sm text-muted-foreground">{peer.standing}, {peer.major} · Bayview</div></div>
       </div>
-      <div className="mt-5 text-sm">
-        <div className="text-xs text-muted-foreground">{met.event} · {when}</div>
-        <p className="mt-1.5 flex items-start gap-2"><Pencil className="mt-1 size-3.5 shrink-0 text-muted-foreground" aria-label="Your note" />{met.text}</p>
-      </div>
+      <ul className="mt-5 space-y-4 text-sm">
+        {met.entries.map((e) => (
+          <li key={`${e.event}-${e.date}`}>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">{e.event} · {when(e.date)}{e.live?.followedUp && <span className="aqua-chip rounded-full px-2 py-0.5 text-[11px] font-medium text-foreground">Followed up</span>}</div>
+            {e.text && <p className="mt-1.5 flex items-start gap-2"><Pencil className="mt-1 size-3.5 shrink-0 text-muted-foreground" aria-label="Your note" />{e.text}</p>}
+            {e.live && !e.live.followedUp && <Button size="sm" variant="outline" className="mt-2" onClick={() => setFollowing(e.live!.eventId)}><Mail className="size-4" aria-hidden="true" />Follow up</Button>}
+          </li>
+        ))}
+      </ul>
       <div className="mt-auto pt-5"><Button size="sm" variant="outline" onClick={() => setOpen(true)}><IdCard className="size-4" aria-hidden="true" />See {callName(peer.name)}'s card</Button></div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] overflow-y-auto bg-card sm:max-w-md">
           <DialogHeader><DialogTitle>{peer.name}'s card</DialogTitle><DialogDescription>Only what {callName(peer.name)} chose to share. Click the card to flip it.</DialogDescription></DialogHeader>
           <PeerPathCard peer={peer} />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!following} onOpenChange={(o) => !o && setFollowing(null)}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] overflow-y-auto bg-card sm:max-w-lg">
+          <DialogHeader><DialogTitle>Follow up with {callName(peer.name)}</DialogTitle><DialogDescription>You send it yourself. Nothing goes out for you.</DialogDescription></DialogHeader>
+          {following && <FollowUpComposer peer={peer} eventId={following} onDone={() => setFollowing(null)} />}
         </DialogContent>
       </Dialog>
     </li>

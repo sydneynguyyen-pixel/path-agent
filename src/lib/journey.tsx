@@ -18,6 +18,7 @@ import { electiveClasses } from "@/data/degree";
 import { symposiumEvent } from "@/data/event";
 import { people } from "@/data/people";
 import { addGoal, goalsFor, makeMain, MAX_GOALS, removeGoal } from "@/lib/goals";
+import { activityId, type Activity, type SingleSkill } from "@/lib/activities";
 import { callName, eventAccountsFor, eventPlanFor, filledEventPlan, followUp, pathBuiltFor, inviteDraft, type DeckChoice, type DemoFill, type EventPlan } from "@/lib/event";
 
 export type Stage = "idle" | "failed" | "chosen";
@@ -52,7 +53,8 @@ const noGoTogether: GoTogether = { showMe: false, shownAt: null, sentTo: [], sen
 
 export type DetailsFocus = { tab: "people"; peer?: string };
 
-export type OwnSkill = { id: string; name: string; where: "class" | "event" | "work" | "own"; detail: string; link?: string };
+export type OwnSkill = SingleSkill;
+export type { Activity };
 
 type State = {
   savedOpportunities: string[];
@@ -66,6 +68,8 @@ type State = {
   skillReviews: Record<string, SkillReview>;
   /** Skills the student added herself. They are marked "Added by you" and never count as verified. */
   ownSkills: OwnSkill[];
+  /** Things she did that no integration sees (jobs, caring for family, clubs…). Self-reported, never verified. */
+  activities: Activity[];
   draftCourses: string[];
   /** The sandbox behind Try a change on the Degree tree. Nothing reads it as the real plan. */
   whatIf: WhatIf;
@@ -153,6 +157,7 @@ const initial: State = {
   goTogether: noGoTogether,
   skillReviews: { observation: { confirmed: true } },
   ownSkills: [],
+  activities: [],
   draftCourses: [],
   interestedRoles: goalsFor("filled"),
   dismissedRoles: [],
@@ -216,8 +221,12 @@ type Ctx = State & {
   /** Home's wallpaper and widgets. A preference like helper choices, so Reset demo keeps it. */
   desk: Desk;
   setDesk: (f: (d: Desk) => Desk) => void;
-  addOwnSkill: (skill: Omit<OwnSkill, "id">) => void;
+  /** Pass an id to put back one she removed (Undo). Returns the id. */
+  addOwnSkill: (skill: Omit<OwnSkill, "id"> & { id?: string }) => string;
   removeOwnSkill: (id: string) => void;
+  /** Pass an id to put back one she removed (Undo). Returns the id. */
+  addActivity: (activity: Omit<Activity, "id"> & { id?: string }) => string;
+  removeActivity: (id: string) => void;
   setShowMeGoing: (on: boolean) => void;
   askToGo: (peerId: string, note?: string) => void;
   requestFriend: (peerId: string) => void;
@@ -567,8 +576,18 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         return { ...p, wentTo };
       }),
       skipSuggestion: (id) => set((p) => ({ ...p, skippedSuggestions: [...p.skippedSuggestions, id] })),
-      addOwnSkill: (skill) => set((p) => ({ ...p, ownSkills: [...p.ownSkills, { ...skill, id: `own-${p.ownSkills.length + 1}-${skill.name.toLowerCase().replace(/\W+/g, "-")}` }] })),
+      addOwnSkill: (skill) => {
+        const id = skill.id ?? `own-${Date.now().toString(36)}-${skill.name.toLowerCase().replace(/\W+/g, "-")}`;
+        set((p) => ({ ...p, ownSkills: [...p.ownSkills.filter((x) => x.id !== id), { ...skill, id }] }));
+        return id;
+      },
       removeOwnSkill: (id) => set((p) => ({ ...p, ownSkills: p.ownSkills.filter((x) => x.id !== id) })),
+      addActivity: (activity) => {
+        const id = activity.id ?? activityId(activity.title, Date.now());
+        set((p) => ({ ...p, activities: [...p.activities.filter((x) => x.id !== id), { ...activity, id }] }));
+        return id;
+      },
+      removeActivity: (id) => set((p) => ({ ...p, activities: p.activities.filter((x) => x.id !== id) })),
       clearHomeItem: (id, how) => set((p) => ({ ...p, homeCleared: { ...p.homeCleared, [id]: how } })),
       restoreHomeItem: (id) => set((p) => {
         const { [id]: _cleared, ...homeCleared } = p.homeCleared;

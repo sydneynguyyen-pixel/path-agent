@@ -11,6 +11,7 @@ import { useJourney } from "@/lib/journey";
 import { evidenceFor, courseCode } from "@/lib/skills";
 import { registrationSkills, type Skill, type EvidenceLevel } from "@/data/scenario";
 import { cn } from "@/lib/utils";
+import type { PortfolioSkill } from "@/lib/portfolio";
 
 export function ReaderCredit() { return <div className="flex items-center gap-2 text-xs text-muted-foreground"><AgentAvatar agent="reader" className="size-8" />From your syllabi</div>; }
 export function EvidenceIndicator({ level }: { level: EvidenceLevel }) {
@@ -37,3 +38,24 @@ export function SkillRow({ skill, actions = true }: { skill: Skill; actions?: bo
 /** A course name that opens its details panel, on any page. */
 export function CourseLink({ course, children }: { course: string; children?: ReactNode }) { const j = useJourney(); const code = courseCode(course); return <button type="button" onClick={() => j.openClass(code)} title={`About ${code}`} className="text-left underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">{children ?? course}</button>; }
 export function AddsSkills({ course }: { course: string }) { const names = registrationSkills[courseCode(course)]; if (!names) return null; return <p className="text-xs text-muted-foreground">Adds: <span className="text-foreground">{names.join(" · ")}</span></p>; }
+
+/** Where a portfolio skill comes from: classes open their panel, listings open theirs, her own additions say so. */
+export function SkillSources({ skill, short = false }: { skill: PortfolioSkill; short?: boolean }) {
+  const j = useJourney();
+  if (short) {
+    const names = [...new Set(skill.proofs.map((p) => (p.type === "class" ? p.code : p.type === "own" ? `Added by you · ${p.title}` : p.title)))];
+    return <>from {names.slice(0, 2).join(", ")}{names.length > 2 && ` +${names.length - 2}`}</>;
+  }
+  return (
+    <ul className="space-y-1.5">
+      {skill.proofs.map((p) => (
+        <li key={`${p.type}-${p.type === "class" ? p.code : p.id}`}>
+          {p.type === "class" ? <>From <CourseLink course={p.code} /> syllabus</>
+            : p.type === "event" ? <>From {p.title}</>
+            : p.type === "doing" ? <>From <button type="button" onClick={() => j.openOpportunity(p.id)} className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">{p.title}</button></>
+            : <><span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">Added by you</span> {p.title}</>}
+        </li>
+      ))}
+    </ul>
+  );
+}

@@ -244,7 +244,7 @@ export function GoalFit({
 export function ProofTiles({ skills }: { skills: PortfolioSkill[] }) {
   const confirmed = skills.filter((s) => s.confirmed).length;
   const classes = skills.filter((s) => s.proofs.some((p) => p.type === "class")).length;
-  const events = skills.filter((s) => s.proofs.some((p) => p.type !== "class")).length;
+  const events = skills.filter((s) => s.proofs.some((p) => p.type === "event" || p.type === "doing")).length;
   const shown = skills.filter((s) => s.level === "Demonstrated").length;
   const tiles = [
     { n: confirmed, of: skills.length, label: "confirmed by you" },

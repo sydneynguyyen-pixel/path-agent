@@ -61,10 +61,14 @@ function Career() {
       <div className="mx-auto max-w-5xl">
         <GapPlan
           roleId={planRole.id}
-          intro={<>
-            <BuildSkills key={planRole.id} role={planRole} onRole={(plan) => void navigate({ search: { plan }, replace: true, resetScroll: false })} />
-            {!isGoal && <Button size="sm" variant="outline" disabled={j.interestedRoles.length >= MAX_GOALS} onClick={() => { const first = j.interestedRoles.length === 0; j.addGoal(planRole.id); toast(first ? "This is your main goal now" : "Added to your goals"); }}><Plus className="size-3.5" aria-hidden="true" />Add {planRole.title} to your goals</Button>}
-          </>}
+          intro={
+            <BuildSkills
+              key={planRole.id}
+              role={planRole}
+              onRole={(plan) => void navigate({ search: { plan }, replace: true, resetScroll: false })}
+              action={!isGoal && <Button size="sm" variant="outline" disabled={j.interestedRoles.length >= MAX_GOALS} onClick={() => { const first = j.interestedRoles.length === 0; j.addGoal(planRole.id); toast(first ? "This is your main goal now" : "Added to your goals"); }}><Plus className="size-3.5" aria-hidden="true" />Add {planRole.title} to your goals</Button>}
+            />
+          }
         />
       </div>
     );

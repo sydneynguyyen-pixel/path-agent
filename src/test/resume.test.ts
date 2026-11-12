@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { addName, blankDoc, coverTemplate, docId, dropName, experiencePhrase, groupDocs, libraryDocs, newVersion, pendingSkills, roleAsks, saveDoc, skillsForDoc, syncResumeSkills } from "@/lib/resume";
+import {
+  addName, appsIn, blankApplication, blankDoc, bulletsFromEvent, bulletsFromWords, comparePosting, contactLine, coverTemplate, docId, docLook, docsIn, dropName, experiencePhrase,
+  folderCounts, folderList, folderOf, groupDocs, jobFolder, jobFolderDocs, libraryDocs, moveItem, newVersion, outcomeBullet, pageCount, pendingSkills, removeApplication,
+  resumeText, roleAsks, saveApplication, saveDoc, skillLines, skillsForDoc, startsWithAction, syncResumeSkills, type ResumePage,
+} from "@/lib/resume";
+import { experiences } from "@/data/scenario";
 
 const ux = { id: "ux", title: "UX researcher" };
 const policy = { id: "policy", title: "Policy analyst" };
@@ -92,5 +97,110 @@ describe("role-specialized documents", () => {
     expect(experiencePhrase({ title: "Corner Cafe", role: "Barista", kind: "job" })).toBe("I worked as a barista with Corner Cafe");
     expect(experiencePhrase({ title: "Caring for my brother", kind: "caring" })).toBe("I've been caring for my brother");
     expect(experiencePhrase({ title: "Data Club", kind: "club" })).toBe("I've been part of Data Club");
+  });
+});
+
+describe("honest bullets", () => {
+  it("her own words become bullets as she wrote them, one per sentence", () => {
+    expect(bulletsFromWords("Made drinks for the morning rush. trained two new baristas.\nClosed the shop on Sundays")).toEqual(["Made drinks for the morning rush", "Trained two new baristas", "Closed the shop on Sundays"]);
+    expect(bulletsFromWords("")).toEqual([]);
+  });
+  it("an event's record becomes bullets that start with a verb, from its outcome and skills only", () => {
+    const hack = experiences.find((e) => e.id === "civic-hack")!;
+    expect(bulletsFromEvent(hack)).toEqual(["Placed 2nd as a team with a map of food pantry hours", "Applied user interviews and prototyping", "Practiced teamwork"]);
+    expect(outcomeBullet("Poster: how students choose study spaces")).toBe("Presented a poster on how students choose study spaces");
+  });
+  it("never adds numbers or results the record doesn't hold", () => {
+    for (const e of experiences) {
+      const source = `${e.outcome ?? ""} ${e.skills.map((s) => s.name).join(" ")}`;
+      const digits = bulletsFromEvent(e).join(" ").match(/\d+/g) ?? [];
+      for (const d of digits) expect(source).toContain(d);
+      if (!e.outcome) expect(bulletsFromEvent(e).every((b) => /^(Applied|Practiced|Learned) /.test(b))).toBe(true);
+    }
+  });
+  it("checks for an action verb gently and reorders bullets", () => {
+    expect(startsWithAction("Interviewed 5 residents")).toBe(true);
+    expect(startsWithAction("Responsible for the register")).toBe(false);
+    expect(moveItem(["a", "b", "c"], 2, 0)).toEqual(["c", "a", "b"]);
+    expect(moveItem(["a", "b"], 0, -1)).toEqual(["a", "b"]);
+  });
+});
+
+describe("templates and the page", () => {
+  it("defaults to Modern with the first accent, and keeps what she picks", () => {
+    expect(docLook(blankDoc("resume", null))).toMatchObject({ template: "modern", accent: { id: "aqua" } });
+    expect(docLook({ template: "classic", accent: "violet" })).toMatchObject({ template: "classic", accent: { id: "violet" } });
+    expect(docLook({ template: "nope" as never, accent: "nope" }).template).toBe("modern");
+  });
+  it("counts pages from the content height", () => {
+    expect(pageCount(1056, 1056)).toBe(1);
+    expect(pageCount(1200, 1056)).toBe(2);
+    expect(pageCount(0, 1056)).toBe(1);
+  });
+  it("the contact line holds only real details: email, school, then what she typed", () => {
+    expect(contactLine("m@x.example", "Bayview", { phone: "", location: "", linkedin: "", site: "" })).toEqual(["m@x.example", "Bayview"]);
+    expect(contactLine("m@x.example", "Bayview", { phone: " ", location: "Eastshore, CA", linkedin: "linkedin.com/in/m", site: "" })).toEqual(["m@x.example", "Eastshore, CA", "linkedin.com/in/m"]);
+  });
+  it("groups skills into research, communication and tools lines", () => {
+    const theme: Record<string, string> = { Interviewing: "Research and data", "Source analysis": "Analysis and critical thinking", "Research writing": "Writing and communication", Prototyping: "Tools" };
+    expect(skillLines(["Interviewing", "Research writing", "Source analysis", "Prototyping", "Leadership"], (n) => theme[n], ["Figma", "prototyping"])).toEqual([
+      { label: "Research", names: ["Interviewing", "Source analysis"] },
+      { label: "Communication", names: ["Research writing"] },
+      { label: "Tools", names: ["Prototyping", "Figma"] },
+      { label: "Other", names: ["Leadership"] },
+    ]);
+  });
+  it("the text version has the same sections as the page, education first", () => {
+    const page: ResumePage = { kind: "resume", name: "Maya Torres", headline: "Aspiring UX researcher", contact: ["m@x.example", "Bayview"], summary: "", letter: "", education: [{ id: "e", school: "Northgate", degree: "B.A., Psychology", when: "Expected 2029", detail: "" }], experience: [{ id: "x", role: "Volunteer", org: "Food bank", when: "Aug 2026", bullets: ["Packed boxes", " "] }], training: [], projects: [], skills: [{ label: "Tools", names: ["Figma"] }] };
+    const t = resumeText(page);
+    expect(t.indexOf("EDUCATION")).toBeLessThan(t.indexOf("EXPERIENCE"));
+    expect(t).toContain("m@x.example | Bayview");
+    expect(t).toContain("  - Packed boxes");
+    expect(t).not.toContain("SUMMARY");
+    expect(t).toContain("Tools: Figma");
+  });
+});
+
+describe("folders", () => {
+  it("one folder per goal, then other careers she made versions for, then jobs, then General", () => {
+    const job = jobFolder("UX Research Intern", "Acme Health", "ux", 1);
+    expect(job.title).toBe("UX Research Intern — Acme Health");
+    const docs = libraryDocs([ux], [newVersion(blankDoc("resume", "ux", "UX researcher"), "market", "Market research analyst", [], 2)]);
+    expect(folderList([ux], [job], docs, () => "Market research analyst").map((f) => f.id)).toEqual(["role-ux", "role-market", job.id, "general"]);
+    expect(docsIn(docs, "role-ux").map((d) => d.kind)).toEqual(["resume", "cover"]);
+    expect(folderCounts(1, 0)).toBe("1 doc · 0 applications");
+    expect(folderCounts(2, 3)).toBe("2 docs · 3 applications");
+  });
+  it("a job folder starts with a copy of her resume and a fresh cover letter, both in the folder", () => {
+    const job = jobFolder("UX Research Intern", "Acme Health", "ux", 7);
+    const from = { ...blankDoc("resume", "ux", "UX researcher"), summary: "Mine", bullets: { a: ["Led it"] } };
+    const [resume, cover] = jobFolderDocs(job, from, 7);
+    expect(resume).toMatchObject({ kind: "resume", folder: job.id, summary: "Mine", copiedFrom: from.id });
+    expect(resume!.bullets).toEqual({ a: ["Led it"] });
+    expect(cover).toMatchObject({ kind: "cover", folder: job.id, letter: null });
+    expect(folderOf(resume!)).toBe(job.id);
+    // A version for another career leaves the job folder.
+    expect(folderOf(newVersion(resume!, "policy", "Policy analyst", [], 8))).toBe("role-policy");
+  });
+});
+
+describe("applications", () => {
+  it("are added, edited and removed by id, and listed newest applied first", () => {
+    const a = { ...blankApplication("role-ux", "resume-ux", 1), company: "Acme Health", role: "UX Research Intern", applied: "2026-11-01", status: "applied" as const };
+    const b = { ...blankApplication("role-ux", null, 2), company: "Bay Clinic", role: "Research assistant" };
+    const c = { ...blankApplication("general", null, 3), company: "Elsewhere", role: "Intern", applied: "2026-11-05" };
+    let apps = saveApplication(saveApplication(saveApplication([], b), a), c);
+    expect(appsIn(apps, "role-ux").map((x) => x.company)).toEqual(["Acme Health", "Bay Clinic"]);
+    apps = saveApplication(apps, { ...a, status: "interviewing" });
+    expect(apps).toHaveLength(3);
+    expect(apps.find((x) => x.id === a.id)?.status).toBe("interviewing");
+    expect(removeApplication(apps, a.id).map((x) => x.id)).toEqual([b.id, c.id]);
+    expect(blankApplication("general", null, 4)).toMatchObject({ status: "saved", applied: "", link: "" });
+  });
+});
+
+describe("job posting against a resume", () => {
+  it("splits the posting's skills into on this resume, hers to add, and not yet", () => {
+    expect(comparePosting(["Interviewing", "SQL", "Research writing", "interviewing"], ["interviewing"], ["Research writing", "Interviewing"])).toEqual({ on: ["Interviewing"], canAdd: ["Research writing"], missing: ["SQL"] });
   });
 });

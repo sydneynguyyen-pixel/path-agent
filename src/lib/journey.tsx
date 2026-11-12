@@ -19,7 +19,7 @@ import { symposiumEvent } from "@/data/event";
 import { people } from "@/data/people";
 import { addGoal, goalsFor, makeMain, MAX_GOALS, removeGoal } from "@/lib/goals";
 import { activityId, type Activity, type SingleSkill } from "@/lib/activities";
-import { addName, dropName, removeDoc, saveDoc, type ResumeDoc } from "@/lib/resume";
+import { addName, blankContact, dropName, removeApplication, removeDoc, saveApplication, saveDoc, type Application, type ResumeContact, type ResumeDoc, type ResumeFolder } from "@/lib/resume";
 import { callName, eventAccountsFor, eventPlanFor, filledEventPlan, followUp, pathBuiltFor, inviteDraft, type DeckChoice, type DemoFill, type EventPlan } from "@/lib/event";
 
 export type Stage = "idle" | "failed" | "chosen";
@@ -99,6 +99,12 @@ type State = {
   resumeSeeded: boolean;
   /** New confirmed skills go on her resume by themselves. A preference, so Reset demo keeps it. */
   autoAddSkills: boolean;
+  /** Folders she made for one specific job (Career → Resume). Goal and General folders come from her goals. */
+  resumeFolders: ResumeFolder[];
+  /** Applications she recorded herself, each with the resume version she sent. Sprout never applies or sends. */
+  applications: Application[];
+  /** Phone, location and links she typed for her resume header. Empty until she does. */
+  resumeContact: ResumeContact;
   event: EventPlan;
   agentOn: Record<AgentId, boolean>;
   access: Record<AccessKey, boolean>;
@@ -182,6 +188,9 @@ const initial: State = {
   resumeDismissed: [],
   resumeSeeded: false,
   autoAddSkills: true,
+  resumeFolders: [],
+  applications: [],
+  resumeContact: blankContact,
   event: filledEventPlan,
   agentOn: { reader: true, planner: true, backup: true, drafter: true },
   access: { registration: true, canvas: true, sis: true, audit: true, articulation: true, handshake: true, email: true },
@@ -279,6 +288,14 @@ type Ctx = State & {
   saveResume: (doc: ResumeDoc) => void;
   /** Removes a saved draft. A default document goes back to its template. */
   removeResume: (id: string) => void;
+  /** Adds or renames a folder for one specific job. */
+  saveResumeFolder: (folder: ResumeFolder) => void;
+  /** Removes a job folder with its drafts and applications. */
+  removeResumeFolder: (id: string) => void;
+  /** Records or edits an application (insert or replace by id). */
+  saveApplication: (app: Application) => void;
+  removeApplication: (id: string) => void;
+  setResumeContact: (patch: Partial<ResumeContact>) => void;
   /** Whether the demo opens with Maya's built path or as a new student. */
   demoFill: DemoFill;
   setDemoFill: (fill: DemoFill) => void;
@@ -689,6 +706,11 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       setAutoAddSkills: (on) => set((p) => ({ ...p, autoAddSkills: on })),
       saveResume: (doc) => set((p) => ({ ...p, resumes: saveDoc(p.resumes, doc) })),
       removeResume: (id) => set((p) => ({ ...p, resumes: removeDoc(p.resumes, id) })),
+      saveResumeFolder: (folder) => set((p) => ({ ...p, resumeFolders: p.resumeFolders.some((f) => f.id === folder.id) ? p.resumeFolders.map((f) => (f.id === folder.id ? folder : f)) : [...p.resumeFolders, folder] })),
+      removeResumeFolder: (id) => set((p) => ({ ...p, resumeFolders: p.resumeFolders.filter((f) => f.id !== id), resumes: p.resumes.filter((d) => d.folder !== id), applications: p.applications.filter((a) => a.folderId !== id) })),
+      saveApplication: (app) => set((p) => ({ ...p, applications: saveApplication(p.applications, app) })),
+      removeApplication: (id) => set((p) => ({ ...p, applications: removeApplication(p.applications, id) })),
+      setResumeContact: (patch) => set((p) => ({ ...p, resumeContact: { ...p.resumeContact, ...patch } })),
       demoFill,
       setDemoFill: applyFill,
       setEventGoal: (goal) => set((p) => ({ ...p, event: { ...p.event, goal } })),

@@ -29,6 +29,17 @@ export type ResumeDoc = {
   showProjects: boolean;
   /** The doc she made this one from with "New version". */
   copiedFrom?: string | undefined;
+  /** Look of the page (Style tab). Missing means Modern with the first accent. */
+  template?: ResumeTemplate | undefined;
+  accent?: string | undefined;
+  /** Bullets she edited, per experience entry id. An entry without a key shows the suggested bullets. */
+  bullets?: Record<string, string[]> | undefined;
+  /** Course codes on the coursework line. Null or missing shows the suggested courses. */
+  courses?: string[] | null | undefined;
+  /** A job posting she pasted on the Job tab. Only read here, never fetched or sent. */
+  posting?: string | undefined;
+  /** A folder she made for one specific job. Missing means the folder for its career (or General). */
+  folder?: string | undefined;
 };
 
 export const docId = (kind: DocKind, roleId: string | null) => `${kind}-${roleId ?? "general"}`;
@@ -101,6 +112,10 @@ export function newVersion(doc: ResumeDoc, roleId: string | null, roleTitle: str
     hiddenSkills: [...doc.hiddenSkills],
     hiddenExperience: [...doc.hiddenExperience],
     projects: doc.projects.map((p) => ({ ...p })),
+    bullets: doc.bullets ? Object.fromEntries(Object.entries(doc.bullets).map(([k, v]) => [k, [...v]])) : undefined,
+    courses: doc.courses ? [...doc.courses] : doc.courses,
+    // A version for another career leaves the job folder it came from.
+    folder: roleId === doc.roleId ? doc.folder : undefined,
     copiedFrom: doc.id,
   };
 }
@@ -202,5 +217,241 @@ export function suggestedSummary(o: { major: string; roleTitle: string | null; s
   const sk = o.skills.slice(0, 3).map(inline);
   const list = sk.length > 1 ? `${sk.slice(0, -1).join(", ")} and ${sk.at(-1)}` : sk[0];
   const aim = o.roleTitle ? ` working toward ${article(inline(o.roleTitle))} ${inline(o.roleTitle)} role` : "";
-  return `${o.major} student${aim}.${list ? ` Skills with proof from class and practice: ${list}.` : ""}`;
+  return `${o.major} student${aim}.${list ? ` Strengths from coursework and practice: ${list}.` : ""}`;
+}
+
+// ---------- Look ----------
+
+export type ResumeTemplate = "modern" | "classic" | "compact";
+
+export const TEMPLATES: { id: ResumeTemplate; name: string; note: string }[] = [
+  { id: "modern", name: "Modern", note: "Left aligned, with a thin accent rule. Clean and current." },
+  { id: "classic", name: "Classic", note: "Centered serif name. Reads as traditional and formal." },
+  { id: "compact", name: "Compact", note: "Tighter spacing, so more fits on one page." },
+];
+
+/** The same accents as Your card, so her card and resume can match. */
+export const RESUME_ACCENTS = [
+  { id: "aqua", name: "Aqua", c: "#3fc6c0", ink: "#063b3a" },
+  { id: "lime", name: "Lime", c: "#a6ec5a", ink: "#22400a" },
+  { id: "violet", name: "Violet", c: "#9d8cf2", ink: "#231a5c" },
+  { id: "coral", name: "Coral", c: "#ff9b85", ink: "#5a1d10" },
+] as const;
+export type ResumeAccent = (typeof RESUME_ACCENTS)[number];
+
+export function docLook(doc: Pick<ResumeDoc, "template" | "accent">): { template: ResumeTemplate; accent: ResumeAccent } {
+  const template = TEMPLATES.some((t) => t.id === doc.template) ? doc.template! : "modern";
+  return { template, accent: RESUME_ACCENTS.find((a) => a.id === doc.accent) ?? RESUME_ACCENTS[0] };
+}
+
+/** Pages a document fills, from its content height and the page height (both in px). Never less than one. */
+export const pageCount = (contentHeight: number, pageHeight: number) => Math.max(1, Math.ceil((contentHeight - 1) / pageHeight));
+
+// ---------- Bullets ----------
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const listOf = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}` : xs[0] ?? "");
+
+/** Her own words, one bullet per sentence (up to three). Nothing added, nothing measured. */
+export function bulletsFromWords(did: string): string[] {
+  return did
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((x) => x.trim().replace(/^[-•*]\s*/, "").replace(/[.;]+$/, ""))
+    .filter(Boolean)
+    .map(cap)
+    .slice(0, 3);
+}
+
+/** An event's recorded outcome as a bullet that starts with a verb. Only rewords; never adds a result. */
+export function outcomeBullet(outcome: string): string {
+  const o = outcome.trim().replace(/\.$/, "");
+  let m = o.match(/^poster:\s*(.+)$/i);
+  if (m) return `Presented a poster on ${m[1]}`;
+  m = o.match(/^team placed (\S+)\s*(.*)$/i);
+  if (m) return `Placed ${m[1]} as a team${m[2] ? ` ${m[2]}` : ""}`;
+  m = o.match(/^certificate issued by (.+)$/i);
+  if (m) return `Earned a certificate issued by ${m[1]}`;
+  return cap(o);
+}
+
+const LEVEL_VERB: Record<string, string> = { Demonstrated: "Applied", Practiced: "Practiced", Taught: "Learned" };
+
+/**
+ * Suggested bullets for an event she really went to: its recorded outcome, then the skills the listing says
+ * happen there, by how far she took them. No numbers or results the record doesn't hold.
+ */
+export function bulletsFromEvent(e: { outcome?: string | undefined; skills: { name: string; level: string }[] }): string[] {
+  const out: string[] = [];
+  if (e.outcome) out.push(outcomeBullet(e.outcome));
+  for (const level of ["Demonstrated", "Practiced", "Taught"]) {
+    const names = [...new Set(e.skills.filter((s) => s.level === level).map((s) => inline(s.name)))];
+    if (names.length) out.push(`${LEVEL_VERB[level]} ${listOf(names)}`);
+  }
+  return out.slice(0, 3);
+}
+
+/** Strong resume bullets start with an action verb. A gentle check for the form, not a rule. */
+const VERBS = /^(led|built|ran|made|wrote|taught|helped|managed|organized|organised|planned|designed|created|developed|presented|interviewed|analyzed|analysed|researched|tutored|trained|coordinated|supported|served|cared|handled|greeted|answered|sorted|packed|placed|earned|applied|practiced|practised|learned|launched|started|founded|edited|translated|tracked|mentored|volunteered|competed|collected|conducted|drafted|mapped|prototyped|tested|observed|recorded|summarized|surveyed|scheduled|balanced|raised|grew|cut|improved|reduced|increased|won|completed|co-led|facilitated|hosted|guided|cooked|cleaned|drove|opened|closed)\b/i;
+export const startsWithAction = (b: string) => VERBS.test(b.trim()) || /^[A-Za-z]+ed\b/.test(b.trim());
+
+/** The bullets showing for an entry: hers once she edits them, the suggestion before that. */
+export const entryBullets = (doc: Pick<ResumeDoc, "bullets">, id: string, suggested: string[]) => doc.bullets?.[id] ?? suggested;
+
+/** Moves one item up or down a list (clamped). */
+export function moveItem<T>(list: T[], from: number, to: number): T[] {
+  if (to < 0 || to >= list.length || from === to) return list;
+  const next = [...list];
+  const [x] = next.splice(from, 1);
+  next.splice(to, 0, x as T);
+  return next;
+}
+
+// ---------- Folders ----------
+
+/** A folder of documents and applications: one per goal career, one per specific job she adds, and General. */
+export type ResumeFolder = { id: string; title: string; roleId: string | null; job?: { title: string; org: string } | undefined };
+
+export const GENERAL_FOLDER = "general";
+export const roleFolderId = (roleId: string) => `role-${roleId}`;
+export const folderOf = (doc: Pick<ResumeDoc, "folder" | "roleId">) => doc.folder ?? (doc.roleId ? roleFolderId(doc.roleId) : GENERAL_FOLDER);
+
+/** Folders in order: goals (main first), other careers she made versions for, jobs she added, then General. */
+export function folderList(goals: RoleLike[], jobs: ResumeFolder[], docs: ResumeDoc[], titleOf: (roleId: string) => string | undefined): ResumeFolder[] {
+  const roles = [...goals.map((g) => g.id), ...docs.filter((d) => !d.folder && d.roleId).map((d) => d.roleId!)];
+  const roleFolders = [...new Set(roles)].map((id) => ({ id: roleFolderId(id), roleId: id, title: goals.find((g) => g.id === id)?.title ?? titleOf(id) ?? id }));
+  return [...roleFolders, ...jobs, { id: GENERAL_FOLDER, roleId: null, title: "General" }];
+}
+
+export const docsIn = (docs: ResumeDoc[], folderId: string) => docs.filter((d) => folderOf(d) === folderId);
+
+/** A folder for one specific job, like "UX Research Intern — Acme Health". */
+export function jobFolder(title: string, org: string, roleId: string | null, stamp: number): ResumeFolder {
+  const t = title.trim(), o = org.trim();
+  const slug = `${t}-${o}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32);
+  return { id: `job-${slug}-${stamp.toString(36)}`, title: o ? `${t} — ${o}` : t, roleId, job: { title: t, org: o } };
+}
+
+/** Starting documents for a job folder: a copy of the resume she picked, and a fresh cover letter. */
+export function jobFolderDocs(folder: ResumeFolder, from: ResumeDoc, stamp: number): ResumeDoc[] {
+  const tag = stamp.toString(36);
+  const name = folder.job?.title || folder.title;
+  return [
+    { ...newVersion(from, folder.roleId, undefined, [], stamp), id: `resume-${folder.id}-${tag}`, title: `Resume · ${name}`, folder: folder.id, kind: from.kind === "cover" ? "resume" : from.kind, headline: from.roleId === folder.roleId ? from.headline : null },
+    { ...blankDoc("cover", folder.roleId), id: `cover-${folder.id}-${tag}`, title: `Cover letter · ${name}`, folder: folder.id },
+  ];
+}
+
+const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+export const folderCounts = (docs: number, apps: number) => `${plural(docs, "doc")} · ${plural(apps, "application")}`;
+
+// ---------- Applications ----------
+
+export type AppStatus = "saved" | "applied" | "interviewing" | "offer" | "closed";
+
+export const APP_STATUS: { id: AppStatus; label: string }[] = [
+  { id: "saved", label: "Saved" },
+  { id: "applied", label: "Applied" },
+  { id: "interviewing", label: "Interviewing" },
+  { id: "offer", label: "Offer" },
+  { id: "closed", label: "Not moving forward" },
+];
+export const statusLabel = (s: AppStatus) => APP_STATUS.find((x) => x.id === s)?.label ?? "Saved";
+
+/** One application she recorded herself. Sprout never applies or sends anything. */
+export type Application = {
+  id: string;
+  folderId: string;
+  company: string;
+  role: string;
+  link: string;
+  /** YYYY-MM-DD, or empty while it's only saved. */
+  applied: string;
+  /** The resume version she sent, so she always knows what they have. */
+  resumeId: string | null;
+  status: AppStatus;
+  /** Next step, in her words. */
+  next: string;
+  /** YYYY-MM-DD follow-up date, or empty. */
+  followUp: string;
+};
+
+export function blankApplication(folderId: string, resumeId: string | null, stamp: number, role = ""): Application {
+  return { id: `app-${stamp.toString(36)}`, folderId, company: "", role, link: "", applied: "", resumeId, status: "saved", next: "", followUp: "" };
+}
+
+export const saveApplication = (apps: Application[], app: Application): Application[] =>
+  apps.some((a) => a.id === app.id) ? apps.map((a) => (a.id === app.id ? app : a)) : [...apps, app];
+
+export const removeApplication = (apps: Application[], id: string): Application[] => apps.filter((a) => a.id !== id);
+
+/** A folder's applications: the newest applied first, saved-for-later ones after. */
+export const appsIn = (apps: Application[], folderId: string) =>
+  apps.filter((a) => a.folderId === folderId).sort((a, b) => (b.applied || "").localeCompare(a.applied || "") || a.company.localeCompare(b.company));
+
+// ---------- Job posting ----------
+
+/**
+ * A posting's skills against this document: already on it, ones she has (confirmed) but hasn't put on it,
+ * and ones she doesn't have yet. Just lists, never a score.
+ */
+export function comparePosting(asked: string[], onDoc: string[], confirmed: string[]): { on: string[]; canAdd: string[]; missing: string[] } {
+  const on: string[] = [], canAdd: string[] = [], missing: string[] = [];
+  for (const n of asked.reduce(addName, [] as string[])) {
+    if (hasName(onDoc, n)) on.push(n);
+    else if (hasName(confirmed, n)) canAdd.push(n);
+    else missing.push(n);
+  }
+  return { on, canAdd, missing };
+}
+
+// ---------- Contact ----------
+
+/** Contact details she typed in herself. Empty until she does; nothing here is filled in for her. */
+export type ResumeContact = { phone: string; location: string; linkedin: string; site: string };
+export const blankContact: ResumeContact = { phone: "", location: "", linkedin: "", site: "" };
+
+/** The contact line: email and school from her account, then only what she added. */
+export const contactLine = (email: string, school: string, c: ResumeContact) =>
+  [email, c.phone, c.location || school, c.linkedin, c.site].map((x) => x.trim()).filter(Boolean);
+
+// ---------- The page as data, and as text ----------
+
+export type PageEntry = { id: string; role: string; org: string; when: string; bullets: string[] };
+export type PageSkillLine = { label: string; names: string[] };
+export type ResumePage = {
+  kind: DocKind;
+  name: string;
+  headline: string;
+  contact: string[];
+  summary: string;
+  letter: string;
+  education: { id: string; school: string; degree: string; when: string; detail: string }[];
+  experience: PageEntry[];
+  training: PageEntry[];
+  projects: PageEntry[];
+  skills: PageSkillLine[];
+};
+
+/** The same document as plain text, for Copy and Download. */
+export function resumeText(p: ResumePage): string {
+  const head = [p.name, ...(p.headline.trim() ? [p.headline.trim()] : []), p.contact.join(" | "), ""];
+  if (p.kind === "cover") return [...head, p.letter.trim(), ""].join("\n");
+  const out = [...head];
+  const entry = (e: PageEntry) => [`${[e.role, e.org].filter(Boolean).join(", ")}${e.when ? ` (${e.when})` : ""}`, ...e.bullets.filter((b) => b.trim()).map((b) => `  - ${b.trim()}`)];
+  if (p.summary.trim()) out.push("SUMMARY", p.summary.trim(), "");
+  out.push("EDUCATION", ...p.education.flatMap((e) => [`${e.school}${e.when ? ` (${e.when})` : ""}`, `  ${e.degree}`, ...(e.detail ? [`  ${e.detail}`] : [])]), "");
+  if (p.experience.length) out.push("EXPERIENCE", ...p.experience.flatMap(entry), "");
+  if (p.projects.length) out.push("PROJECTS", ...p.projects.flatMap(entry), "");
+  if (p.training.length) out.push("TRAINING AND EVENTS", ...p.training.flatMap(entry), "");
+  if (p.skills.length) out.push("SKILLS", ...p.skills.map((s) => `${s.label}: ${s.names.join(", ")}`), "");
+  return out.join("\n");
+}
+
+/** Skill themes as resume lines. Research and analysis share a line; tools get their own. */
+export function skillLines(names: string[], themeOf: (name: string) => string | undefined, tools: string[]): PageSkillLine[] {
+  const LINE: Record<string, string> = { "Research and data": "Research", "Analysis and critical thinking": "Research", "Writing and communication": "Communication", Tools: "Tools" };
+  const lines = new Map<string, string[]>([["Research", []], ["Communication", []], ["Tools", []], ["Other", []]]);
+  for (const n of names) lines.get(LINE[themeOf(n) ?? ""] ?? "Other")!.push(n);
+  for (const t of tools) if (!hasName(lines.get("Tools")!, t)) lines.get("Tools")!.push(t);
+  return [...lines].filter(([, v]) => v.length).map(([label, v]) => ({ label, names: v }));
 }

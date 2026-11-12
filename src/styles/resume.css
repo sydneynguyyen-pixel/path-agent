@@ -1,0 +1,119 @@
+/* Career → Resume: the page sits on the same dotted board as Your card (.pc-stage), with the
+   "Make it yours" panel (.pc-panel, .pc-tabs) beside it. Only resume-specific layout and the paper live here. */
+
+.pc-stage.rs-stage { align-items: start; }
+@media (max-width: 639px) {
+  .pc-stage.rs-stage { padding: 16px; border-radius: 24px; gap: 16px; }
+  .rs-stage .pc-panel-head { padding: 18px 16px 14px; }
+  .rs-stage .pc-panel-body { padding: 16px 16px 20px; }
+}
+@media (min-width: 1024px) {
+  .pc-stage.rs-stage { grid-template-columns: minmax(0, 1fr) 380px; height: auto; min-height: 0; }
+  .rs-stage .pc-panel { position: sticky; top: 16px; height: auto; max-height: calc(100vh - 32px); }
+  .rs-stage .pc-panel-body { flex: 1 1 auto; min-height: 0; }
+}
+
+/* The column the page sits in: a small toolbar, then the page centered and scaled to fit. */
+.rs-canvas { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 14px; }
+.rs-toolbar { display: flex; width: 100%; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.rs-count { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; background: var(--card); padding: 6px 12px; font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; box-shadow: 0 1px 2px rgb(15 23 42 / .06), 0 6px 16px -10px rgb(15 23 42 / .3); }
+.rs-fit { width: 100%; display: flex; justify-content: center; overflow-x: clip; }
+.rs-fit-box { position: relative; max-width: 100%; }
+.rs-fit-inner { position: absolute; top: 0; left: 0; width: 816px; transform-origin: top left; }
+.rs-break { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px dashed color-mix(in oklab, var(--foreground) 28%, transparent); pointer-events: none; }
+.rs-break span { position: absolute; right: 10px; top: 6px; border-radius: 9999px; background: var(--muted); padding: 2px 8px; font-size: 11px; color: var(--muted-foreground); }
+
+/* The paper. Always white with dark ink, like a printed page, in every theme. */
+.rs-paper {
+  --rs-rule: #d7dbe2; --rs-ink-body: #1b2230; --rs-muted: #4b5466;
+  position: relative; width: 816px; min-height: 1056px; padding: 60px 68px 64px;
+  background: #fff; color: var(--rs-ink-body); border-radius: 4px;
+  box-shadow: 0 1px 2px rgb(15 23 42 / .06), 0 24px 48px -28px rgb(15 23 42 / .35);
+  font-family: var(--font-sans); font-size: 13.5px; line-height: 1.45; text-wrap: pretty;
+}
+.rs-paper section { margin-top: 18px; }
+.rs-head { padding-bottom: 2px; }
+.brand-app .rs-paper .rs-name, .rs-paper .rs-name { font-size: 32px; font-weight: 700; letter-spacing: -.025em; line-height: 1.05; color: #0e131c; }
+.rs-headline { margin-top: 6px; font-size: 14.5px; font-weight: 500; color: var(--rs-ink-body); }
+.rs-contact { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; row-gap: 2px; font-size: 12.5px; color: var(--rs-muted); }
+.rs-contact li + li::before { content: ""; display: inline-block; width: 1px; height: 11px; margin: 0 10px; vertical-align: -1px; background: currentColor; opacity: .4; }
+.brand-app .rs-paper .rs-h, .rs-paper .rs-h { margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--rs-rule); font-family: var(--font-sans); font-size: 11.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #0e131c; }
+.rs-list { display: grid; gap: 10px; }
+.rs-list-tight { display: grid; gap: 3px; }
+.rs-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.rs-role { font-weight: 650; color: #0e131c; }
+.rs-org { color: var(--rs-ink-body); }
+.rs-org-line { font-style: italic; }
+.rs-detail { margin-top: 2px; color: var(--rs-muted); }
+.rs-date { flex: none; font-size: 12.5px; color: var(--rs-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rs-bullets { margin-top: 3px; padding-left: 18px; list-style: disc; }
+.rs-bullets li { padding-left: 2px; }
+.rs-bullets li::marker { color: var(--rs-muted); }
+.rs-skills { display: grid; gap: 3px; }
+.rs-skills b { font-weight: 650; color: #0e131c; }
+.rs-new { margin-left: 4px; border-radius: 9999px; padding: 0 6px; font-size: 10px; font-weight: 600; vertical-align: 1px; }
+.rs-letter { margin-top: 28px; display: grid; gap: 12px; max-width: 600px; }
+.rs-date-line { color: var(--rs-muted); margin-bottom: 8px; }
+
+/* Modern: left aligned, a thin accent rule under the header, headings in the accent's ink. */
+.rs-paper[data-template="modern"] .rs-head { padding-bottom: 14px; border-bottom: 3px solid var(--rs-accent); }
+.rs-paper[data-template="modern"] .rs-h { color: var(--rs-ink); border-bottom-color: color-mix(in oklab, var(--rs-accent) 45%, white); }
+.rs-paper[data-template="modern"] .rs-bullets li::marker { color: var(--rs-accent); }
+
+/* Classic: centered serif name, small-caps headings, black hairlines. */
+.rs-paper[data-template="classic"] .rs-head { text-align: center; }
+.rs-paper[data-template="classic"] .rs-contact { justify-content: center; }
+.brand-app .rs-paper[data-template="classic"] .rs-name, .rs-paper[data-template="classic"] .rs-name { font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif; font-weight: 600; letter-spacing: -.01em; font-size: 34px; }
+.brand-app .rs-paper[data-template="classic"] .rs-h, .rs-paper[data-template="classic"] .rs-h { font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif; font-size: 14px; font-weight: 600; letter-spacing: .08em; text-transform: none; font-variant: small-caps; border-bottom-color: #1b2230; color: #0e131c; }
+.rs-paper[data-template="classic"] .rs-head { padding-bottom: 6px; border-bottom: 1px solid var(--rs-accent); }
+
+/* Compact: tighter, so more fits on one page. */
+.rs-paper[data-template="compact"] { padding: 40px 52px 44px; font-size: 12.5px; line-height: 1.36; }
+.rs-paper[data-template="compact"] section { margin-top: 12px; }
+.rs-paper[data-template="compact"] .rs-name { font-size: 26px; }
+.rs-paper[data-template="compact"] .rs-head { display: grid; padding-bottom: 8px; border-bottom: 2px solid var(--rs-accent); }
+.rs-paper[data-template="compact"] .rs-h { margin-bottom: 5px; padding-bottom: 2px; }
+.rs-paper[data-template="compact"] .rs-list { gap: 6px; }
+
+/* Blocks: a click opens the field; the field being edited rings the block briefly. */
+.rs-block { border-radius: 6px; outline: 3px solid transparent; outline-offset: 4px; transition: outline-color 300ms cubic-bezier(.22,.8,.2,1); }
+.rs-block[title] { cursor: pointer; }
+.rs-block[title]:hover { outline-color: color-mix(in oklab, var(--aqua-ring-start) 35%, transparent); }
+.rs-block[data-flash] { outline-color: var(--aqua-ring-start); }
+.rs-block .rs-block { outline-offset: 2px; }
+
+/* The panel: form fields that a page click lands on get the same aqua ring for a moment. */
+.rs-field { scroll-margin-top: 12px; border-radius: 16px; transition: box-shadow 300ms cubic-bezier(.22,.8,.2,1); }
+.rs-field[data-flash] { box-shadow: 0 0 0 3px color-mix(in oklab, var(--aqua-ring-start) 70%, transparent); }
+.rs-stage .pc-tabs { grid-template-columns: repeat(4, 1fr); }
+
+/* Folders above the board. */
+.rs-folders { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); }
+.rs-folder { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; border-radius: 18px; padding: 12px 14px 12px 12px; text-align: left; background: var(--card); box-shadow: 0 1px 2px rgb(15 23 42 / .05), 0 6px 16px -12px rgb(15 23 42 / .3); transition: box-shadow 200ms cubic-bezier(.22,.8,.2,1), background-color 200ms cubic-bezier(.22,.8,.2,1); }
+.rs-folder:hover { background: color-mix(in oklab, var(--foreground) 3%, var(--card)); }
+.rs-folder::before { content: ""; position: absolute; left: 18px; top: -5px; width: 34px; height: 8px; border-radius: 6px 6px 0 0; background: color-mix(in oklab, var(--career, var(--muted-foreground)) 30%, white); }
+.rs-folder-new { justify-content: center; background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--foreground) 14%, transparent); color: var(--muted-foreground); }
+.rs-folder-new::before { display: none; }
+.rs-folder-new:hover { color: var(--foreground); }
+
+/* Status chips on applications. */
+.rs-status { display: inline-flex; align-items: center; border-radius: 9999px; padding: 2px 9px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.rs-status[data-s="saved"] { background: var(--muted); color: var(--foreground); }
+.rs-status[data-s="applied"] { background: var(--aqua-gradient); color: var(--foreground); }
+.rs-status[data-s="interviewing"] { background: var(--warning-soft); color: var(--foreground); }
+.rs-status[data-s="offer"] { background: var(--success-soft); color: var(--foreground); }
+.rs-status[data-s="closed"] { background: var(--muted); color: var(--muted-foreground); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-block, .rs-field, .rs-folder { transition: none; }
+}
+
+/* Download as PDF prints only the page. */
+.rs-print-root { display: none; }
+@media print {
+  @page { size: letter; margin: 0; }
+  body > *:not(.rs-print-root) { display: none !important; }
+  .rs-print-root { display: block !important; }
+  .rs-print-root .rs-paper { box-shadow: none; border-radius: 0; min-height: 0; width: 8.5in; }
+  .rs-print-root .rs-block { outline: none !important; }
+}

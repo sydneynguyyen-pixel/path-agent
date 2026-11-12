@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyRunEvent, laneLayout, LANE, laterLine, recheckSummary, recordRun, RUN_HISTORY_CAP, runGroups, runTitle, storyLines, type RunEvent, type TraceRun } from "@/lib/run";
+import { applyRunEvent, checkResult, factPlain, laneLayout, LANE, laterLine, recheckSummary, recordRun, RUN_HISTORY_CAP, runGroups, runTitle, storyLines, toolStates, traceRows, type RunEvent, type TraceRun } from "@/lib/run";
 
 const on = { reader: true, planner: true, backup: true, drafter: true };
 type Timed = RunEvent & { at: number };
@@ -115,5 +115,33 @@ describe("helper lanes", () => {
     expect(kept[0]!.x).toBeGreaterThan(layout.changes[0]!.x);
     expect(layout.links).toHaveLength(2);
     expect(layout.ticks.map((t) => t.label)).toEqual(["0s", "4s · usable", "+2s"]);
+  });
+});
+
+describe("behind the scenes", () => {
+  it("lays out a re-check's steps with timing, and lists what it kept", () => {
+    const { rows, totalMs } = traceRows(play(RECHECK), [play(FIRST)]);
+    expect(rows.filter((r) => r.kind === "kept").map((r) => r.tool)).toEqual(["read_portal_error", "find_courses_that_count"]);
+    const steps = rows.filter((r) => r.kind === "step");
+    expect(steps.map((r) => r.tool)).toEqual(["search_open_sections", "submit_recommendation"]);
+    for (const s of steps) if (s.kind === "step") expect(s.endMs).toBeGreaterThanOrEqual(s.startMs);
+    expect(rows.some((r) => r.kind === "handoff")).toBe(true);
+    expect(totalMs).toBeGreaterThanOrEqual(2000);
+  });
+
+  it("marks each tool as ran, kept or not needed", () => {
+    expect(toolStates(play(RECHECK), [play(FIRST)])).toEqual({
+      read_portal_error: "kept", find_courses_that_count: "kept", search_open_sections: "ran", check_week_fit: "idle", submit_recommendation: "ran",
+    });
+    expect(play(RECHECK).stale?.tools).toEqual(["search_open_sections", "submit_recommendation"]);
+  });
+
+  it("names facts in plain words and reports the safety checks", () => {
+    expect(factPlain("seats.math13")).toBe("MATH 13 filled");
+    expect(factPlain("note.no-early")).toBe("Your note");
+    expect(checkResult(play(FIRST)).state).toBe("passed");
+    const sentBack = applyRunEvent(play(FIRST.slice(0, 5)), { type: "step", tool: "submit_recommendation", helper: "planner", text: "The safety check sent a recommendation back: MATH 13 section 02 has no open seats.", ok: false }, new Date(3000));
+    expect(checkResult(sentBack).sentBack).toEqual(["MATH 13 section 02 has no open seats."]);
+    expect(checkResult(sentBack).state).toBe("running");
   });
 });

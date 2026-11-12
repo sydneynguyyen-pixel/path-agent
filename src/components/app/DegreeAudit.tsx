@@ -9,6 +9,7 @@ import { outsideSchool, requirements } from "@/data/scenario";
 import { useDegreeAudit } from "@/hooks/use-degree-audit";
 import sceneRegistration from "@/assets/scene-registration.jpg";
 import { useJourney } from "@/lib/journey";
+import "@/styles/motion-overview.css";
 import { formatCredits, standingOf, transferReadiness, type AuditCategory, type AuditRule, type AuditSlot, type DegreeAudit, type TransferItem } from "@/lib/degree";
 
 const share = (n: number, of: number) => `${(n / of) * 100}%`;
@@ -18,7 +19,12 @@ const wide = () => typeof window !== "undefined" && window.matchMedia("(min-widt
 export function DegreeAuditView({ audit, row, slot }: { audit: DegreeAudit; row?: string | undefined; slot?: string | undefined }) {
   const { input } = useDegreeAudit();
   const [openId, setOpenId] = useState<string | null>(row ?? null);
-  const toggle = (id: string) => setOpenId((c) => (c === id && !wide() ? null : id));
+  // Marks fill in only once she picks a row, not for the row the page opens on.
+  const [chose, setChose] = useState(false);
+  const toggle = (id: string) => {
+    setChose(true);
+    setOpenId((c) => (c === id && !wide() ? null : id));
+  };
   const met = audit.rules.filter((r) => r.done >= r.needed).length;
   const ready = useMemo(() => transferReadiness(requirements, input), [input]);
   const readyDone = ready.filter((r) => r.status === "done").length;
@@ -45,6 +51,8 @@ export function DegreeAuditView({ audit, row, slot }: { audit: DegreeAudit; row?
     : shown === "rules" ? { name: "University requirements", about: `Already part of your ${audit.needed}`, amount: <><b>{met}</b> of {audit.rules.length} met</>, body: rulesLines }
     : shown === "transfer" ? { name: "Finish at Bayview before you transfer", about: "Needed before Fall 2027", amount: <><b>{readyDone}</b> of {ready.length} done</>, body: transferLines }
     : { name: "How your units convert", about: "Quarters at Bayview, semesters at Northgate", body: <UnitLines /> };
+  // How many lines the detail holds, so its count can settle after the last mark.
+  const lines = picked ? picked.slots.length : shown === "rules" ? audit.rules.length : shown === "transfer" ? ready.length : 0;
 
   return (
     <div ref={root} className="dg-audit">
@@ -75,20 +83,20 @@ export function DegreeAuditView({ audit, row, slot }: { audit: DegreeAudit; row?
         <div className="dg-split">
           <div className="dg-rows">
             {audit.categories.map((c) => <CategoryRow key={c.id} category={c} open={openId === c.id} selected={shown === c.id} found={slot} onToggle={() => toggle(c.id)} />)}
-            <section className="dg-row" data-open={openId === "rules" || undefined} data-selected={shown === "rules" || undefined}>
+            <section className="dg-row motion-marks-row" style={{ "--n": audit.rules.length } as CSSProperties} data-open={openId === "rules" || undefined} data-selected={shown === "rules" || undefined}>
               <button type="button" className="dg-row-head" aria-expanded={openId === "rules"} onClick={() => toggle("rules")}>
                 <span className="dg-row-name"><b>University requirements</b><span>Already part of your {audit.needed}</span></span>
                 <span className="dg-row-marks" aria-hidden="true">{audit.rules.map((r) => <DegreeMark key={r.id} status={r.done >= r.needed ? "done" : r.done + r.planned >= r.needed ? "planned" : "open"} />)}</span>
-                <span className="dg-row-credits"><b>{met}</b> of {audit.rules.length} met</span>
+                <span className="dg-row-credits motion-count"><b>{met}</b> of {audit.rules.length} met</span>
                 <ChevronDown className="dg-chev" aria-hidden="true" />
               </button>
               <Collapse open={openId === "rules"}>{rulesLines}</Collapse>
             </section>
-            <section className="dg-row" data-row="transfer" data-open={openId === "transfer" || undefined} data-selected={shown === "transfer" || undefined}>
+            <section className="dg-row motion-marks-row" style={{ "--n": ready.length } as CSSProperties} data-row="transfer" data-open={openId === "transfer" || undefined} data-selected={shown === "transfer" || undefined}>
               <button type="button" className="dg-row-head" aria-expanded={openId === "transfer"} onClick={() => toggle("transfer")}>
                 <span className="dg-row-name"><b>Finish at Bayview before you transfer</b><span>Needed before Fall 2027</span></span>
                 <span className="dg-row-marks" aria-hidden="true">{ready.map((r) => <DegreeMark key={r.id} status={r.status} />)}</span>
-                <span className="dg-row-credits"><b>{readyDone}</b> of {ready.length} done</span>
+                <span className="dg-row-credits motion-count"><b>{readyDone}</b> of {ready.length} done</span>
                 <ChevronDown className="dg-chev" aria-hidden="true" />
               </button>
               <Collapse open={openId === "transfer"}>{transferLines}</Collapse>
@@ -106,11 +114,14 @@ export function DegreeAuditView({ audit, row, slot }: { audit: DegreeAudit; row?
 
           {/* Wide screens: the picked row's lines sit beside the list instead of unfolding under it. */}
           <aside className="dg-detail" aria-label={`${detail.name} details`} style={detail.color ? ({ "--c": detail.color } as CSSProperties) : undefined}>
-            <div className="dg-detail-head">
-              <div><h2>{detail.name}</h2><p>{detail.about}</p></div>
-              {detail.amount && <div className="dg-row-credits">{detail.amount}</div>}
+            {/* Keyed by row, so picking another one replays the fill: marks one after another, then the count. */}
+            <div key={shown} className={chose ? "motion-marks" : undefined} style={{ "--n": lines } as CSSProperties}>
+              <div className="dg-detail-head">
+                <div><h2>{detail.name}</h2><p>{detail.about}</p></div>
+                {detail.amount && <div className="dg-row-credits motion-count">{detail.amount}</div>}
+              </div>
+              <div className="dg-slots">{detail.body}</div>
             </div>
-            <div className="dg-slots">{detail.body}</div>
           </aside>
         </div>
       </div>
@@ -120,11 +131,11 @@ export function DegreeAuditView({ audit, row, slot }: { audit: DegreeAudit; row?
 
 function CategoryRow({ category: c, open, selected, found, onToggle }: { category: AuditCategory; open: boolean; selected: boolean; found?: string | undefined; onToggle: () => void }) {
   return (
-    <section className="dg-row" data-row={c.id} data-open={open || undefined} data-selected={selected || undefined} style={{ "--c": c.color } as CSSProperties}>
+    <section className="dg-row motion-marks-row" data-row={c.id} data-open={open || undefined} data-selected={selected || undefined} style={{ "--c": c.color, "--n": c.slots.length } as CSSProperties}>
       <button type="button" className="dg-row-head" aria-expanded={open} onClick={onToggle}>
         <span className="dg-row-name"><b>{c.name}</b><span>{c.about}</span></span>
         <span className="dg-row-marks" aria-hidden="true">{c.slots.map((s) => <DegreeMark key={s.id} status={s.status} />)}</span>
-        <span className="dg-row-credits"><b>{formatCredits(c.credits.done)}</b> of {c.needed}</span>
+        <span className="dg-row-credits motion-count"><b>{formatCredits(c.credits.done)}</b> of {c.needed}</span>
         <ChevronDown className="dg-chev" aria-hidden="true" />
       </button>
       <Collapse open={open}>

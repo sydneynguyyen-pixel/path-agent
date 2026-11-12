@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AgentAvatar, SubjectIcon } from "./Brand";
+import { GrowCheck } from "./GrowCheck";
 import { useJourney } from "@/lib/journey";
 import { evidenceFor, courseCode } from "@/lib/skills";
 import { registrationSkills, type Skill, type EvidenceLevel } from "@/data/scenario";
@@ -25,7 +26,7 @@ export function SkillRow({ skill, actions = true }: { skill: Skill; actions?: bo
   const [file, setFile] = useState<File | null>(null);
   const level = evidenceFor(skill, review);
   return <div className="skill-row relative py-4">
-    <div className="flex items-start gap-3"><SubjectIcon course={skill.confidence === "Low" ? "Unknown" : skill.course} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-medium">{review?.wording || skill.name}</h3>{review?.confirmed && <Check className="size-3.5 text-mark-yes" aria-label="Confirmed" />}</div><p className="mt-1 text-xs text-muted-foreground">{skill.course} · {skill.course} syllabus · {skill.source}</p><div className="mt-2"><EvidenceIndicator level={level} /></div>
+    <div className="flex items-start gap-3"><SubjectIcon course={skill.confidence === "Low" ? "Unknown" : skill.course} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="font-medium">{review?.wording || skill.name}</h3><GrowCheck on={!!review?.confirmed} label="Confirmed" className="size-3.5 text-mark-yes" /></div><p className="mt-1 text-xs text-muted-foreground">{skill.course} · {skill.course} syllabus · {skill.source}</p><div className="mt-2"><EvidenceIndicator level={level} /></div>
     <details className="mt-2 text-xs"><summary className="cursor-pointer text-muted-foreground">See the syllabus line</summary><blockquote className="mt-2 rounded-xl bg-secondary p-3 leading-relaxed">“{skill.quote}”<cite className="mt-1 block not-italic text-muted-foreground">{skill.course} syllabus · {skill.source} · synthetic</cite></blockquote></details>
     {(review?.work || skill.work) && <p className="mt-2 break-words text-xs text-muted-foreground"><Paperclip className="mr-1 inline size-3" />{review?.work || skill.work}</p>}
     {actions && <div className="mt-3 flex items-center gap-1"><Button size="sm" variant="outline" disabled={review?.confirmed} onClick={() => { j.reviewSkill(skill.id, { confirmed: true }); toast("Saved to your skills"); }}><Check className="size-3" />{review?.confirmed ? "Confirmed" : "Confirm"}</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={`More actions for ${skill.name}`}><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="start"><DropdownMenuItem onSelect={() => setDialog("wording")}><Pencil />Edit wording</DropdownMenuItem><DropdownMenuItem onSelect={() => setDialog("work")}><Paperclip />Attach work</DropdownMenuItem><DropdownMenuItem onSelect={() => j.reviewSkill(skill.id, { hidden: true })}><EyeOff />Hide</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>}

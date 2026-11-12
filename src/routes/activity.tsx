@@ -5,6 +5,9 @@ import { useEvents, useScriptNow, When, EventStatusChip } from "@/components/app
 import { useJourney, type AgentId } from "@/lib/journey";
 import { runGroups } from "@/lib/run";
 import { NeedsYou, RunCard } from "@/components/app/RunCard";
+import { BehindScenes } from "@/components/app/BehindScenes";
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 import { Spot } from "@/components/app/Illustrations";
 
 type Search = { tab?: "timeline" | "decisions" | undefined; helper?: AgentId | undefined };
@@ -54,6 +57,21 @@ export function Activity({ embedded = false }: { embedded?: boolean; tab?: "time
   );
 }
 
+const VIEW_KEY = "pa-runs-view";
+
+/** Simple for students; Behind the scenes for anyone who wants to see how it worked. Remembered in this browser. */
+function useView() {
+  const [view, setView] = useState<"simple" | "behind">("simple");
+  useEffect(() => {
+    try { if (localStorage.getItem(VIEW_KEY) === "behind") setView("behind"); } catch { /* storage blocked */ }
+  }, []);
+  const set = (v: "simple" | "behind") => {
+    setView(v);
+    try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ }
+  };
+  return [view, set] as const;
+}
+
 function Runs() {
   const j = useJourney();
   const events = useEvents();
@@ -64,9 +82,17 @@ function Runs() {
   const groups = runGroups(all);
   const latest = all.at(-1) ?? null;
   const earlier = events.filter((e) => !(groups.length && e.id === "stat2-full"));
+  const [view, setView] = useView();
   return (
     <div className="space-y-4">
       <NeedsYou latest={latest} />
+      {groups.length > 0 && (
+        <div role="tablist" aria-label="How much detail" className="inline-flex gap-1 rounded-full border bg-card p-1 text-sm">
+          {([["simple", "Simple"], ["behind", "Behind the scenes"]] as const).map(([v, l]) => (
+            <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => setView(v)} className={cn("inline-flex h-8 items-center rounded-full px-4", view === v ? "glass-active font-medium" : "text-muted-foreground hover:text-foreground")}>{l}</button>
+          ))}
+        </div>
+      )}
       {groups.length === 0 ? (
         <div className="rounded-3xl border border-dashed p-10 text-center text-muted-foreground">
           <Spot name="rocks" className="mx-auto mb-3 w-28" />
@@ -78,7 +104,10 @@ function Runs() {
           const from = g.root.startedAt?.getTime() ?? 0;
           const until = groups[i - 1]?.root.startedAt?.getTime() ?? Infinity;
           const decisions = j.decisions.filter((d) => d.when.getTime() >= from && d.when.getTime() < until);
-          return <RunCard key={g.root.runId ?? i} group={g} decisions={decisions} latest={i === 0} />;
+          // Keyed by view so switching plays the swap motion instead of jumping.
+          return view === "behind"
+            ? <div key={`b-${g.root.runId ?? i}`} className="bts-swap"><BehindScenes group={g} /></div>
+            : <div key={`s-${g.root.runId ?? i}`} className="bts-swap"><RunCard group={g} decisions={decisions} latest={i === 0} /></div>;
         })
       )}
       {earlier.length > 0 && (

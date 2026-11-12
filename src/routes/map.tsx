@@ -4,6 +4,8 @@ import { memo, useCallback, useMemo, useRef, useState, type CSSProperties, type 
 import { SubjectIcon } from "@/components/app/Brand";
 import { Visual } from "@/components/app/MapParts";
 import { PathView } from "@/components/app/PathView";
+import { useNewestGrowIn } from "@/components/app/OverviewGrowIn";
+import "@/styles/motion-overview.css";
 import { useCanvasCamera } from "@/hooks/use-canvas-camera";
 import { useSlidingPill } from "@/hooks/use-sliding-pill";
 import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
@@ -186,6 +188,7 @@ function TimelineView({ layers, memory }: { layers: Record<MapLayer, boolean>; m
   const onAdd = useCallback(() => setMasters(true), [setMasters]);
 
   const selected = selectedId ? layout.nodes.find((n) => n.id === selectedId) ?? null : null;
+  const grownId = useNewestGrowIn((id) => layout.nodes.some((n) => n.id === id));
   const dot = Math.max(16, 22 * (cam.s < 0.5 ? cam.s * 2 : cam.s));
   const worldStyle = { transform: `translate(${cam.x}px, ${cam.y}px)`, "--s": cam.s, "--k": nodeScale(cam.s) } as CSSProperties;
   const ticks = size.h ? rulerTicks(cam, size.h, layout.lastMonth) : [];
@@ -206,7 +209,7 @@ function TimelineView({ layers, memory }: { layers: Record<MapLayer, boolean>; m
         onKeyDown={onKeyDown}
       >
         <div className="map-world" style={worldStyle} data-near={cam.s >= NEAR_SCALE || undefined}>
-          <World layout={layout} layers={layers} selectedId={selectedId} onPick={onPick} onAdd={onAdd} />
+          <World layout={layout} layers={layers} selectedId={selectedId} grownId={grownId} onPick={onPick} onAdd={onAdd} />
         </div>
       </div>
 
@@ -241,19 +244,22 @@ function FramePicker({ value, onPick }: { value: Frame; onPick: (f: Frame) => vo
 }
 
 /** Rendered once per layout, so moving the camera only touches one transform. */
-const World = memo(function World({ layout, layers, selectedId, onPick, onAdd }: { layout: MapLayout; layers: Record<MapLayer, boolean>; selectedId: string | null; onPick: (id: string) => void; onAdd: () => void }) {
+const World = memo(function World({ layout, layers, selectedId, grownId, onPick, onAdd }: { layout: MapLayout; layers: Record<MapLayer, boolean>; selectedId: string | null; grownId: string | null; onPick: (id: string) => void; onAdd: () => void }) {
   const hidden = (layer?: MapLayer) => !!layer && !layers[layer];
+  // Focus: everything outside the picked node, its classes and the graduation milestone steps back.
+  const related = (n: MapNode) => !selectedId || n.id === selectedId || n.parent === selectedId || n.kind === "milestone";
+  const ownLink = (id: string) => id === `link-${selectedId}` || id === `span-${selectedId}`;
   return (
     <>
       <svg className="map-svg" width="1" height="1" aria-hidden="true">
         <g className="map-scaled">
           <line x1={-4000} x2={4000} y1={layout.today} y2={layout.today} className="map-today-line" />
-          {layout.links.map((l) => <path key={l.id} d={l.d} className="map-link" data-status={l.status} data-off={hidden(l.layer) || undefined} style={{ stroke: colorOf(l.layer, l.school) }} />)}
+          {layout.links.map((l) => <path key={l.id} d={l.d} className="map-link" data-status={l.status} data-off={hidden(l.layer) || undefined} data-focus={(selectedId && ownLink(l.id)) || undefined} data-dim={(selectedId && !ownLink(l.id)) || undefined} style={{ stroke: colorOf(l.layer, l.school) }} />)}
           {layout.spine.map((s) => <path key={s.id} d={`M 0 ${s.y1} L 0 ${s.y2}`} className="map-spine" data-status={s.status} style={{ stroke: colorOf(undefined, s.school) }} />)}
         </g>
         {layout.ports.filter((p) => p.layer).map((p) => <circle key={p.id} r={3} className="map-port" data-off={hidden(p.layer) || undefined} style={{ stroke: colorOf(p.layer), "--x": p.x, "--y": p.y } as CSSProperties} />)}
       </svg>
-      {layout.nodes.map((n) => <Node key={n.id} node={n} off={hidden(n.layer)} selected={selectedId === n.id || selectedId === n.parent} onPick={onPick} onAdd={onAdd} />)}
+      {layout.nodes.map((n) => <Node key={n.id} node={n} off={hidden(n.layer)} selected={selectedId === n.id || selectedId === n.parent} dim={!related(n)} grown={grownId === n.id} onPick={onPick} onAdd={onAdd} />)}
       <svg className="map-svg map-ports" width="1" height="1" aria-hidden="true">
         {layout.ports.filter((p) => !p.layer).map((p) => <circle key={p.id} r={3} className="map-port" style={{ stroke: colorOf(undefined, p.school), "--x": p.x, "--y": p.y } as CSSProperties} />)}
       </svg>
@@ -271,9 +277,9 @@ function StatusMark({ status, plain }: { status: MapStatus; plain?: boolean }) {
   );
 }
 
-function Node({ node: n, off, selected, onPick, onAdd }: { node: MapNode; off: boolean; selected: boolean; onPick: (id: string) => void; onAdd: () => void }) {
+function Node({ node: n, off, selected, dim = false, grown = false, onPick, onAdd }: { node: MapNode; off: boolean; selected: boolean; dim?: boolean; grown?: boolean; onPick: (id: string) => void; onAdd: () => void }) {
   const style = { "--x": n.x, "--y": n.top, width: n.w, height: n.h, "--c": colorOf(n.layer, n.school) } as CSSProperties;
-  const common = { type: "button" as const, className: "mn", style, draggable: false, "data-kind": n.kind, "data-status": n.status, "data-off": off || undefined, "data-selected": (selected && n.kind !== "work") || undefined };
+  const common = { type: "button" as const, className: "mn", style, draggable: false, "data-kind": n.kind, "data-status": n.status, "data-off": off || undefined, "data-selected": (selected && n.kind !== "work") || undefined, "data-dim": dim || undefined, "data-grown": grown || undefined };
   if (n.kind === "add") return <button {...common} onClick={onAdd}><Plus className="size-3" aria-hidden="true" />{n.title}</button>;
   const pick = () => onPick(n.parent ?? n.id);
   if (n.kind === "work") return <button {...common} onClick={pick}><span className="truncate font-medium">{n.title}</span><span className="ml-auto shrink-0 text-muted-foreground">{n.sub}</span></button>;

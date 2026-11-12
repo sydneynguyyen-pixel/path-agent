@@ -22,6 +22,8 @@ import { useSlidingPill } from "@/hooks/use-sliding-pill";
 import { photoUrl } from "@/lib/photos";
 import { PostingLink } from "@/components/app/PostingLink";
 import sceneOpportunities from "@/assets/scene-opportunities.jpg";
+import { useReflow } from "@/lib/motion-plan";
+import "@/styles/motion-plan.css";
 
 export const Route = createFileRoute("/explore")({
   validateSearch: (s: Record<string, unknown>): { role?: string; open?: string; fills?: string; view?: "careers" | "plan" | "people"; calendar?: boolean } => ({
@@ -305,6 +307,9 @@ function Explore() {
   // One layout per type: events are a calendar (the date matters), classes and internships a list by deadline, clubs a grid, All the goal shelves.
   const byDeadline = local.kind === "class" || local.kind === "internship";
   const eventsBoard = local.kind === "event";
+  // Cards reflow when the results change: the ids say what changed, the layout says whether they can glide.
+  const layout = people ? "people" : eventsBoard ? "events" : results.length === 0 ? "none" : byDeadline ? "deadline" : local.kind === "all" && !hasFilters ? "shelves" : local.kind === "all" ? "compact" : "grid";
+  const reflow = useReflow<HTMLDivElement>(results.map((o) => o.id).join(","), `${layout}:${local.kind}`);
   const schoolScope = <SchoolScope nearby={local.nearbySchools} onChange={(nearbySchools) => update({ nearbySchools })} />;
 
 
@@ -334,7 +339,7 @@ function Explore() {
             </PillGroup>
             {!eventsBoard && !people && (
               <button type="button" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)} className={cn("inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm text-muted-foreground hover:text-foreground", (filtersOpen || activeFilters > 0) && "glass-active font-medium text-foreground")}>
-                <SlidersHorizontal className="size-3.5" aria-hidden="true" />Filters{activeFilters > 0 && <span className="grid size-5 place-items-center rounded-full count-badge text-[10px]">{activeFilters}</span>}
+                <SlidersHorizontal className="size-3.5" aria-hidden="true" />Filters{activeFilters > 0 && <span className="grid size-5 place-items-center rounded-full count-badge text-[10px]"><Roll value={activeFilters} /></span>}
               </button>
             )}
             {!eventsBoard && fillsSlot && <button type="button" onClick={clearFills} className="glass-active inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium">Classes for your {fillsSlot.need.toLowerCase()} <X className="size-3.5" aria-hidden="true" /></button>}
@@ -360,6 +365,7 @@ function Explore() {
         <div aria-live="polite" className="sr-only">{results.length} results</div>
         {local.kind === "class" && !people && <div className="flex justify-end">{schoolScope}</div>}
         {!people && <OnYourPlan kind={local.kind} />}
+        <div ref={reflow}>
         {people ? (
           <PeopleMet />
         ) : eventsBoard ? (
@@ -378,6 +384,7 @@ function Explore() {
         ) : (
           <KindGrid items={results} gaps={missing} onOpen={onOpen} />
         )}
+        </div>
 
         <div className={cn("flex flex-wrap items-center justify-between gap-3 border-t pt-5 text-sm text-muted-foreground", people && "hidden")}>
           <span className="flex items-center gap-2"><CalendarClock className="size-4 shrink-0" aria-hidden="true" /> {timeLeftLine(terms, results)}</span>

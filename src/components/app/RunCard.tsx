@@ -7,6 +7,9 @@ import { SafeSource } from "@/components/app/SafeSource";
 import { HelperLanes } from "@/components/app/HelperLanes";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import type { AgentId } from "@/lib/journey";
+import "@/styles/motion-agents.css";
 
 /** One chip per document, at most three, so a step that cited one rulebook five times shows it once. */
 function uniqueSources(ids: string[]) {
@@ -52,7 +55,7 @@ export function NeedsYou({ latest }: { latest: TraceRun | null }) {
   }
   if (!text) return null;
   return (
-    <div role="status" className="surface flex flex-wrap items-center gap-3 p-4">
+    <div key={text} role="status" className="surface run-settle flex flex-wrap items-center gap-3 p-4">
       <span className="rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-medium text-warning">Needs you</span>
       <p className="min-w-0 flex-1 basis-56 text-[15px] font-medium">{text}</p>
       {action}
@@ -60,12 +63,12 @@ export function NeedsYou({ latest }: { latest: TraceRun | null }) {
   );
 }
 
-function Story({ run, earlier }: { run: TraceRun; earlier: TraceRun[] }) {
+function Story({ run, earlier, lit, onLit }: { run: TraceRun; earlier: TraceRun[]; lit: AgentId | null; onLit: (h: AgentId | null) => void }) {
   const j = useJourney();
   return (
     <ul className="space-y-3">
       {storyLines(run, j.agentOn, earlier).map((l) => (
-        <li key={l.helper} className={cn("flex flex-wrap items-center gap-x-3 gap-y-1.5", !l.used && "opacity-50")}>
+        <li key={l.helper} onMouseEnter={() => onLit(l.helper)} onMouseLeave={() => onLit(null)} className={cn("run-line -mx-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-2 py-1", !l.used && "opacity-50", lit === l.helper && "run-lit")}>
           <AgentAvatar agent={l.helper} className="size-8" />
           <p className="min-w-0 flex-1 basis-56 text-[15px] leading-snug"><b className="font-semibold">{HELPER_NAME[l.helper]}</b> {l.used ? l.text.charAt(0).toLowerCase() + l.text.slice(1) : l.text.replace(`${HELPER_NAME[l.helper]} `, "").replace(`${HELPER_NAME[l.helper]}'s `, "'s ")}{l.used && !/[.!?]$/.test(l.text) ? "." : ""}</p>
           {l.sourceIds.length > 0 && <span className="flex flex-wrap gap-1 pl-11 sm:justify-end sm:pl-0">{uniqueSources(l.sourceIds).map((id) => <SafeSource key={id} id={id} />)}</span>}
@@ -102,6 +105,8 @@ export function RunCard({ group, decisions, latest }: { group: RunGroup; decisio
   const filled = rechecks[0]?.stale?.facts.some((f) => f.startsWith("seats."));
   const t0 = root.startedAt?.getTime() ?? 0;
   const ttv = usableIn(root.ttvMs);
+  // One highlight shared by the story, the sources and the lanes, so any claim traces to its step.
+  const [lit, setLit] = useState<AgentId | null>(null);
   return (
     <article className="surface space-y-4 p-5 sm:p-7" aria-label={runTitle(root)}>
       <header className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -110,12 +115,12 @@ export function RunCard({ group, decisions, latest }: { group: RunGroup; decisio
         <span className="ml-auto text-xs text-muted-foreground">{[ttv, root.startedAt && fmtStamp(root.startedAt), root.status === "running" && "running now"].filter(Boolean).join(" · ")}</span>
       </header>
 
-      <Story run={root} earlier={[]} />
+      <Story run={root} earlier={[]} lit={lit} onLit={setLit} />
 
       {replaced && firstPick && (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-secondary px-4 py-3 text-sm">
-          <span className="text-muted-foreground line-through">First pick: {shortCourse(firstPick)} §{firstPick.section} · {verdictLine[firstPick.verdict]}</span>
-          <span className="text-xs font-medium text-alert">{filled ? "filled" : "replaced"} {laterLine(t0, rechecks[0]!.startedAt?.getTime() ?? t0)}</span>
+          <span className="run-strike text-muted-foreground">First pick: {shortCourse(firstPick)} §{firstPick.section} · {verdictLine[firstPick.verdict]}</span>
+          <span className="run-drop text-xs font-medium text-alert">{filled ? "filled" : "replaced"} {laterLine(t0, rechecks[0]!.startedAt?.getTime() ?? t0)}</span>
         </p>
       )}
 
@@ -143,7 +148,7 @@ export function RunCard({ group, decisions, latest }: { group: RunGroup; decisio
         </ul>
       )}
 
-      {root.steps.length > 0 && <HelperLanes root={root} rechecks={rechecks} />}
+      {root.steps.length > 0 && <HelperLanes root={root} rechecks={rechecks} lit={lit} onLit={setLit} />}
     </article>
   );
 }

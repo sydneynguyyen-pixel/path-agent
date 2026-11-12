@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowRight, CalendarCheck, Check, CheckCheck, Copy, Download, EyeOff, FileText, FlaskConical, Lightbulb, MessageSquareText, MoreHorizontal, Paperclip, Pencil, Plus, Sparkles, Wrench, X, type LucideIcon } from "lucide-react";
+import { ArrowRight, CalendarCheck, CheckCheck, Copy, Download, EyeOff, FileText, FlaskConical, Lightbulb, MessageSquareText, MoreHorizontal, Paperclip, Pencil, Plus, Sparkles, Wrench, X, type LucideIcon } from "lucide-react";
 import { careerRoles, skillCourses, type EventPlatform } from "@/data/scenario";
 import { SCRIPT_TODAY, useJourney, type OwnSkill } from "@/lib/journey";
 import { attendance, type Found } from "@/lib/experiences";
@@ -16,6 +16,8 @@ import { Accounts, PROOF_LINE, Via } from "@/components/app/EventBits";
 import { EventMark } from "@/components/app/ItemMark";
 import { CourseLink, EvidenceIndicator } from "@/components/app/SkillsBits";
 import { usePortfolioSkills } from "@/hooks/use-portfolio-skills";
+import { GrowCheck } from "@/components/app/GrowCheck";
+import { useConfirmCascade } from "@/components/app/GrowSkills";
 import { TOOLS } from "@/components/app/PathCard";
 import { Link } from "@tanstack/react-router";
 
@@ -126,10 +128,12 @@ export function CareerSkills({ found, onConnect, resumeOpen, onResume }: { found
   const themes = [...new Set(shown.map((s) => s.theme))];
   const confirmable = sure.filter((s) => !s.confirmed);
 
+  // Rows check one after another (and uncheck in reverse on Undo), so she sees each one land.
+  const cascade = useConfirmCascade(j.reviewSkill);
   const confirmAll = () => {
-    const keys = confirmable.flatMap((s) => s.reviewKeys);
-    keys.forEach((k) => j.reviewSkill(k, { confirmed: true }));
-    toast(`${confirmable.length} ${confirmable.length === 1 ? "skill" : "skills"} confirmed`, { description: "They can go on your card and resume now.", action: { label: "Undo", onClick: () => keys.forEach((k) => j.reviewSkill(k, { confirmed: false })) } });
+    const rows = [...confirmable];
+    cascade(rows, true);
+    toast(`${rows.length} ${rows.length === 1 ? "skill" : "skills"} confirmed`, { description: "They can go on your card and resume now.", action: { label: "Undo", onClick: () => cascade(rows, false) } });
   };
 
   return (
@@ -250,7 +254,7 @@ function PortfolioSkillRow({ skill: s, forGoal }: { skill: PortfolioSkill; forGo
         </div>
         <div className="flex items-center gap-1">
           {s.confirmed
-            ? <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-success-soft px-3 text-xs font-medium"><Check className="size-3.5" aria-hidden="true" />Confirmed</span>
+            ? <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-success-soft px-3 text-xs font-medium"><GrowCheck on={s.confirmed} className="size-3.5" />Confirmed</span>
             : <Button size="sm" onClick={() => { review({ confirmed: true }); toast(`${s.name} confirmed`, { description: "It can go on your card and resume now.", action: { label: "Undo", onClick: () => review({ confirmed: false }) } }); }}>Yes, I did this</Button>}
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={`More actions for ${s.name}`}><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>

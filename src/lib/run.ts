@@ -38,7 +38,7 @@ export type TraceRun = {
   /** Kept for the parts of the app that only read steps. */
   steps: (TraceStep & { tool: string; perm: "read" | "suggested" })[];
   /** What changed, when a run is re-checking earlier work. */
-  stale: { facts: string[]; helpers: AgentId[] } | null;
+  stale: { facts: string[]; helpers: AgentId[]; tools: string[] } | null;
   result: AgentResult | null;
   ttvMs: number | null;
   /** The question a helper is waiting on, while status is "waiting". */
@@ -48,7 +48,7 @@ export type TraceRun = {
 export const newTraceRun = (): TraceRun => ({ runId: null, parentRunId: null, status: "running", mode: null, reason: null, cause: null, trigger: "error", startedAt: null, entries: [], steps: [], stale: null, result: null, ttvMs: null, need: null });
 
 /** Which helper owns each tool, so a re-check can say who is redoing work. */
-const TOOL_HELPER: Record<string, AgentId> = {
+export const TOOL_HELPER: Record<string, AgentId> = {
   read_portal_error: "reader",
   find_courses_that_count: "planner",
   search_open_sections: "backup",
@@ -74,7 +74,7 @@ export function applyRunEvent(run: TraceRun | null, event: RunEvent | AgentEvent
       return { ...r, entries: [...r.entries, { kind: "blocked", tool: e.tool, rule: e.rule, at }] };
     case "stale": {
       const helpers = [...new Set(e.tools.map((t) => TOOL_HELPER[t]).filter((h): h is AgentId => !!h))];
-      return { ...r, stale: { facts: e.facts, helpers } };
+      return { ...r, stale: { facts: e.facts, helpers, tools: e.tools } };
     }
     case "done": {
       const ttvMs = e.ttvMs ?? (r.startedAt ? Math.max(0, at.getTime() - r.startedAt.getTime()) : null);
@@ -298,4 +298,88 @@ export function laneLayout(root: TraceRun, rechecks: TraceRun[] = []): LaneLayou
     if (r.ttvMs !== null) ticks.push({ x: xOf(start + r.ttvMs), label: i === 0 ? `${Math.round(r.ttvMs / 1000)}s · usable` : `+${Math.round(r.ttvMs / 1000)}s` });
   });
   return { width, height: LANE.top + ORDER.length * LANE.gap, laneY, dots, links, changes, ticks };
+}
+
+// ---------- Behind the scenes: trace rows, what was redone, safety checks ----------
+
+/** The agent's tools in run order, with plain names for students. */
+export const TOOLS: { id: string; plain: string }[] = [
+  { id: "read_portal_error", plain: "Read the registration page" },
+  { id: "find_courses_that_count", plain: "Check which classes count" },
+  { id: "search_open_sections", plain: "Find open seats" },
+  { id: "check_week_fit", plain: "Check your busy weeks" },
+  { id: "submit_recommendation", plain: "Make a pick and run the safety checks" },
+];
+export const toolPlain = (id: string) => TOOLS.find((t) => t.id === id)?.plain ?? id;
+
+export type TraceRow =
+  | { kind: "step"; id: string; tool: string; helper: AgentId; text: string; ok: boolean; sourceIds: string[]; startMs: number; endMs: number }
+  | { kind: "kept"; id: string; tool: string; helper: AgentId; text: string }
+  | { kind: "handoff"; id: string; from: AgentId; to: AgentId; summary: string; atMs: number };
+
+/**
+ * The waterfall for one run: steps with their start and end (a step starts when the previous entry
+ * ended), handoffs, and, for a re-check, the earlier steps it kept instead of redoing.
+ */
+export function traceRows(run: TraceRun, earlier: TraceRun[] = []): { rows: TraceRow[]; totalMs: number } {
+  const t0 = run.startedAt?.getTime() ?? run.entries[0]?.at.getTime() ?? 0;
+  const ranTools = new Set(run.steps.map((s) => s.tool));
+  const kept: TraceRow[] = [];
+  if (earlier.length) {
+    for (const t of TOOLS) {
+      if (ranTools.has(t.id)) continue;
+      const prev = [...earlier].reverse().flatMap((r) => [...r.steps].reverse()).find((s) => s.tool === t.id);
+      if (prev) kept.push({ kind: "kept", id: `kept-${t.id}`, tool: t.id, helper: prev.helper, text: prev.text });
+    }
+  }
+  const rows: TraceRow[] = [];
+  let prevMs = 0;
+  let stepIdx = 0;
+  for (const e of run.entries) {
+    const ms = Math.max(0, e.at.getTime() - t0);
+    if (e.kind === "handoff") rows.push({ kind: "handoff", id: `h-${ms}-${e.from}`, from: e.from, to: e.to, summary: e.summary, atMs: ms });
+    if (e.kind === "step") {
+      const s = run.steps[stepIdx++];
+      rows.push({ kind: "step", id: `s-${stepIdx}`, tool: s?.tool ?? "", helper: e.helper, text: e.text, ok: e.ok, sourceIds: e.sourceIds, startMs: prevMs, endMs: ms });
+    }
+    prevMs = ms;
+  }
+  const totalMs = Math.max(1000, prevMs, run.ttvMs ?? 0);
+  return { rows: [...kept, ...rows], totalMs };
+}
+
+export type ToolState = "ran" | "kept" | "idle";
+
+/** For each tool: did it run in this run, keep an earlier answer, or not take part. */
+export function toolStates(run: TraceRun, earlier: TraceRun[] = []): Record<string, ToolState> {
+  const ran = new Set(run.steps.map((s) => s.tool));
+  const before = new Set(earlier.flatMap((r) => r.steps.map((s) => s.tool)));
+  return Object.fromEntries(TOOLS.map((t) => [t.id, ran.has(t.id) ? "ran" : before.has(t.id) ? "kept" : "idle"]));
+}
+
+/** Plain words for a changed fact: "MATH 13 filled", "Your note". */
+export function factPlain(fact: string) {
+  const [kind, id = ""] = fact.split(".");
+  if (kind === "seats") return `${id.replace(/^([a-z]+)(\d+)$/, (_m, a: string, b: string) => `${a.toUpperCase()} ${b}`)} filled`;
+  if (kind === "note") return "Your note";
+  if (kind === "counselor") return "Your counselor said no";
+  return fact;
+}
+
+/** The rules every pick has to pass, as code checks them. */
+export const PICK_CHECKS = [
+  "Looked up what counts and what's open first",
+  "The section has open seats",
+  "It counts toward the requirement",
+  "Your counselor hasn't declined it",
+  "It follows the notes you gave the helpers",
+];
+
+/** Whether this run's pick passed the checks, and what got sent back on the way. */
+export function checkResult(run: TraceRun): { state: "passed" | "none" | "running"; sentBack: string[]; blocked: string[] } {
+  const submits = run.steps.filter((s) => s.tool === "submit_recommendation");
+  const sentBack = submits.filter((s) => !s.ok).map((s) => s.text.replace(/^The safety check sent a recommendation back:\s*/, ""));
+  const blocked = run.entries.flatMap((e) => (e.kind === "blocked" ? [e.rule] : []));
+  if (run.status !== "done") return { state: "running", sentBack, blocked };
+  return { state: submits.some((s) => s.ok) ? "passed" : "none", sentBack, blocked };
 }

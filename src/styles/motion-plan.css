@@ -1,0 +1,38 @@
+/* Micro-interactions for Terms and Explore. One easing, short, never looping. */
+
+/* Terms: a due chip and its class row light each other on hover or focus. */
+.plan-link .class-chip,
+.plan-link [data-plan-course] { transition: box-shadow 180ms cubic-bezier(.22,.8,.2,1), background-color 180ms cubic-bezier(.22,.8,.2,1); }
+.plan-link button[data-plan-hot] > .class-chip { box-shadow: 0 0 0 2px color-mix(in oklab, var(--chip-c) 60%, transparent); }
+.plan-link .cal-class[data-plan-hot] { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--chip-c) 60%, transparent); }
+.plan-link [data-plan-course] { border-radius: 10px; }
+.plan-link [data-plan-course][data-plan-hot] { background: color-mix(in oklab, var(--foreground) 5%, transparent); box-shadow: 0 0 0 6px color-mix(in oklab, var(--foreground) 5%, transparent); }
+
+/* Terms: the pile-up week's Due row pulses once, and its tip types in. */
+@keyframes plan-pulse {
+  0% { box-shadow: inset 0 0 0 0 transparent; }
+  40% { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--alert) 45%, transparent); background-color: var(--alert-soft); }
+  100% { box-shadow: inset 0 0 0 2px transparent; }
+}
+@keyframes plan-type {
+  from { clip-path: inset(0 100% 0 0); opacity: .4; }
+  to { clip-path: inset(0 0 0 0); opacity: 1; }
+}
+.cal-wk-due[data-plan-pulse] { animation: plan-pulse 340ms cubic-bezier(.22,.8,.2,1); }
+.cal-busy-note[data-plan-speak] { animation: plan-type 340ms cubic-bezier(.22,.8,.2,1) backwards; }
+
+/* Explore: a card that left fades out where it was. */
+.plan-ghost { position: fixed; z-index: 5; margin: 0; pointer-events: none; }
+
+/* Explore calendar: the old details fade out over the new ones. */
+.plan-fade-root { position: relative; }
+.plan-fade-ghost { position: absolute; inset-inline: 0; z-index: 2; background: var(--card); pointer-events: none; }
+[data-plan-day] { scroll-margin-block: 96px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-link .class-chip,
+  .plan-link [data-plan-course] { transition: none; }
+  .cal-wk-due[data-plan-pulse],
+  .cal-busy-note[data-plan-speak] { animation: none; }
+  .plan-ghost, .plan-fade-ghost { display: none; }
+}

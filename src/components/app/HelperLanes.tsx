@@ -27,7 +27,7 @@ const secs = (ms: number) => `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)}s`;
  * text, source and time. Handoffs are the curves; a dashed line marks what changed, and dashed
  * dots are helpers whose earlier result still held. Scrolls sideways inside the card on a phone.
  */
-export function HelperLanes({ root, rechecks }: { root: TraceRun; rechecks: TraceRun[] }) {
+export function HelperLanes({ root, rechecks, lit = null, onLit }: { root: TraceRun; rechecks: TraceRun[]; lit?: AgentId | null; onLit?: (h: AgentId | null) => void }) {
   const layout = laneLayout(root, rechecks);
   const [picked, setPicked] = useState<string | null>(null);
   const dot = layout.dots.find((d) => d.id === picked) ?? null;
@@ -68,11 +68,15 @@ export function HelperLanes({ root, rechecks }: { root: TraceRun; rechecks: Trac
               aria-label={label(d)}
               aria-pressed={picked === d.id}
               onClick={() => setPicked(picked === d.id ? null : d.id)}
+              onMouseEnter={() => onLit?.(d.helper)}
+              onMouseLeave={() => onLit?.(null)}
+              onFocus={() => onLit?.(d.helper)}
+              onBlur={() => onLit?.(null)}
               className="absolute grid size-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
               style={{ left: d.x, top: d.y }}
             >
               <span
-                className={cn("block rounded-full motion-safe:transition-transform", d.pick ? "size-5 ring-2 ring-foreground" : "size-3.5", d.kept && "border-[1.5px] border-dashed border-muted-foreground bg-card", picked === d.id && "scale-125")}
+                className={cn("block rounded-full motion-safe:transition-transform", d.pick ? "size-5 ring-2 ring-foreground" : "size-3.5", d.kept && "border-[1.5px] border-dashed border-muted-foreground bg-card", (picked === d.id || lit === d.helper) && "run-dot-lit scale-125")}
                 style={d.kept ? undefined : { background: FILL[d.helper] }}
               />
             </button>

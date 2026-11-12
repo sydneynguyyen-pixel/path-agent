@@ -7,7 +7,7 @@ import { ArrowLeft, Bookmark, Check, Copy, MapPin, Pencil, Pin, RotateCcw, Send,
 import { symposiumEvent as ev } from "@/data/event";
 import { people, type Person } from "@/data/people";
 import { PersonPhoto } from "@/components/app/PersonPhoto";
-import { ledgerSkills } from "@/data/scenario";
+import { ledgerSkills, type EvidenceLevel } from "@/data/scenario";
 import { callName, followUp, lowerFirst, nextCard, nextStep, promiseId, recall, toMeet, visibleClassmates, type DeckChoice } from "@/lib/event";
 import { useJourney } from "@/lib/journey";
 import { evidenceFor } from "@/lib/skills";
@@ -18,6 +18,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { AgentAvatar } from "@/components/app/Brand";
 import { Spot } from "@/components/app/Illustrations";
 import { cn } from "@/lib/utils";
+import { calm } from "@/lib/motion";
+import { levelChange } from "@/lib/motionGrow";
+import { GrowCheck } from "@/components/app/GrowCheck";
 
 const STEPS = ["before", "during", "after"] as const;
 type Step = (typeof STEPS)[number];
@@ -287,22 +290,34 @@ function TalkRow({ person }: { person: Person }) {
   const [text, setText] = useState(note?.text ?? "");
   const [promise, setPromise] = useState(note?.promise ?? "");
   const save = () => j.setPersonNote(person.id, text, promise);
+  const noteField = useRef<HTMLInputElement>(null);
+  // Only a tap moves the cursor; arriving on a row that's already marked doesn't.
+  const tapped = useRef(false);
+  useEffect(() => {
+    if (!talked || !tapped.current) return;
+    tapped.current = false;
+    noteField.current?.focus({ preventScroll: true });
+  }, [talked]);
+  const tap = () => { tapped.current = !talked; j.markTalked(person.id, !talked); };
   return (
     <li className={cn("surface p-4", talked && "ring-1 ring-[var(--ring)]")}>
-      <button onClick={() => j.markTalked(person.id, !talked)} aria-pressed={talked} className="flex w-full items-start gap-3 text-left">
-        <span className={cn("mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border", talked && "glass-on border-transparent text-white")}>{talked && <Check className="size-3.5" />}</span>
+      <button onClick={tap} aria-pressed={talked} className="flex w-full items-start gap-3 text-left">
+        <span className={cn("grow-dot mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border", talked && "glass-on border-transparent text-white")}><GrowCheck on={talked} className="size-3.5" /></span>
         <PersonPhoto photo={person.photo} org={person.org} size="md" />
         <span className="min-w-0 flex-1">
           <span className="block font-medium">{person.name}</span>
           <span className="block text-xs text-muted-foreground">{talked ? "Talked" : `“${person.opener}”`}</span>
         </span>
       </button>
-      {talked && (
-        <div className="mt-3 space-y-2 pl-9">
-          <Input value={text} onChange={(e) => setText(e.target.value)} onBlur={save} placeholder="One line to remember" aria-label={`Note about ${person.name}`} />
-          <Input value={promise} onChange={(e) => setPromise(e.target.value)} onBlur={save} placeholder="I said I'd… (optional)" aria-label={`Anything you said you'd do for ${person.name}`} />
+      {/* Always mounted so the note fields can unfold; inert while closed. */}
+      <div className="grow-unfold" data-open={talked} inert={!talked}>
+        <div>
+          <div className="mt-3 space-y-2 pl-9">
+            <Input ref={noteField} value={text} onChange={(e) => setText(e.target.value)} onBlur={save} placeholder="One line to remember" aria-label={`Note about ${person.name}`} />
+            <Input value={promise} onChange={(e) => setPromise(e.target.value)} onBlur={save} placeholder="I said I'd… (optional)" aria-label={`Anything you said you'd do for ${person.name}`} />
+          </div>
         </div>
-      )}
+      </div>
     </li>
   );
 }
@@ -317,6 +332,7 @@ function After() {
     ...recallPromises(j),
     ...j.event.promises.filter((p) => !p.done),
   ];
+  const [hadCopied] = useState(() => j.event.followUp.copied.length > 0);
   const step = nextStep(talked.filter((id) => !j.event.followUp.copied.includes(id)), allPromises, people);
   if (talked.length === 0)
     return (
@@ -327,6 +343,8 @@ function After() {
       </div>
     );
   const pending = talked.find((id) => !j.event.followUp.copied.includes(id));
+  // The level change plays once: only when the first follow-up is copied while this step is open.
+  const moved = !hadCopied;
   return (
     <div className="grid items-start gap-6 lg:grid-cols-2">
       <div className="space-y-6">
@@ -345,7 +363,7 @@ function After() {
       {j.event.followUp.copied.length > 0 && (
         <Link to="/career" search={{ tab: "skills" }} className="surface flex items-center justify-between gap-3 p-4 text-sm hover:bg-foreground/[.02]">
           <span><span className="font-medium">{skill.name}</span><span className="block text-xs text-muted-foreground">From {skill.course}, now with a real conversation behind it</span></span>
-          <span className="shrink-0 text-xs">{skill.level} → <b>{evidenceFor(skill, j.skillReviews[skill.id])}</b></span>
+          <LevelMove from={skill.level} to={evidenceFor(skill, j.skillReviews[skill.id])} play={moved} />
         </Link>
       )}
       <Promises />
@@ -357,6 +375,16 @@ function After() {
       )}
       </div>
     </div>
+  );
+}
+
+/** "Taught → Practiced": the old level strikes and fades, the new one slides in. */
+function LevelMove({ from, to, play }: { from: EvidenceLevel; to: EvidenceLevel; play: boolean }) {
+  const [animate] = useState(() => play && !!levelChange(from, to) && !calm());
+  return (
+    <span className="shrink-0 text-xs">
+      <span className={cn(animate && "grow-level-old")}>{from}</span> → <b className={cn(animate && "grow-level-new")}>{to}</b>
+    </span>
   );
 }
 

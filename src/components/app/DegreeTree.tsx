@@ -10,6 +10,8 @@ import { CourseLink } from "@/components/app/SkillsBits";
 import { electiveClasses } from "@/data/degree";
 import type { Camera, Insets, Viewport } from "@/lib/map";
 import { centerPath, clampPath, fitPath, PATH_MAX_SCALE, PATH_MIN_SCALE, zoomPath } from "@/lib/path-map";
+// Changed cards pulse once and the graduation card follows a beat later (see motion-overview.css).
+import "@/styles/motion-overview.css";
 
 const TRY_PANEL_W = 300;
 const insetsFor = (w: number, trying = false): Insets => ({ l: 288 + (trying ? TRY_PANEL_W : 0), t: trying ? 156 : 96, r: 24, b: 64, ...(w < 768 ? { l: 8, r: 8 } : {}) });

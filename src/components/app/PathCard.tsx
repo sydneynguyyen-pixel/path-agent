@@ -145,7 +145,7 @@ export function PathCardStudio({ skills, editing = true, onEdit, about }: { skil
         <div className="pc-panel-head">
           <h2 className="text-base font-semibold">Make it yours</h2>
           <p className="mt-1 text-sm text-muted-foreground">Your card only shows at events you turn it on for.</p>
-          <div className="pc-tabs" role="tablist" aria-label="Card settings">
+          <div className="pc-tabs segmented" role="tablist" aria-label="Card settings">
             {PANELS.map((t) => <button key={t.id} type="button" role="tab" aria-selected={panel === t.id} onClick={() => setPanel(t.id)} className="pc-tab-btn">{t.label}</button>)}
           </div>
         </div>

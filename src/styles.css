@@ -485,6 +485,7 @@
   .brand-app [data-slot="tabs-list"] { max-width: 100%; }
   .brand-app [role="tablist"]:not(.segmented) { display: flex; flex-wrap: wrap; height: auto; max-width: 100%; }
   .brand-app [role="tab"] { white-space: normal; }
+  .brand-app .segmented [role="tab"] { white-space: nowrap; flex-shrink: 0; }
 }
 
 /* ---------- Motion + liquid glass ---------- */
@@ -1594,6 +1595,8 @@ html[data-vt="theme"]::view-transition-new(root) { animation: none; }
 
 /* Suggestions: rise in one after another, a calm blue rim on hover */
 .agent-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+/* Phones: suggestions wait until she taps the box, so they never cover Home. */
+@media (max-width: 767px) { .agent-chips[data-rest] { display: none; } }
 .agent-chip { --pa-r: 999px; position: relative; isolation: isolate; padding: 8px 15px; border-radius: 999px; font-size: 13px; background: rgba(255,255,255,.62); border: 1px solid rgba(255,255,255,.75);
   -webkit-backdrop-filter: blur(10px) saturate(1.5); backdrop-filter: blur(10px) saturate(1.5); box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 6px 18px -12px rgba(20,40,60,.35); }
 .agent-chips .agent-chip { opacity: 0; transform: translateY(10px) scale(.96); filter: blur(3px); transition: opacity 380ms var(--pa-soft), transform 520ms var(--pa-soft), filter 380ms ease, background-color 220ms ease; }

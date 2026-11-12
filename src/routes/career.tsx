@@ -122,7 +122,7 @@ function Tabs({ tab: current, onChange, className }: { tab: CareerTab; onChange:
     return <button type="button" role="tab" aria-selected={on} onClick={() => onChange(id)} className={cn("inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2.5 text-sm whitespace-nowrap transition-colors sm:px-5", on ? "glass-active font-medium" : "text-muted-foreground hover:text-foreground")}><Icon className="size-4" aria-hidden="true" />{label}</button>;
   };
   return (
-    <div ref={containerRef} role="tablist" aria-label="Career" className={cn("sub-tabs has-pill relative inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full border bg-card/70 p-1 [scrollbar-width:none]", className)}>
+    <div ref={containerRef} role="tablist" aria-label="Career" className={cn("segmented sub-tabs has-pill relative inline-flex max-w-full flex-nowrap items-center gap-1 overflow-x-auto rounded-full border bg-card/70 p-1 [scrollbar-width:none]", className)}>
       <span ref={pillRef} className="sliding-pill liquid" aria-hidden="true" />
       {tab("goals", "Your goals", Target)}
       {tab("skills", "Your skills", Sparkles)}

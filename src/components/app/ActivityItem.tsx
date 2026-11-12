@@ -55,7 +55,7 @@ export function ActivityItem({ helper, summary, at, now, status, open, onToggle,
         <button type="button" aria-expanded={open} aria-controls={id} onClick={onToggle}
           className="flex w-full min-w-0 items-center gap-2.5 !rounded-[14px] px-3 py-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-4">
           <AgentAvatar agent={helper} className="size-6 shrink-0" />
-          <span className="min-w-0 flex-1 truncate text-sm font-medium" title={label}>{summary}</span>
+          <span className="min-w-0 flex-1 text-sm font-medium max-sm:line-clamp-2 sm:truncate" title={label}>{summary}</span>
           {at && <span className="hidden shrink-0 sm:inline"><When d={at} now={now} /></span>}
           <StatusChip s={status} />
           <ChevronDown className="act-chevron size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -91,7 +91,7 @@ export function EventCard({ e, now, open, onToggle }: { e: ActivityEvent; now: n
   const teaser = e.found?.[0];
   return (
     <ActivityItem helper={helper} label={e.headline} at={e.at} now={now} status={fromEvent[e.status]} open={open} onToggle={onToggle}
-      summary={<>{e.headline}{teaser && <span className="font-normal text-muted-foreground"> · {teaser}</span>}</>}>
+      summary={<>{e.headline}{teaser && <span className="font-normal text-muted-foreground max-sm:hidden"> · {teaser}</span>}</>}>
       {(e.found?.length || e.suggest?.length) ? (
         <div className="act-outcome rounded-lg bg-secondary/70 px-3 py-2.5">
           {e.found?.length ? (

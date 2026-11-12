@@ -58,11 +58,13 @@ function DidYouGoNotice({ asks, onAdd }: { asks: Found[]; onAdd: () => void }) {
   const went = (e: Found) => { j.checkEvent(e.id, "went"); toast(`Skills from ${e.title} added`, { action: { label: "Undo", onClick: () => j.checkEvent(e.id, null) } }); };
   return (
     <section aria-labelledby="did-you-go" className="notice max-w-3xl">
-      <div className="flex items-center gap-3 py-2.5 pr-2.5 pl-3">
-        <span className="flex shrink-0 -space-x-2" aria-hidden="true">{asks.slice(0, 3).map((e) => <EventMark key={e.id} photo={e.photo} className="size-8 rounded-lg ring-2 ring-card" />)}</span>
-        <p id="did-you-go" className="min-w-0 flex-1 text-sm"><span className="font-medium">Did you go to {asks.length === 1 ? "this event" : `${asks.length} past events`}?</span> <span className="text-muted-foreground">No check-in, so their skills don't count yet. <button type="button" onClick={onAdd} className="underline underline-offset-4 hover:text-foreground">Or add something else.</button></span></p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5 pr-2.5 pl-3">
+        <span className="flex shrink-0 -space-x-2 max-sm:hidden" aria-hidden="true">{asks.slice(0, 3).map((e) => <EventMark key={e.id} photo={e.photo} className="size-8 rounded-lg ring-2 ring-card" />)}</span>
+        <p id="did-you-go" className="min-w-0 flex-1 basis-52 text-sm"><span className="font-medium">Did you go to {asks.length === 1 ? "this event" : `${asks.length} past events`}?</span> <span className="text-muted-foreground">No check-in, so their skills don't count yet. <button type="button" onClick={onAdd} className="underline underline-offset-4 hover:text-foreground">Or add something else.</button></span></p>
+        <span className="ml-auto flex shrink-0 items-center gap-1">
         <Button size="sm" variant="outline" className="shrink-0 rounded-full" aria-expanded={open} onClick={() => setOpen((o) => !o)}>{open ? "Hide" : "Answer"}</Button>
         <button type="button" onClick={() => j.clearHomeItem("did-you-go", "snoozed")} aria-label="Ask me later" title="Ask me later" className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground"><X className="size-4" aria-hidden="true" /></button>
+        </span>
       </div>
       {open && (
         <ul className="divide-y border-t">
@@ -312,13 +314,13 @@ function DidThis({ on, disabled, name, onChange }: { on: boolean; disabled?: boo
       disabled={disabled}
       title={disabled ? "Counts because you went" : undefined}
       onClick={() => onChange(!on)}
-      className={`inline-flex h-8 items-center gap-2 rounded-full border px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default ${on ? "border-transparent bg-success-soft" : "hover:bg-foreground/5"}`}
+      className={`inline-flex h-8 items-center gap-2 rounded-full border px-3 text-xs max-sm:px-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default ${on ? "border-transparent bg-success-soft" : "hover:bg-foreground/5"}`}
       style={{ transition: `background-color 180ms ${SETTLE}, border-color 180ms ${SETTLE}` }}
     >
       <span aria-hidden="true" className={`grid size-4 place-items-center rounded-[5px] border ${on ? "border-mark-yes bg-card" : "border-muted-foreground/50"}`}>
         <GrowCheck on={on} className="size-3 text-mark-yes" />
       </span>
-      Yes, I did this
+      <span className="max-sm:hidden">Yes, I did this</span>
     </button>
   );
 }

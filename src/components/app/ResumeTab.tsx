@@ -339,7 +339,7 @@ export function ResumeTab({ view: viewProp, onView }: { view?: View; onView?: (v
               <div className="pc-panel-head">
                 <h2 className="text-base font-semibold">{doc.kind === "cover" ? "Write your letter" : `Build your ${KIND_LABEL[doc.kind].toLowerCase()}`}</h2>
                 {app && <p className="mt-1 text-sm text-muted-foreground">For {[app.role, app.company].filter(Boolean).join(" at ")}</p>}
-                <div className="pc-tabs" role="tablist" aria-label="Resume settings">
+                <div className="pc-tabs segmented" role="tablist" aria-label="Resume settings">
                   {PANELS.map((t) => <button key={t.id} type="button" role="tab" aria-selected={panel === t.id} onClick={() => setPanel(t.id)} className="pc-tab-btn">{t.label}</button>)}
                 </div>
               </div>

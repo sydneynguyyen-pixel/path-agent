@@ -31,3 +31,11 @@
 
 @keyframes chat-open { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .chat-fold-body { animation: none; } }
+
+/* Phones: suggestions wait until she taps the box, so they never sit on top of Home's widgets;
+   the note chips under the last message become one row she can swipe. */
+@media (max-width: 767px) {
+  .chat-steers { flex-wrap: nowrap; flex-shrink: 0; overflow-x: auto; padding-left: 0; margin-inline: -4px; padding-inline: 4px; scrollbar-width: none; }
+  .chat-steers::-webkit-scrollbar { display: none; }
+  .chat-steers > * { flex-shrink: 0; }
+}

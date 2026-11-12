@@ -330,7 +330,7 @@ function AgentShell() {
     <>
       <div className="agent-scrim" data-show={open || undefined} onClick={collapse} aria-hidden="true" />
       <div ref={dockRef} className="agent-dock" data-mode={mode}>
-        <div className="agent-chips" data-show={chips || undefined} aria-hidden={!chips}>
+        <div className="agent-chips" data-show={chips || undefined} data-rest={(chips && !focused) || undefined} aria-hidden={!chips}>
           {suggestions.map((c, i) => (
             <button key={c} type="button" tabIndex={chips ? 0 : -1} className="agent-chip agent-ring" onMouseDown={(e) => e.preventDefault()} style={{ transitionDelay: chips ? `${140 + i * 70}ms` : "0ms" }} onClick={() => typeOut(c)}><span className="agent-aura" aria-hidden="true"><i /></span>{c}</button>
           ))}

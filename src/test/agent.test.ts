@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { GatewayError, gatewayModel, runRecovery } from "@/lib/agent/gateway";
-import { applyAgentEvent, runAgent, scriptedModel, type AgentEvent, type Model, type ToolCall } from "@/lib/agent/loop";
-import { allTools, rejectPick, toolsFor } from "@/lib/agent/tools";
+import { parseRunInput } from "@/lib/agent/input";
+import { applyAgentEvent, runAgent, scriptedModel, scriptedModelFor, type AgentEvent, type Model, type ToolCall } from "@/lib/agent/loop";
+import { allTools, buildTools, rejectPick, toolsFor } from "@/lib/agent/tools";
 
 const allOn = { reader: true, planner: true, backup: true, drafter: true };
 const call = (name: string, args: Record<string, unknown> = {}, id = name): ToolCall => ({ id, type: "function", function: { name, arguments: JSON.stringify(args) } });
@@ -35,7 +36,8 @@ describe("agent loop", () => {
   it("runs tools and returns a checked recommendation", async () => {
     const { events, emit } = collect();
     const result = await runAgent({ model: scriptModel([gather, [call("submit_recommendation", { option_id: "math13", why: "It counts." })]]), tools: toolsFor(allOn), emit });
-    expect(result).toEqual({ optionId: "math13", why: "It counts.", model: "test-model", gaveUp: false });
+    expect(result).toMatchObject({ optionId: "math13", why: "It counts.", model: "test-model", gaveUp: false });
+    expect(result.ttvMs).toEqual(expect.any(Number));
     expect(events.filter((e) => e.type === "step")).toHaveLength(3);
   });
   it("sends a bad pick back to the model and lets it correct itself", async () => {
@@ -101,13 +103,84 @@ describe("gateway", () => {
   it("labels the run as scripted when there is no key", async () => {
     const { events, emit } = collect();
     await runRecovery({}, allOn, emit);
-    expect(events[0]).toEqual({ type: "start", mode: "scripted", reason: "No AI key is connected here." });
+    expect(events[0]).toMatchObject({ type: "start", mode: "scripted", reason: "No AI key is connected here.", trigger: "error" });
     expect(events.at(-1)?.type).toBe("done");
   });
   it("restarts as scripted and says why when the gateway fails", async () => {
     const { events, emit } = collect();
     await runRecovery({ apiKey: "k", fetchImpl: reply({}, 402) }, allOn, emit);
     expect(events.filter((e) => e.type === "start").map((e) => e.type === "start" && e.mode)).toEqual(["live", "scripted"]);
-    expect(events[1]).toEqual({ type: "start", mode: "scripted", reason: "The AI workspace is out of credits." });
+    expect(events[1]).toMatchObject({ type: "start", mode: "scripted", reason: "The AI workspace is out of credits." });
+  });
+  it("keeps one run id across the fallback and passes the trigger through", async () => {
+    const { events, emit } = collect();
+    await runRecovery({ apiKey: "k", fetchImpl: reply({}, 429) }, allOn, emit, { runId: "run_test", trigger: "recheck" });
+    const starts = events.filter((e) => e.type === "start");
+    expect(starts.map((e) => e.type === "start" && e.runId)).toEqual(["run_test", "run_test"]);
+    expect(starts.every((e) => e.type === "start" && e.trigger === "recheck")).toBe(true);
+  });
+});
+
+describe("world passed in", () => {
+  const called = ["find_courses_that_count", "search_open_sections"];
+  it("a filled seat reaches the safety check", () => {
+    expect(rejectPick("math13", called, { seats: { math13: 0 } })).toContain("no open seats");
+  });
+  it("a counselor's no reaches the safety check", () => {
+    expect(rejectPick("math13", called, { declined: ["math13"] })).toContain("counselor");
+  });
+  it("the scripted run picks the next option when the top one fills", async () => {
+    const top = (await runAgent({ model: scriptedModelFor(), tools: toolsFor(allOn), emit: () => {} })).optionId;
+    const world = { seats: { [top!]: 0 } };
+    const next = await runAgent({ model: scriptedModelFor(world), tools: toolsFor(allOn, world), emit: () => {}, world });
+    expect(next.optionId).toBeTruthy();
+    expect(next.optionId).not.toBe(top);
+  });
+  it("tools report the changed seats", () => {
+    const search = buildTools({ seats: { math13: 0 } }).find((t) => t.name === "search_open_sections")!;
+    const ids = (search.run({}).data as { id: string }[]).map((o) => o.id);
+    expect(ids).not.toContain("math13");
+  });
+  it("sends the model verdicts, not confidence numbers", () => {
+    const find = allTools.find((t) => t.name === "find_courses_that_count")!;
+    for (const row of find.run({}).data as Record<string, unknown>[]) expect(row).not.toHaveProperty("confidence");
+  });
+});
+
+describe("trace", () => {
+  it("marks handoffs when the owning helper changes, and times each step", async () => {
+    const { events, emit } = collect();
+    let t = 0;
+    await runAgent({ model: scriptedModel, tools: toolsFor(allOn), emit, now: () => (t += 100) });
+    const handoffs = events.filter((e) => e.type === "handoff");
+    expect(handoffs.map((e) => e.type === "handoff" && `${e.from}>${e.to}`)).toEqual(["reader>planner", "planner>backup", "backup>planner"]);
+    const steps = events.filter((e) => e.type === "step");
+    expect(steps.every((e) => e.type === "step" && typeof e.elapsedMs === "number")).toBe(true);
+    expect(steps.find((e) => e.type === "step" && e.tool === "read_portal_error")).toMatchObject({ sourceIds: ["portal-full"] });
+  });
+  it("ignores event types it doesn't know", () => {
+    const run = applyAgentEvent(null, { type: "start", mode: "live", reason: null, runId: "r1" }, new Date(0));
+    const after = applyAgentEvent(run, { type: "policy" } as unknown as AgentEvent, new Date(0));
+    expect(after).toEqual(run);
+  });
+  it("stores handoffs and the run id", () => {
+    let run = applyAgentEvent(null, { type: "start", mode: "live", reason: null, runId: "r1", trigger: "error" }, new Date(0));
+    run = applyAgentEvent(run, { type: "handoff", from: "reader", to: "planner", summary: "s" }, new Date(0));
+    expect(run).toMatchObject({ runId: "r1", trigger: "error", handoffs: [{ from: "reader", to: "planner" }] });
+  });
+});
+
+describe("request parsing", () => {
+  it("keeps helpers on unless explicitly off, and drops unknown fields", () => {
+    expect(parseRunInput({ agentOn: { backup: false, hacker: true } }).agentOn).toEqual({ reader: true, planner: true, backup: false, drafter: true });
+    expect(parseRunInput(null)).toEqual({ agentOn: { reader: true, planner: true, backup: true, drafter: true }, world: {}, trigger: "error" });
+  });
+  it("accepts only known options and whole seat counts", () => {
+    const { world } = parseRunInput({ world: { seats: { math13: 0, fake: 3, psyc5: -1, bus21: 1.5 }, declined: ["bus21", "fake", 7] } });
+    expect(world).toEqual({ seats: { math13: 0 }, declined: ["bus21"] });
+  });
+  it("falls back to the error trigger and rejects odd run ids", () => {
+    expect(parseRunInput({ trigger: "delete-everything", runId: "<script>" })).toEqual({ agentOn: { reader: true, planner: true, backup: true, drafter: true }, world: {}, trigger: "error" });
+    expect(parseRunInput({ trigger: "recheck", runId: "run_abc" })).toMatchObject({ trigger: "recheck", runId: "run_abc" });
   });
 });

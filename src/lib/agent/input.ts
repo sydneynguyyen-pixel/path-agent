@@ -7,7 +7,7 @@ const HELPERS: AgentId[] = ["reader", "planner", "backup", "drafter"];
 const KNOWN = new Set(options.map((o) => o.id));
 
 /** Everything a run needs from the app. The server trusts nothing else. */
-export type RunInput = { agentOn: Record<AgentId, boolean>; world: World; trigger: Trigger; runId?: string };
+export type RunInput = { agentOn: Record<AgentId, boolean>; world: World; trigger: Trigger; runId?: string; changes?: string[] };
 
 /**
  * Reads a request body into a run. Unknown helpers, options and fields are dropped, so a bad
@@ -30,7 +30,18 @@ export function parseRunInput(body: unknown): RunInput {
     if (declined.length) world.declined = declined;
   }
 
+  if (Array.isArray(w["notes"])) {
+    const notes = w["notes"]
+      .filter((n): n is { id: string; text: string } => !!n && typeof n === "object" && typeof (n as Record<string, unknown>)["id"] === "string" && typeof (n as Record<string, unknown>)["text"] === "string")
+      .filter((n) => /^[a-z0-9-]{1,48}$/.test(n.id) && n.text.trim().length > 0)
+      .slice(0, 6)
+      .map((n) => ({ id: n.id, text: n.text.trim().slice(0, 120) }));
+    if (notes.length) world.notes = notes;
+  }
+
+  const changes = Array.isArray(b["changes"]) ? [...new Set(b["changes"].filter((c): c is string => typeof c === "string" && /^(seats|counselor|note)\.[a-z0-9-]{1,48}$/.test(c)))].slice(0, 6) : [];
+
   const trigger = TRIGGERS.includes(b["trigger"] as Trigger) ? (b["trigger"] as Trigger) : "error";
   const runId = typeof b["runId"] === "string" && /^[\w-]{1,64}$/.test(b["runId"]) ? b["runId"] : undefined;
-  return { agentOn, world, trigger, ...(runId ? { runId } : {}) };
+  return { agentOn, world, trigger, ...(runId ? { runId } : {}), ...(changes.length ? { changes } : {}) };
 }

@@ -35,6 +35,7 @@ import { Route as SkillsExportRouteImport } from './routes/skills-export'
 import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as WhatIfRouteImport } from './routes/what-if'
+import { Route as ApiAgentAskRouteImport } from './routes/api/agent-ask'
 import { Route as ApiAgentRecoverRouteImport } from './routes/api/agent-recover'
 
 const IndexRoute = IndexRouteImport.update({
@@ -167,6 +168,11 @@ const WhatIfRoute = WhatIfRouteImport.update({
   path: '/what-if',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAgentAskRoute = ApiAgentAskRouteImport.update({
+  id: '/api/agent-ask',
+  path: '/api/agent-ask',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentRecoverRoute = ApiAgentRecoverRouteImport.update({
   id: '/api/agent-recover',
   path: '/api/agent-recover',
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/sources': typeof SourcesRoute
   '/welcome': typeof WelcomeRoute
   '/what-if': typeof WhatIfRoute
+  '/api/agent-ask': typeof ApiAgentAskRoute
   '/api/agent-recover': typeof ApiAgentRecoverRoute
 }
 export interface FileRoutesByTo {
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/sources': typeof SourcesRoute
   '/welcome': typeof WelcomeRoute
   '/what-if': typeof WhatIfRoute
+  '/api/agent-ask': typeof ApiAgentAskRoute
   '/api/agent-recover': typeof ApiAgentRecoverRoute
 }
 export interface FileRoutesById {
@@ -259,6 +267,7 @@ export interface FileRoutesById {
   '/sources': typeof SourcesRoute
   '/welcome': typeof WelcomeRoute
   '/what-if': typeof WhatIfRoute
+  '/api/agent-ask': typeof ApiAgentAskRoute
   '/api/agent-recover': typeof ApiAgentRecoverRoute
 }
 export interface FileRouteTypes {
@@ -290,6 +299,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/welcome'
     | '/what-if'
+    | '/api/agent-ask'
     | '/api/agent-recover'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/welcome'
     | '/what-if'
+    | '/api/agent-ask'
     | '/api/agent-recover'
   id:
     | '__root__'
@@ -348,6 +359,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/welcome'
     | '/what-if'
+    | '/api/agent-ask'
     | '/api/agent-recover'
   fileRoutesById: FileRoutesById
 }
@@ -378,6 +390,7 @@ export interface RootRouteChildren {
   SourcesRoute: typeof SourcesRoute
   WelcomeRoute: typeof WelcomeRoute
   WhatIfRoute: typeof WhatIfRoute
+  ApiAgentAskRoute: typeof ApiAgentAskRoute
   ApiAgentRecoverRoute: typeof ApiAgentRecoverRoute
 }
 
@@ -565,6 +578,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WhatIfRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/agent-ask': {
+      id: '/api/agent-ask'
+      path: '/api/agent-ask'
+      fullPath: '/api/agent-ask'
+      preLoaderRoute: typeof ApiAgentAskRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agent-recover': {
       id: '/api/agent-recover'
       path: '/api/agent-recover'
@@ -602,6 +622,7 @@ const rootRouteChildren: RootRouteChildren = {
   SourcesRoute: SourcesRoute,
   WelcomeRoute: WelcomeRoute,
   WhatIfRoute: WhatIfRoute,
+  ApiAgentAskRoute: ApiAgentAskRoute,
   ApiAgentRecoverRoute: ApiAgentRecoverRoute,
 }
 export const routeTree = rootRouteImport

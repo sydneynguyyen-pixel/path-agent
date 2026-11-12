@@ -1,5 +1,6 @@
 import type { AgentId } from "@/lib/journey";
-import { newRunId, runAgent, scriptedModelFor, type AgentEvent, type Model, type ToolCall, type Trigger } from "./loop";
+import { newRunId, runAgent, scriptedModelFor, type AgentEvent, type AgentResult, type Model, type ToolCall, type Trigger } from "./loop";
+import { causeFor, knownFor, promptFor, staleFor } from "./recheck";
 import { toolsFor, type World } from "./tools";
 
 /** Server-only. Model calls stay on Lovable's gateway and the key never reaches the browser. */
@@ -36,29 +37,37 @@ const reasonFor = (e: unknown) => {
   return "The AI service didn't respond.";
 };
 
-/** Who started this run and with which facts. Defaults keep older callers working. */
-export type RunOptions = { world?: World; trigger?: Trigger; runId?: string };
+/** Who started this run, with which facts, and what changed since the last one. Defaults keep older callers working. */
+export type RunOptions = { world?: World; trigger?: Trigger; runId?: string; changes?: string[] };
 
 /** Runs the agent on the gateway. If that isn't possible, says so and runs the same tools without AI. */
 export async function runRecovery(env: GatewayEnv, agentOn: Record<AgentId, boolean>, emit: (e: AgentEvent) => void | Promise<void>, run: RunOptions = {}) {
   const world = run.world ?? {};
   const trigger = run.trigger ?? "error";
   const runId = run.runId ?? newRunId();
+  const changes = trigger === "error" ? [] : run.changes ?? [];
+  const known = knownFor(changes);
+  const userPrompt = promptFor(trigger, changes, world);
   const tools = toolsFor(agentOn, world);
+  const begin = async (mode: "live" | "scripted", reason: string | null) => {
+    const cause = causeFor(changes, world);
+    await emit({ type: "start", mode, reason, runId, trigger, ...(cause ? { cause } : {}) });
+    if (changes.length) await emit({ type: "stale", facts: changes, tools: staleFor(changes) });
+  };
+  const finish = async (result: AgentResult) => emit({ type: "done", result, ttvMs: result.ttvMs ?? null });
   const scripted = async (reason: string) => {
-    await emit({ type: "start", mode: "scripted", reason, runId, trigger });
+    await begin("scripted", reason);
     const paced = async (e: AgentEvent) => {
       await emit(e);
       if (env.scriptedDelayMs) await new Promise((r) => setTimeout(r, env.scriptedDelayMs));
     };
-    await emit({ type: "done", result: await runAgent({ model: scriptedModelFor(world), tools, emit: paced, world }) });
+    await finish(await runAgent({ model: scriptedModelFor(world, known), tools, emit: paced, world, known, userPrompt }));
   };
 
   if (!env.apiKey) return scripted("No AI key is connected here.");
   try {
-    await emit({ type: "start", mode: "live", reason: null, runId, trigger });
-    const result = await runAgent({ model: gatewayModel({ ...env, apiKey: env.apiKey }), tools, emit, world });
-    await emit({ type: "done", result });
+    await begin("live", null);
+    await finish(await runAgent({ model: gatewayModel({ ...env, apiKey: env.apiKey }), tools, emit, world, known, userPrompt }));
   } catch (e) {
     await scripted(reasonFor(e));
   }

@@ -10,7 +10,7 @@ export const Route = createFileRoute("/api/agent-recover")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const { agentOn, world, trigger, runId } = parseRunInput(await request.json().catch(() => ({})));
+        const { agentOn, world, trigger, runId, changes } = parseRunInput(await request.json().catch(() => ({})));
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
           async start(controller) {
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/api/agent-recover")({
               { apiKey: process.env["LOVABLE_API_KEY"], url: process.env["AI_GATEWAY_URL"], model: process.env["AGENT_MODEL"], scriptedDelayMs: 450 },
               agentOn,
               (e) => controller.enqueue(encoder.encode(`${JSON.stringify(e)}\n`)),
-              { world, trigger, ...(runId ? { runId } : {}) },
+              { world, trigger, ...(runId ? { runId } : {}), ...(changes ? { changes } : {}) },
             );
             controller.close();
           },

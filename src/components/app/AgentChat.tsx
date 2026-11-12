@@ -82,7 +82,11 @@ function AgentSays({ m, compact = false }: { m: ChatMsg; compact?: boolean }) {
   return (
     <div className="agent-says agent-in">
       <AgentFace className="!size-8 shrink-0" />
-      <div className="min-w-0 flex-1 pt-1">{m.note ? <NoteReply note={m.note} compact={compact} /> : <Reply topic={m.topic ?? null} compact={compact} />}</div>
+      <div className="min-w-0 flex-1 pt-1">
+        {m.note ? <NoteReply note={m.note} compact={compact} /> : <Reply topic={m.topic ?? null} compact={compact} answer={m.live?.answer} />}
+        {/* Honest about where the words came from: live answers say so; previews say nothing extra. */}
+        {m.live && !compact && <p className="mt-2 text-xs text-muted-foreground">Live answer from your plan{m.live.factIds.length ? ` · ${m.live.factIds.length} ${m.live.factIds.length === 1 ? "fact" : "facts"} used` : ""}</p>}
+      </div>
     </div>
   );
 }

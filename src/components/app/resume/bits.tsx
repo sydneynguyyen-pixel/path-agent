@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { APP_STATUS, type AppStatus } from "@/lib/resume";
 
 import { fieldId } from "./data";
 
@@ -12,10 +11,6 @@ export function Section({ block, title, aside, hint, flash, children }: { block?
       {children}
     </section>
   );
-}
-
-export function StatusChip({ status }: { status: AppStatus }) {
-  return <span className="rs-status" data-s={status}>{APP_STATUS.find((s) => s.id === status)?.label}</span>;
 }
 
 /** A small label above a form control. */

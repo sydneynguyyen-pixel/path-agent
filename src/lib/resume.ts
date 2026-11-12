@@ -38,8 +38,14 @@ export type ResumeDoc = {
   courses?: string[] | null | undefined;
   /** A job posting she pasted on the Job tab. Only read here, never fetched or sent. */
   posting?: string | undefined;
-  /** A folder she made for one specific job. Missing means the folder for its career (or General). */
+  /** Legacy: the job folder it was made in, before job folders became applications. Read only by migrateJobFolders. */
   folder?: string | undefined;
+  /** A version tailored to one job posting belongs to that application. Base resumes have none. */
+  applicationId?: string | undefined;
+  /** Skills on this version in this order (a tailored version leads with what the posting asks for). Missing follows the career's order. */
+  skillOrder?: string[] | undefined;
+  /** Entries in this order within their section (tailoring puts the ones the posting asks about first). Missing is newest first. */
+  entryOrder?: string[] | undefined;
   /** Sections she hid on this page with the eye toggle. Missing means all show. */
   hiddenSections?: HideableSection[] | undefined;
   /** Entries she moved to another section (like a hackathon under Projects), by entry id. */
@@ -134,8 +140,11 @@ export function newVersion(doc: ResumeDoc, roleId: string | null, roleTitle: str
     hiddenSections: doc.hiddenSections ? [...doc.hiddenSections] : undefined,
     entrySections: doc.entrySections ? { ...doc.entrySections } : undefined,
     dismissedIdeas: doc.dismissedIdeas ? [...doc.dismissedIdeas] : undefined,
-    // A version for another career leaves the job folder it came from.
-    folder: roleId === doc.roleId ? doc.folder : undefined,
+    skillOrder: doc.skillOrder ? [...doc.skillOrder] : undefined,
+    entryOrder: doc.entryOrder ? [...doc.entryOrder] : undefined,
+    // A version for another career is a base version again, not the application's.
+    folder: undefined,
+    applicationId: roleId === doc.roleId ? doc.applicationId : undefined,
     copiedFrom: doc.id,
   };
 }
@@ -365,43 +374,33 @@ export function moveItem<T>(list: T[], from: number, to: number): T[] {
   return next;
 }
 
-// ---------- Folders ----------
+// ---------- Base and tailored versions ----------
 
-/** A folder of documents and applications: one per goal career, one per specific job she adds, and General. */
-export type ResumeFolder = { id: string; title: string; roleId: string | null; job?: { title: string; org: string } | undefined };
+/** Base versions: her untailored resumes and CVs (one per goal, the general CV, versions she made). Not cover letters. */
+export const baseDocs = (docs: ResumeDoc[]) => docs.filter((d) => d.kind !== "cover" && !d.applicationId && !d.folder);
 
-export const GENERAL_FOLDER = "general";
-export const roleFolderId = (roleId: string) => `role-${roleId}`;
-export const folderOf = (doc: Pick<ResumeDoc, "folder" | "roleId">) => doc.folder ?? (doc.roleId ? roleFolderId(doc.roleId) : GENERAL_FOLDER);
-
-/** Folders in order: goals (main first), other careers she made versions for, jobs she added, then General. */
-export function folderList(goals: RoleLike[], jobs: ResumeFolder[], docs: ResumeDoc[], titleOf: (roleId: string) => string | undefined): ResumeFolder[] {
-  const roles = [...goals.map((g) => g.id), ...docs.filter((d) => !d.folder && d.roleId).map((d) => d.roleId!)];
-  const roleFolders = [...new Set(roles)].map((id) => ({ id: roleFolderId(id), roleId: id, title: goals.find((g) => g.id === id)?.title ?? titleOf(id) ?? id }));
-  return [...roleFolders, ...jobs, { id: GENERAL_FOLDER, roleId: null, title: "General" }];
+/** Orders entries within a section by the document's entryOrder; entries it doesn't name keep their order after. */
+export function orderEntries<T extends { id: string }>(list: T[], order: string[] | undefined): T[] {
+  if (!order?.length) return list;
+  const at = (id: string) => { const k = order.indexOf(id); return k < 0 ? order.length : k; };
+  return list.map((x, k) => ({ x, k })).sort((a, b) => at(a.x.id) - at(b.x.id) || a.k - b.k).map((v) => v.x);
 }
 
-export const docsIn = (docs: ResumeDoc[], folderId: string) => docs.filter((d) => folderOf(d) === folderId);
-
-/** A folder for one specific job, like "UX Research Intern — Acme Health". */
-export function jobFolder(title: string, org: string, roleId: string | null, stamp: number): ResumeFolder {
-  const t = title.trim(), o = org.trim();
-  const slug = `${t}-${o}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32);
-  return { id: `job-${slug}-${stamp.toString(36)}`, title: o ? `${t} — ${o}` : t, roleId, job: { title: t, org: o } };
+/**
+ * The skills on one version: its own order when it has one (only names she confirmed or has on her resume),
+ * then anything newly confirmed since, in the career's order.
+ */
+export function orderedSkills(derived: string[], order: string[] | undefined, known: (name: string) => boolean, hidden: string[]): { lead: string[]; rest: string[] } {
+  if (!order) return { lead: [], rest: derived };
+  const lead = order.filter((n) => known(n) && !hasName(hidden, n)).reduce(addName, [] as string[]);
+  return { lead, rest: derived.filter((n) => !hasName(lead, n)) };
 }
 
-/** Starting documents for a job folder: a copy of the resume she picked, and a fresh cover letter. */
-export function jobFolderDocs(folder: ResumeFolder, from: ResumeDoc, stamp: number): ResumeDoc[] {
-  const tag = stamp.toString(36);
-  const name = folder.job?.title || folder.title;
-  return [
-    { ...newVersion(from, folder.roleId, undefined, [], stamp), id: `resume-${folder.id}-${tag}`, title: `Resume · ${name}`, folder: folder.id, kind: from.kind === "cover" ? "resume" : from.kind, headline: from.roleId === folder.roleId ? from.headline : null },
-    { ...blankDoc("cover", folder.roleId), id: `cover-${folder.id}-${tag}`, title: `Cover letter · ${name}`, folder: folder.id },
-  ];
+/** A copy of a base version tailored to one job: the changes she accepted, the posting, and the application it belongs to. */
+export function tailoredDoc(base: ResumeDoc, patch: Partial<ResumeDoc>, o: { id: string; title: string; posting: string; applicationId: string }): ResumeDoc {
+  const copy = newVersion(base, base.roleId, undefined, [], 0);
+  return { ...copy, ...patch, id: o.id, title: o.title, posting: o.posting, applicationId: o.applicationId, folder: undefined, copiedFrom: base.id };
 }
-
-const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
-export const folderCounts = (docs: number, apps: number) => `${plural(docs, "doc")} · ${plural(apps, "application")}`;
 
 // ---------- Applications ----------
 
@@ -419,23 +418,32 @@ export const statusLabel = (s: AppStatus) => APP_STATUS.find((x) => x.id === s)?
 /** One application she recorded herself. Sprout never applies or sends anything. */
 export type Application = {
   id: string;
-  folderId: string;
   company: string;
   role: string;
   link: string;
   /** YYYY-MM-DD, or empty while it's only saved. */
   applied: string;
-  /** The resume version she sent, so she always knows what they have. */
+  /** The resume version she sent (or will send), so she always knows what they have. */
   resumeId: string | null;
   status: AppStatus;
   /** Next step, in her words. */
   next: string;
   /** YYYY-MM-DD follow-up date, or empty. */
   followUp: string;
+  /** The goal career it's toward, for filtering. Null when she isn't sure. */
+  roleId?: string | null | undefined;
+  /** The cover letter she wrote for it, if any. */
+  coverId?: string | null | undefined;
+  /** The posting text she dropped in. Only read here, never fetched or sent. */
+  posting?: string | undefined;
+  /** YYYY-MM-DD she saved it. */
+  savedOn?: string | undefined;
+  /** Legacy: the folder it was tracked in before folders became applications. */
+  folderId?: string | undefined;
 };
 
-export function blankApplication(folderId: string, resumeId: string | null, stamp: number, role = ""): Application {
-  return { id: `app-${stamp.toString(36)}`, folderId, company: "", role, link: "", applied: "", resumeId, status: "saved", next: "", followUp: "" };
+export function blankApplication(roleId: string | null, resumeId: string | null, stamp: number, role = ""): Application {
+  return { id: `app-${stamp.toString(36)}`, roleId, company: "", role, link: "", applied: "", resumeId, status: "saved", next: "", followUp: "" };
 }
 
 export const saveApplication = (apps: Application[], app: Application): Application[] =>
@@ -443,9 +451,50 @@ export const saveApplication = (apps: Application[], app: Application): Applicat
 
 export const removeApplication = (apps: Application[], id: string): Application[] => apps.filter((a) => a.id !== id);
 
-/** A folder's applications: the newest applied first, saved-for-later ones after. */
-export const appsIn = (apps: Application[], folderId: string) =>
-  apps.filter((a) => a.folderId === folderId).sort((a, b) => (b.applied || "").localeCompare(a.applied || "") || a.company.localeCompare(b.company));
+/** The goal an application is toward: its own, or the career folder it was tracked in before. */
+export const appRole = (a: Application): string | null => (a.roleId !== undefined ? a.roleId : a.folderId?.startsWith("role-") ? a.folderId.slice(5) : null);
+
+/** The date that puts it on the list: when she applied, else when she saved it. */
+export const appDate = (a: Application) => a.applied || a.savedOn || "";
+
+/** Newest first: by date applied or saved, then the one made last. */
+export const sortApps = (apps: Application[]) =>
+  [...apps].sort((a, b) => appDate(b).localeCompare(appDate(a)) || b.id.localeCompare(a.id));
+
+export type AppFilter = { status: AppStatus | "all"; roleId: string | "all"; q: string };
+export const filterApps = (apps: Application[], f: AppFilter) => {
+  const q = f.q.trim().toLowerCase();
+  return sortApps(apps).filter((a) => (f.status === "all" || a.status === f.status) && (f.roleId === "all" || appRole(a) === f.roleId) && (!q || a.company.toLowerCase().includes(q)));
+};
+
+/** Legacy job folder, from before job folders became applications. */
+export type ResumeFolder = { id: string; title: string; roleId: string | null; job?: { title: string; org: string } | undefined };
+
+/**
+ * Job folders become applications: each folder's resume and cover letter go with one application (the ones
+ * she already tracked there keep theirs). Goal folders need nothing: their documents are her base versions.
+ */
+export function migrateJobFolders(st: { resumeFolders: ResumeFolder[]; resumes: ResumeDoc[]; applications: Application[] }): { resumeFolders: ResumeFolder[]; resumes: ResumeDoc[]; applications: Application[] } {
+  if (!st.resumeFolders.length) return st;
+  let apps = st.applications.map((a) => (a.roleId === undefined ? { ...a, roleId: appRole(a) } : a));
+  let resumes = st.resumes;
+  for (const f of st.resumeFolders) {
+    const inF = resumes.filter((d) => d.folder === f.id);
+    const resume = inF.find((d) => d.kind !== "cover") ?? null;
+    const cover = inF.find((d) => d.kind === "cover") ?? null;
+    let owners = apps.filter((a) => a.folderId === f.id);
+    if (!owners.length) {
+      const made: Application = { ...blankApplication(f.roleId, resume?.id ?? null, 0), id: `app-${f.id}`, company: f.job?.org ?? "", role: f.job?.title ?? f.title, folderId: f.id };
+      apps = saveApplication(apps, made);
+      owners = [made];
+    }
+    const ids = new Set(owners.map((o) => o.id));
+    apps = apps.map((a) => (ids.has(a.id) ? { ...a, roleId: a.roleId ?? f.roleId, resumeId: a.resumeId ?? resume?.id ?? null, coverId: a.coverId ?? cover?.id ?? null } : a));
+    const first = owners[0]!;
+    resumes = resumes.map((d) => (d.folder === f.id ? { ...d, folder: undefined, applicationId: first.id } : d));
+  }
+  return { resumeFolders: [], resumes, applications: apps };
+}
 
 // ---------- Job posting ----------
 

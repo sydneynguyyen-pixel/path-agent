@@ -95,7 +95,7 @@ export function proofLabel(p: SkillProof): string {
 const proofShort = (p: SkillProof) => (p.type === "class" ? p.code : p.title);
 const uniq = <T,>(xs: T[]) => [...new Set(xs)];
 /** Up to two places a skill came from, one class and one thing she did when she has both. */
-const sourcesOf = (s: SuggestSkill): SkillProof[] => {
+export const sourcesOf = (s: SuggestSkill): SkillProof[] => {
   const cls = s.proofs.find((p) => p.type === "class");
   const did = s.proofs.find((p) => p.type !== "class");
   return cls && did ? [cls, did] : s.proofs.slice(0, 2);
@@ -118,15 +118,21 @@ export function strongestSkills(i: SuggestInput, n = 3): SuggestSkill[] {
     .map((x) => x.s);
 }
 
+/** "Skills from coursework and events: qualitative observation (ANTH 2, Undergraduate Research Symposium)." Names and sources only. */
+export function skillsSentence(top: SuggestSkill[]): string {
+  if (!top.length) return "";
+  const kinds = uniq<string>(top.flatMap((s) => sourcesOf(s).map((p) => (p.type === "class" ? "coursework" : p.type === "event" ? "events" : "projects"))));
+  const order = ["coursework", "events", "projects"].filter((k) => kinds.includes(k));
+  const parts = top.map((s) => `${inline(s.name)} (${uniq(sourcesOf(s).map(proofShort)).join(", ")})`);
+  return `Skills from ${listOf(order)}: ${listOf(parts)}.`;
+}
+
 /** A summary aimed at the role, naming her strongest confirmed skills and where each came from. Nothing more. */
 export function roleSummary(i: SuggestInput): string | null {
   const top = strongestSkills(i);
   if (!top.length) return null;
-  const kinds = uniq<string>(top.flatMap((s) => sourcesOf(s).map((p) => (p.type === "class" ? "coursework" : p.type === "event" ? "events" : "projects"))));
-  const order = ["coursework", "events", "projects"].filter((k) => kinds.includes(k));
-  const parts = top.map((s) => `${inline(s.name)} (${uniq(sourcesOf(s).map(proofShort)).join(", ")})`);
   const aim = i.role ? ` working toward ${roleLine(i.role.title)}` : "";
-  return `${i.major} student${aim}. Skills from ${listOf(order)}: ${listOf(parts)}.`;
+  return `${i.major} student${aim}. ${skillsSentence(top)}`;
 }
 
 /** Every bullet the record supports for an entry, in order. */

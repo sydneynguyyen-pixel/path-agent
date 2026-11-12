@@ -17,12 +17,16 @@ const tab = (name: string) => fireEvent.click(within(panel()).getByRole("tab", {
 const card = (name: string) => fireEvent.click(within(within(panel()).getByRole("region", { name })).getAllByRole("button", { expanded: false })[0]!);
 
 describe("Career → Resume", () => {
-  it("opens the main goal's folder on a real one-page resume, education first, with only her real details", () => {
+  it("opens on the main goal's resume, a real one-page resume, education first, with only her real details", () => {
     view();
-    const folders = screen.getByRole("navigation", { name: "Folders" });
-    expect(within(folders).getByRole("button", { name: /UX researcher.*2 docs · 0 applications/ })).toHaveAttribute("aria-pressed", "true");
-    expect(within(folders).getByRole("button", { name: /General.*1 doc/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Cover letter/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Build" })).toHaveAttribute("aria-pressed", "true");
+    const docs = screen.getByRole("navigation", { name: "Documents" });
+    expect(within(docs).getByRole("button", { name: /Resume · UX researcher/ })).toHaveAttribute("aria-pressed", "true");
+    expect(within(docs).getByRole("button", { name: /General CV/ })).toBeInTheDocument();
+    expect(within(docs).getByRole("button", { name: /Cover letter/ })).toBeInTheDocument();
+    // No folders any more: one drop zone for a job instead.
+    expect(screen.queryByRole("navigation", { name: "Folders" })).not.toBeInTheDocument();
+    expect(screen.getByText("Drop a job and I'll tailor a copy.")).toBeInTheDocument();
     expect(within(page()).getByText("Maya Torres")).toBeInTheDocument();
     const contact = within(page()).getByRole("list", { name: "Contact" });
     expect(contact).toHaveTextContent("maya.torres@bayview.example");
@@ -93,7 +97,7 @@ describe("Career → Resume", () => {
     expect(page().style.getPropertyValue("--rs-accent")).toBe("#9d8cf2");
     expect(journey!.resumes.find((d) => d.id === "resume-ux")).toMatchObject({ template: "classic", accent: "violet" });
     // Another document keeps its own look.
-    fireEvent.click(screen.getByRole("button", { name: /Cover letter/ }));
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Documents" })).getByRole("button", { name: /Cover letter/ }));
     expect(page()).toHaveAttribute("data-template", "modern");
     fireEvent.click(within(panel()).getByRole("button", { name: /Compact/ }));
     expect(page()).toHaveAttribute("data-template", "compact");
@@ -101,7 +105,7 @@ describe("Career → Resume", () => {
 
   it("the cover letter is its own editable page from her real skills", () => {
     view();
-    fireEvent.click(screen.getByRole("button", { name: /Cover letter/ }));
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Documents" })).getByRole("button", { name: /Cover letter/ }));
     const box = within(panel()).getByRole("textbox", { name: "Cover letter" }) as HTMLTextAreaElement;
     expect(box.value).toContain("UX researcher role");
     expect(box.value).toContain("qualitative observation");
@@ -138,47 +142,12 @@ describe("Career → Resume", () => {
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
   });
 
-  it("tracks applications she records, with the resume she sent, and Undo after removing", async () => {
-    view();
-    tab("Apply");
-    expect(within(panel()).getByText("Track where you've applied.")).toBeInTheDocument();
-    fireEvent.click(within(panel()).getByRole("button", { name: "Add an application" }));
-    const form = within(panel()).getByRole("form", { name: "Add an application" });
-    fireEvent.change(within(form).getByLabelText("Company"), { target: { value: "Acme Health" } });
-    fireEvent.change(within(form).getByLabelText("Role title"), { target: { value: "UX Research Intern" } });
-    fireEvent.change(within(form).getByLabelText("Date applied"), { target: { value: "2026-11-10" } });
-    expect((within(form).getByLabelText("Resume you sent") as HTMLSelectElement).value).toBe("resume-ux");
-    fireEvent.click(within(form).getByRole("button", { name: "Interviewing" }));
-    fireEvent.click(within(form).getByRole("button", { name: "Add to tracker" }));
-    expect(journey!.applications).toMatchObject([{ company: "Acme Health", role: "UX Research Intern", applied: "2026-11-10", status: "interviewing", resumeId: "resume-ux", folderId: "role-ux" }]);
-    expect(within(panel()).getByText(/Sent Resume/)).toBeInTheDocument();
-    expect(within(screen.getByRole("navigation", { name: "Folders" })).getByRole("button", { name: /UX researcher.*1 application/ })).toBeInTheDocument();
-    fireEvent.click(within(panel()).getByRole("button", { name: "Remove Acme Health" }));
-    expect(journey!.applications).toEqual([]);
-    fireEvent.click(await screen.findByRole("button", { name: "Undo" }));
-    expect(journey!.applications).toHaveLength(1);
-    expect(screen.getByText(/Sprout never applies or sends anything/)).toBeInTheDocument();
-  });
-
-  it("makes a folder for a specific job with its own resume and cover letter", () => {
-    view();
-    fireEvent.click(screen.getByRole("button", { name: "New folder for a specific job" }));
-    fireEvent.change(screen.getByLabelText("Job title"), { target: { value: "UX Research Intern" } });
-    fireEvent.change(screen.getByLabelText(/Organization/), { target: { value: "Acme Health" } });
-    fireEvent.click(screen.getByRole("button", { name: "Make folder" }));
-    expect(journey!.resumeFolders).toMatchObject([{ title: "UX Research Intern — Acme Health", roleId: "ux" }]);
-    const folder = within(screen.getByRole("navigation", { name: "Folders" })).getByRole("button", { name: /UX Research Intern.*Acme Health.*2 docs/ });
-    expect(folder).toHaveAttribute("aria-pressed", "true");
-    expect(within(panel()).getByText(/Resume · UX Research Intern/)).toBeInTheDocument();
-  });
-
-  it("Reset demo clears drafts, folders and applications but keeps the auto-add choice", () => {
+  it("Reset demo clears drafts and applications but keeps the auto-add choice", () => {
     view();
     card("Skills");
     fireEvent.click(screen.getByRole("switch", { name: /Add new skills automatically/ }));
     act(() => journey!.saveResume({ id: "resume-ux", kind: "resume", roleId: "ux", title: "x", headline: null, summary: "Mine", letter: null, hiddenExperience: [], hiddenSkills: [], projects: [], showProjects: false, template: "classic" }));
-    act(() => journey!.saveApplication({ id: "a", folderId: "role-ux", company: "Acme", role: "Intern", link: "", applied: "", resumeId: null, status: "saved", next: "", followUp: "" }));
-    act(() => journey!.saveResumeFolder({ id: "job-x", title: "Intern — Acme", roleId: "ux" }));
+    act(() => journey!.saveApplication({ id: "a", roleId: "ux", company: "Acme", role: "Intern", link: "", applied: "", resumeId: null, status: "saved", next: "", followUp: "" }));
     act(() => journey!.setResumeContact({ phone: "555" }));
     act(() => journey!.reset());
     expect(journey!.resumes).toEqual([]);
@@ -270,7 +239,7 @@ describe("Career → Resume: Content cards and Sprout's ideas", () => {
     expect(within(skills).queryByRole("group", { name: /^Not yet:/ })).not.toBeInTheDocument();
     expect(journey!.resumes.find((d) => d.id === "resume-ux")?.dismissedIdeas).toEqual(["gap:ux"]);
     // Another document still has its own ideas.
-    fireEvent.click(within(screen.getByRole("navigation", { name: "Folders" })).getByRole("button", { name: /General/ }));
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Documents" })).getByRole("button", { name: /General CV/ }));
     expect(within(panel()).getByRole("button", { name: /Sprout has \d+ ideas? for this CV/ })).toBeInTheDocument();
   });
 

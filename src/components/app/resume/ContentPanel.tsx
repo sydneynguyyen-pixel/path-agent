@@ -115,7 +115,7 @@ export function ContentPanel(p: Props) {
       <div className="rs-cards">
         {header}
         <Card id="letter" block="letter" icon={FileText} title="Letter" preview={doc.letter === null ? "From the template · fill in the [brackets]" : "Your words"} {...card("letter")}>
-          <p className="text-xs text-muted-foreground">A starting point from your real skills. Fill in the [brackets] and make it sound like you.</p>
+          <p className="text-xs text-muted-foreground">Fill in the [brackets].</p>
           <div>
             <Textarea value={p.letter} onFocus={() => ping("letter")} onChange={(e) => { save({ letter: e.target.value }); ping("letter"); }} rows={18} className="leading-relaxed" aria-label="Cover letter" />
             {doc.letter !== null && <Button variant="ghost" size="sm" className="mt-1 -ml-3" onClick={() => save({ letter: null })}><RotateCcw className="size-3.5" aria-hidden="true" />Back to the template</Button>}
@@ -150,7 +150,6 @@ export function ContentPanel(p: Props) {
         preview={sectionHidden(doc, "summary") ? "Hidden on the page" : p.summary.trim() || "Empty · leave it out or write two lines"} {...card("summary")}>
         <IdeaList ideas={ideasIn("summary")} {...ideaProps} />
         <div>
-          <p className="mb-2 text-xs text-muted-foreground">{doc.summary === null ? "Suggested from your skills. Edit it and it's yours." : "Two lines is plenty."}</p>
           <Textarea value={p.summary} onFocus={() => ping("summary")} onChange={(e) => { save({ summary: e.target.value }); ping("summary"); }} rows={3} aria-label="Summary" />
           {doc.summary !== null && <Button variant="ghost" size="sm" className="mt-1 -ml-3" onClick={() => save({ summary: null })}><RotateCcw className="size-3.5" aria-hidden="true" />Use the suggestion</Button>}
         </div>
@@ -180,7 +179,6 @@ export function ContentPanel(p: Props) {
             </ul>
           )}
           {id === "projects" && <OwnProjects doc={doc} save={save} ping={ping} fieldFlash={fieldFlash} openEntry={openEntry} setOpenEntry={setOpenEntry} />}
-          {id !== "projects" && shownIn(id).length > 0 && <p className="text-xs text-muted-foreground">Untick one to leave it off this version. Click a line on the page to jump to it.</p>}
         </Card>
       ))}
 
@@ -343,7 +341,6 @@ function HeaderFields({ headline, save, ping }: { headline: string; save: Save; 
               </div>
             ))}
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Only what you type here shows. These are the same on all your documents.</p>
         </div>
       ) : (
         <Button size="sm" variant="outline" className="h-8 justify-self-start" onClick={() => setMore(true)}><Plus className="size-3.5" aria-hidden="true" />Add contact details</Button>
@@ -482,7 +479,6 @@ function OwnProjects({ doc, save, ping, fieldFlash, openEntry, setOpenEntry }: {
         );
       })}
       <Button size="sm" variant="outline" className="h-8 justify-self-start" onClick={add}><Plus className="size-3.5" aria-hidden="true" />Add a project</Button>
-      <p className="text-xs text-muted-foreground">Something you made or studied on your own, like a class project you're proud of.</p>
     </div>
   );
 }
@@ -507,9 +503,8 @@ function SkillsEditor({ doc, save, ping, split, byName, all, roleTitle }: { doc:
   };
   return (
     <div>
-      <p className="mb-2 text-xs text-muted-foreground">{roleTitle ? `Skills ${roleTitle} roles ask for come first. Untick one to leave it off this version.` : "Only skills you confirmed. Untick one to leave it off this version."}</p>
       <label className="flex items-center justify-between gap-3 rounded-[12px] bg-muted px-3.5 py-2.5 text-sm">
-        <span><span className="font-medium">Add new skills automatically</span><span className="block text-xs text-muted-foreground">When you confirm a skill, it joins your resume. You can undo it.</span></span>
+        <span><span className="font-medium">Add new skills automatically</span></span>
         <Switch checked={j.autoAddSkills} onCheckedChange={j.setAutoAddSkills} />
       </label>
       {fresh.length > 0 && (
@@ -562,7 +557,6 @@ function SkillsEditor({ doc, save, ping, split, byName, all, roleTitle }: { doc:
       )}
       <div className="mt-4">
         <p className="text-xs font-medium">Tools</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">From Software and tools. Ones you're still learning aren't listed yet.</p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {RESUME_TOOLS.map((t) => {
             const on = !hasName(doc.hiddenSkills, t.name);

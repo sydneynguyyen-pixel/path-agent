@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  addName, appsIn, blankApplication, blankDoc, bulletsFromEvent, bulletsFromWords, comparePosting, contactLine, coverTemplate, docId, docLook, docsIn, dropName, experiencePhrase,
-  folderCounts, folderList, folderOf, groupDocs, jobFolder, jobFolderDocs, libraryDocs, moveItem, newVersion, outcomeBullet, pageCount, pendingSkills, removeApplication,
+  addName, appRole, baseDocs, blankApplication, blankDoc, bulletsFromEvent, bulletsFromWords, comparePosting, contactLine, coverTemplate, docId, docLook, dropName, experiencePhrase,
+  filterApps, groupDocs, libraryDocs, migrateJobFolders, moveItem, newVersion, orderEntries, orderedSkills, outcomeBullet, pageCount, pendingSkills, removeApplication, sortApps, tailoredDoc,
   resumeText, roleAsks, saveApplication, saveDoc, skillLines, skillsForDoc, startsWithAction, syncResumeSkills, type ResumePage,
   entrySection, sectionHidden, toggleSection, verbLed,
 } from "@/lib/resume";
@@ -162,41 +162,55 @@ describe("templates and the page", () => {
   });
 });
 
-describe("folders", () => {
-  it("one folder per goal, then other careers she made versions for, then jobs, then General", () => {
-    const job = jobFolder("UX Research Intern", "Acme Health", "ux", 1);
-    expect(job.title).toBe("UX Research Intern — Acme Health");
-    const docs = libraryDocs([ux], [newVersion(blankDoc("resume", "ux", "UX researcher"), "market", "Market research analyst", [], 2)]);
-    expect(folderList([ux], [job], docs, () => "Market research analyst").map((f) => f.id)).toEqual(["role-ux", "role-market", job.id, "general"]);
-    expect(docsIn(docs, "role-ux").map((d) => d.kind)).toEqual(["resume", "cover"]);
-    expect(folderCounts(1, 0)).toBe("1 doc · 0 applications");
-    expect(folderCounts(2, 3)).toBe("2 docs · 3 applications");
+describe("base and tailored versions", () => {
+  it("base versions are her untailored resumes and CVs, never cover letters or a job's copy", () => {
+    const base = blankDoc("resume", "ux", "UX researcher");
+    const t = tailoredDoc({ ...base, summary: "Mine", bullets: { a: ["Led it"] } }, { summary: "For Acme", skillOrder: ["Interviewing"] }, { id: "resume-app-1", title: "Resume · Intern — Acme", posting: "text", applicationId: "app-1" });
+    expect(t).toMatchObject({ id: "resume-app-1", kind: "resume", roleId: "ux", summary: "For Acme", skillOrder: ["Interviewing"], posting: "text", applicationId: "app-1", copiedFrom: base.id });
+    expect(t.bullets).toEqual({ a: ["Led it"] });
+    const docs = libraryDocs([ux], [t]);
+    expect(baseDocs(docs).map((d) => d.id)).toEqual(["resume-ux", "cv-general"]);
+    // A version for another career is a base version again.
+    expect(newVersion(t, "policy", "Policy analyst", [], 8).applicationId).toBeUndefined();
   });
-  it("a job folder starts with a copy of her resume and a fresh cover letter, both in the folder", () => {
-    const job = jobFolder("UX Research Intern", "Acme Health", "ux", 7);
-    const from = { ...blankDoc("resume", "ux", "UX researcher"), summary: "Mine", bullets: { a: ["Led it"] } };
-    const [resume, cover] = jobFolderDocs(job, from, 7);
-    expect(resume).toMatchObject({ kind: "resume", folder: job.id, summary: "Mine", copiedFrom: from.id });
-    expect(resume!.bullets).toEqual({ a: ["Led it"] });
-    expect(cover).toMatchObject({ kind: "cover", folder: job.id, letter: null });
-    expect(folderOf(resume!)).toBe(job.id);
-    // A version for another career leaves the job folder.
-    expect(folderOf(newVersion(resume!, "policy", "Policy analyst", [], 8))).toBe("role-policy");
+  it("orders entries and skills by the version's own order, keeping anything it doesn't name after", () => {
+    expect(orderEntries([{ id: "a" }, { id: "b" }, { id: "c" }], ["c", "x"]).map((e) => e.id)).toEqual(["c", "a", "b"]);
+    expect(orderEntries([{ id: "a" }], undefined).map((e) => e.id)).toEqual(["a"]);
+    const known = (n: string) => n !== "Made up";
+    expect(orderedSkills(["A", "B", "C"], ["C", "Made up", "A"], known, ["A"])).toEqual({ lead: ["C"], rest: ["A", "B"] });
+    expect(orderedSkills(["A"], undefined, known, [])).toEqual({ lead: [], rest: ["A"] });
   });
 });
 
 describe("applications", () => {
-  it("are added, edited and removed by id, and listed newest applied first", () => {
-    const a = { ...blankApplication("role-ux", "resume-ux", 1), company: "Acme Health", role: "UX Research Intern", applied: "2026-11-01", status: "applied" as const };
-    const b = { ...blankApplication("role-ux", null, 2), company: "Bay Clinic", role: "Research assistant" };
-    const c = { ...blankApplication("general", null, 3), company: "Elsewhere", role: "Intern", applied: "2026-11-05" };
+  it("are added, edited and removed by id, listed newest first, and filtered", () => {
+    const a = { ...blankApplication("ux", "resume-ux", 1), company: "Acme Health", role: "UX Research Intern", applied: "2026-11-01", status: "applied" as const };
+    const b = { ...blankApplication("ux", null, 2), company: "Bay Clinic", role: "Research assistant", savedOn: "2026-11-07" };
+    const c = { ...blankApplication(null, null, 3), company: "Elsewhere", role: "Intern", applied: "2026-11-05" };
     let apps = saveApplication(saveApplication(saveApplication([], b), a), c);
-    expect(appsIn(apps, "role-ux").map((x) => x.company)).toEqual(["Acme Health", "Bay Clinic"]);
+    expect(sortApps(apps).map((x) => x.company)).toEqual(["Bay Clinic", "Elsewhere", "Acme Health"]);
+    expect(filterApps(apps, { status: "all", roleId: "ux", q: "" }).map((x) => x.company)).toEqual(["Bay Clinic", "Acme Health"]);
+    expect(filterApps(apps, { status: "applied", roleId: "all", q: "" }).map((x) => x.company)).toEqual(["Acme Health"]);
+    expect(filterApps(apps, { status: "all", roleId: "all", q: "acme" }).map((x) => x.company)).toEqual(["Acme Health"]);
     apps = saveApplication(apps, { ...a, status: "interviewing" });
     expect(apps).toHaveLength(3);
     expect(apps.find((x) => x.id === a.id)?.status).toBe("interviewing");
     expect(removeApplication(apps, a.id).map((x) => x.id)).toEqual([b.id, c.id]);
-    expect(blankApplication("general", null, 4)).toMatchObject({ status: "saved", applied: "", link: "" });
+    expect(blankApplication(null, null, 4)).toMatchObject({ status: "saved", applied: "", link: "", roleId: null });
+    expect(appRole({ ...c, roleId: undefined, folderId: "role-policy" })).toBe("policy");
+  });
+  it("old job folders become applications, with their resume and cover letter; goal folders need nothing", () => {
+    const folder = { id: "job-intern-acme", title: "Intern — Acme", roleId: "ux", job: { title: "Intern", org: "Acme" } };
+    const resume = { ...blankDoc("resume", "ux"), id: "resume-job", folder: folder.id };
+    const cover = { ...blankDoc("cover", "ux"), id: "cover-job", folder: folder.id };
+    const tracked = { ...blankApplication(null, null, 9), roleId: undefined, folderId: "role-policy", company: "Policy Lab", role: "Analyst" };
+    const out = migrateJobFolders({ resumeFolders: [folder], resumes: [resume, cover, blankDoc("resume", "ux")], applications: [tracked] });
+    expect(out.resumeFolders).toEqual([]);
+    expect(out.applications).toMatchObject([{ company: "Policy Lab", roleId: "policy" }, { id: "app-job-intern-acme", company: "Acme", role: "Intern", roleId: "ux", resumeId: "resume-job", coverId: "cover-job", status: "saved" }]);
+    expect(out.resumes.filter((d) => d.applicationId === "app-job-intern-acme").map((d) => d.id)).toEqual(["resume-job", "cover-job"]);
+    expect(out.resumes.every((d) => !d.folder)).toBe(true);
+    const none = { resumeFolders: [], resumes: [], applications: [] };
+    expect(migrateJobFolders(none)).toBe(none);
   });
 });
 

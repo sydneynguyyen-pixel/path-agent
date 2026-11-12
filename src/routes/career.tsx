@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { ArrowRight, Check, Compass, FileText, MoreHorizontal, IdCard, Plus, Sparkles, Star, Target, Undo2, X } from "lucide-react";
 import { careerInterests, careerRoles, opportunities, type CareerRole, type EventPlatform } from "@/data/scenario";
@@ -15,7 +15,7 @@ import { GapPlan } from "@/components/app/CareerDiscovery";
 import { ConnectDialog, useFound } from "@/components/app/EventBits";
 import { CareerSkills } from "@/components/app/CareerSkills";
 import { YourCard } from "@/components/app/YourCard";
-import { ResumeTab } from "@/components/app/ResumeTab";
+import { ResumeTab, ResumeViewToggle, type ResumeView } from "@/components/app/ResumeTab";
 import { BuildSkills } from "@/components/app/BuildSkills";
 import { usePortfolioSkills } from "@/hooks/use-portfolio-skills";
 import { useSlidingPill } from "@/hooks/use-sliding-pill";
@@ -23,10 +23,11 @@ import { CareerMark, careerStyle } from "@/components/app/CareerMark";
 import sceneOpportunities from "@/assets/scene-opportunities.jpg";
 
 export const Route = createFileRoute("/career")({
-  validateSearch: (s: Record<string, unknown>): { plan?: string; resume?: boolean; tab?: "skills" | "card" | "resume" } => ({
+  validateSearch: (s: Record<string, unknown>): { plan?: string; resume?: boolean; tab?: "skills" | "card" | "resume"; view?: "applications" } => ({
     ...(typeof s["plan"] === "string" ? { plan: s["plan"] } : {}),
     ...(s["tab"] === "skills" || s["tab"] === "card" || s["tab"] === "resume" ? { tab: s["tab"] } : {}),
     ...(s["resume"] === true || s["resume"] === "true" ? { resume: true } : {}),
+    ...(s["view"] === "applications" ? { view: "applications" as const } : {}),
   }),
   head: () => ({
     meta: [
@@ -44,7 +45,7 @@ const HEAD: Record<CareerTab, { title: string; sub: string }> = {
   goals: { title: "Your goals", sub: "The careers you're working toward, main goal first." },
   skills: { title: "Your skills", sub: "What your classes and events show you can do." },
   card: { title: "Your card", sub: "What other students see when you go to something." },
-  resume: { title: "Your resume", sub: "Resumes, CVs and cover letters for the roles you're going for." },
+  resume: { title: "Your resume", sub: "Tailor it. Track applications." },
 };
 
 function Career() {
@@ -56,6 +57,8 @@ function Career() {
   const [connecting, setConnecting] = useState<EventPlatform | null>(null);
   // ?resume=true (old links, the Skills page's resume button) lands on the Resume tab.
   const tab: CareerTab = search.resume ? "resume" : search.tab ?? "goals";
+  const resumeView: ResumeView = search.view ?? "build";
+  const setResumeView = (v: ResumeView) => void navigate({ search: { tab: "resume", ...(v === "applications" ? { view: "applications" as const } : {}) }, replace: true, resetScroll: false });
 
   if (search.plan) {
     const planRole = careerRoles.find((r) => r.id === search.plan) ?? careerRoles[0]!;
@@ -80,11 +83,11 @@ function Career() {
   return (
     <div className="mx-auto max-w-7xl">
       <PageBanner src={sceneOpportunities} position="50% 40%" />
-      <PageHeader {...HEAD[tab]} />
-      <Tabs tab={tab} onChange={(t) => void navigate({ search: t === "goals" ? {} : { tab: t }, replace: true, resetScroll: false })} />
+      <CareerHeader tab={tab} onChange={(t) => void navigate({ search: t === "goals" ? {} : { tab: t }, replace: true, resetScroll: false })}
+        extra={tab === "resume" && <ResumeViewToggle view={resumeView} onView={setResumeView} count={j.applications.length} />} />
       <div className="mt-8 space-y-14">
         {tab === "skills" && <CareerSkills found={found} onConnect={setConnecting} resumeOpen={false} onResume={(open) => void navigate({ search: open ? { tab: "resume" } : { tab: "skills" } })} />}
-        {tab === "resume" && <ResumeTab />}
+        {tab === "resume" && <ResumeTab view={resumeView} onView={setResumeView} />}
         {tab === "card" && <YourCard found={found} />}
         {tab === "goals" && <><YourGoals goals={goals} /><Suggestions full={goals.length >= MAX_GOALS} /></>}
         <ConnectDialog platform={connecting} onClose={() => setConnecting(null)} />
@@ -95,15 +98,31 @@ function Career() {
 }
 
 /** Goals and skills are two tabs, so careers to consider sit right under her goals instead of past every skill. */
-type CareerTab = "goals" | "skills" | "card" | "resume";
-function Tabs({ tab: current, onChange }: { tab: CareerTab; onChange: (t: CareerTab) => void }) {
+export type CareerTab = "goals" | "skills" | "card" | "resume";
+
+/** The title and subtitle on the left with the tab pills on the same row on the right (lg+); on smaller screens the pills drop under the title. */
+export function CareerHeader({ tab, onChange, extra }: { tab: CareerTab; onChange: (t: CareerTab) => void; extra?: ReactNode }) {
+  return (
+    <div className="lg:flex lg:items-end lg:justify-between lg:gap-8">
+      <div className="min-w-0 *:mb-0">
+        <PageHeader {...HEAD[tab]} />
+      </div>
+      <div className="mt-6 flex flex-wrap items-center gap-2 lg:mt-0 lg:mb-0.5 lg:shrink-0 lg:justify-end">
+        {extra}
+        <Tabs tab={tab} onChange={onChange} />
+      </div>
+    </div>
+  );
+}
+
+function Tabs({ tab: current, onChange, className }: { tab: CareerTab; onChange: (t: CareerTab) => void; className?: string }) {
   const { containerRef, pillRef } = useSlidingPill<HTMLDivElement>('[aria-selected="true"]');
   const tab = (id: CareerTab, label: string, Icon: typeof Target) => {
     const on = id === current;
     return <button type="button" role="tab" aria-selected={on} onClick={() => onChange(id)} className={cn("inline-flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2.5 text-sm whitespace-nowrap transition-colors sm:px-5", on ? "glass-active font-medium" : "text-muted-foreground hover:text-foreground")}><Icon className="size-4" aria-hidden="true" />{label}</button>;
   };
   return (
-    <div ref={containerRef} role="tablist" aria-label="Career" className="sub-tabs has-pill relative mt-6 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full border bg-card/70 p-1 [scrollbar-width:none]">
+    <div ref={containerRef} role="tablist" aria-label="Career" className={cn("sub-tabs has-pill relative inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-full border bg-card/70 p-1 [scrollbar-width:none]", className)}>
       <span ref={pillRef} className="sliding-pill liquid" aria-hidden="true" />
       {tab("goals", "Your goals", Target)}
       {tab("skills", "Your skills", Sparkles)}

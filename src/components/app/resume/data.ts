@@ -3,7 +3,7 @@ import { opportunities, progress, schools, setupDirectory, terms } from "@/data/
 import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
 import { kindLabel } from "@/lib/activities";
 import { attendance, wentTo, type Found } from "@/lib/experiences";
-import { bulletsFromEvent, bulletsFromWords, experiencePhrase, KIND_LABEL, type EntrySection, type ResumeDoc } from "@/lib/resume";
+import { bulletsFromEvent, bulletsFromWords, experiencePhrase, type EntrySection } from "@/lib/resume";
 import type { EntryRecord } from "@/lib/resumeSuggest";
 import { TOOLS } from "@/components/app/PathCard";
 
@@ -119,9 +119,3 @@ export const fieldId = (block: string) => `rs-f-${block.replace(/[^a-z0-9-]/gi, 
 export const RESUME_TOOLS = TOOLS.filter((t) => !("later" in t && t.later));
 
 export const shortDate = (d: string) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "");
-/** "Resume", "Resume v2", "Cover letter". */
-export const docName = (d: ResumeDoc | undefined) => {
-  if (!d) return "";
-  const v = d.title.match(/\((v\d+)\)$/)?.[1];
-  return `${KIND_LABEL[d.kind]}${v ? ` ${v}` : ""}`;
-};

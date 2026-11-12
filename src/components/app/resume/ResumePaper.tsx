@@ -154,3 +154,18 @@ export function FittedPaper(props: PaperProps & { onPages?: (n: number) => void 
     </div>
   );
 }
+
+/**
+ * A small picture of a page (Applications, Base resumes, the tailoring sequence). Hidden from screen readers:
+ * whatever opens it carries the name. `lit` rings one section, for the tailoring sequence.
+ */
+export function MiniPaper({ width = 72, lit, ...props }: PaperProps & { width?: number; lit?: string | undefined }) {
+  const s = width / PAGE_W;
+  return (
+    <div className="rs-mini" aria-hidden="true" inert data-lit={lit} style={{ width, height: PAGE_H * s }}>
+      <div className="rs-mini-inner" style={{ transform: `scale(${s})` }}>
+        <PaperContent {...props} />
+      </div>
+    </div>
+  );
+}

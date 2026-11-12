@@ -19,7 +19,7 @@ import { symposiumEvent } from "@/data/event";
 import { people } from "@/data/people";
 import { addGoal, goalsFor, makeMain, MAX_GOALS, removeGoal } from "@/lib/goals";
 import { activityId, type Activity, type SingleSkill } from "@/lib/activities";
-import { addName, blankContact, dropName, removeApplication, removeDoc, saveApplication, saveDoc, type Application, type ResumeContact, type ResumeDoc, type ResumeFolder } from "@/lib/resume";
+import { addName, blankContact, dropName, migrateJobFolders, removeApplication, removeDoc, saveApplication, saveDoc, type Application, type ResumeContact, type ResumeDoc, type ResumeFolder } from "@/lib/resume";
 import { callName, eventAccountsFor, eventPlanFor, filledEventPlan, followUp, pathBuiltFor, inviteDraft, type DeckChoice, type DemoFill, type EventPlan } from "@/lib/event";
 
 export type Stage = "idle" | "failed" | "chosen";
@@ -99,9 +99,9 @@ type State = {
   resumeSeeded: boolean;
   /** New confirmed skills go on her resume by themselves. A preference, so Reset demo keeps it. */
   autoAddSkills: boolean;
-  /** Folders she made for one specific job (Career → Resume). Goal and General folders come from her goals. */
+  /** Legacy job folders. Folders are retired: any here become applications at once (migrateJobFolders). */
   resumeFolders: ResumeFolder[];
-  /** Applications she recorded herself, each with the resume version she sent. Sprout never applies or sends. */
+  /** Applications she saved or recorded herself (Career → Resume → Applications), each with the resume version for it. Sprout never applies or sends. */
   applications: Application[];
   /** Phone, location and links she typed for her resume header. Empty until she does. */
   resumeContact: ResumeContact;
@@ -288,10 +288,8 @@ type Ctx = State & {
   saveResume: (doc: ResumeDoc) => void;
   /** Removes a saved draft. A default document goes back to its template. */
   removeResume: (id: string) => void;
-  /** Adds or renames a folder for one specific job. */
+  /** Legacy: restores an old job folder, which becomes an application with its drafts right away. */
   saveResumeFolder: (folder: ResumeFolder) => void;
-  /** Removes a job folder with its drafts and applications. */
-  removeResumeFolder: (id: string) => void;
   /** Records or edits an application (insert or replace by id). */
   saveApplication: (app: Application) => void;
   removeApplication: (id: string) => void;
@@ -450,6 +448,11 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       set((p) => ({ ...p, event: eventPlanFor("fresh"), eventAccounts: eventAccountsFor("fresh"), interestedRoles: goalsFor("fresh") }));
     }
   }, []);
+
+  // Job folders are retired: any that turn up become applications, their drafts the tailored versions.
+  useEffect(() => {
+    if (s.resumeFolders.length) set((p) => (p.resumeFolders.length ? { ...p, ...migrateJobFolders(p) } : p));
+  }, [s.resumeFolders]);
 
   const latest = useRef(s);
   latest.current = s;
@@ -707,7 +710,6 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       saveResume: (doc) => set((p) => ({ ...p, resumes: saveDoc(p.resumes, doc) })),
       removeResume: (id) => set((p) => ({ ...p, resumes: removeDoc(p.resumes, id) })),
       saveResumeFolder: (folder) => set((p) => ({ ...p, resumeFolders: p.resumeFolders.some((f) => f.id === folder.id) ? p.resumeFolders.map((f) => (f.id === folder.id ? folder : f)) : [...p.resumeFolders, folder] })),
-      removeResumeFolder: (id) => set((p) => ({ ...p, resumeFolders: p.resumeFolders.filter((f) => f.id !== id), resumes: p.resumes.filter((d) => d.folder !== id), applications: p.applications.filter((a) => a.folderId !== id) })),
       saveApplication: (app) => set((p) => ({ ...p, applications: saveApplication(p.applications, app) })),
       removeApplication: (id) => set((p) => ({ ...p, applications: removeApplication(p.applications, id) })),
       setResumeContact: (patch) => set((p) => ({ ...p, resumeContact: { ...p.resumeContact, ...patch } })),

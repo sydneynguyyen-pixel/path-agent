@@ -1,12 +1,15 @@
 import type { EvidenceLevel, Skill } from "@/data/scenario";
 import { eventSkillKey, type EventSkill } from "@/lib/experiences";
 import { evidenceFor, type SkillReview } from "@/lib/skills";
+import { isOwnKey, type OwnProof } from "@/lib/activities";
 
-export type SkillSource = "all" | "classes" | "events";
+export type SkillSource = "all" | "classes" | "events" | "own";
 export type SkillProof =
   | { type: "class"; code: string; quote: string; source: string }
   | { type: "event"; id: string; title: string }
-  | { type: "doing"; id: string; title: string };
+  | { type: "doing"; id: string; title: string }
+  /** Self-reported: a skill she added from something she did. Shown as "Added by you", never as verified. */
+  | { type: "own"; id: string; title: string };
 
 export type PortfolioSkill = {
   key: string;
@@ -20,6 +23,8 @@ export type PortfolioSkill = {
   hidden: boolean;
   unsure: boolean;
   work?: string | undefined;
+  /** Every proof is self-reported, so it's labelled "Added by you". */
+  selfReported: boolean;
 };
 
 const RANK: Record<EvidenceLevel, number> = { Taught: 1, Practiced: 2, Demonstrated: 3 };
@@ -32,12 +37,12 @@ const SAME_SKILL: Record<string, string> = {
 };
 
 /** Class, event and hands-on proof merged into one row per skill. */
-export function portfolioSkills(ledger: Skill[], events: EventSkill[], doing: { skill: string; via: { id: string; title: string } }[], reviews: Record<string, SkillReview>): PortfolioSkill[] {
+export function portfolioSkills(ledger: Skill[], events: EventSkill[], doing: { skill: string; via: { id: string; title: string } }[], reviews: Record<string, SkillReview>, own: OwnProof[] = []): PortfolioSkill[] {
   const rows = new Map<string, PortfolioSkill>();
   const rowFor = (raw: string, theme: string, level: EvidenceLevel) => {
     const name = SAME_SKILL[raw.toLowerCase()] ?? raw;
     const key = name.toLowerCase();
-    const row = rows.get(key) ?? { key, name, theme, level, proofs: [], reviewKeys: [], confirmed: false, hidden: false, unsure: false };
+    const row = rows.get(key) ?? { key, name, theme, level, proofs: [], reviewKeys: [], confirmed: false, hidden: false, unsure: false, selfReported: false };
     if (RANK[level] > RANK[row.level]) row.level = level;
     if (row.theme === OTHER_THEME) row.theme = theme;
     rows.set(key, row);
@@ -62,11 +67,47 @@ export function portfolioSkills(ledger: Skill[], events: EventSkill[], doing: { 
     if (!row.proofs.some((p) => p.type === "doing" && p.id === d.via.id)) row.proofs.push({ type: "doing", id: d.via.id, title: d.via.title.split(" · ").at(-1)! });
   }
 
+  for (const o of own) {
+    // Her word never raises the evidence level of proof Sprout found; a new row starts at Practiced.
+    const existing = rows.get((SAME_SKILL[o.skill.toLowerCase()] ?? o.skill).toLowerCase());
+    const row = rowFor(o.skill, o.theme, existing?.level ?? "Practiced");
+    if (!row.proofs.some((p) => p.type === "own" && p.id === o.via.id)) row.proofs.push({ type: "own", id: o.via.id, title: o.via.title });
+    if (!row.reviewKeys.includes(o.key)) row.reviewKeys.push(o.key);
+    row.unsure = false;
+    if (o.link && !row.work) row.work = o.link;
+  }
+
+  // Self-reported proof counts as confirmed: ticking it when she added it was her "yes". She can still unconfirm it.
+  const isConfirmed = (k: string) => (isOwnKey(k) ? reviews[k]?.confirmed !== false : !!reviews[k]?.confirmed);
   return [...rows.values()]
     .filter((r) => r.proofs.length > 0)
     .map((r) => {
       const seen = r.reviewKeys.map((k) => reviews[k]);
       const wording = seen.find((x) => x?.wording)?.wording;
-      return { ...r, name: wording ?? r.name, confirmed: r.reviewKeys.length > 0 ? seen.every((x) => x?.confirmed) : true, hidden: r.reviewKeys.length > 0 && seen.some((x) => x?.hidden), unsure: r.unsure && !seen.some((x) => x?.confirmed) };
+      const work = seen.find((x) => x?.work)?.work ?? r.work;
+      const confirmed = r.reviewKeys.length > 0 ? r.reviewKeys.every(isConfirmed) || r.reviewKeys.some((k) => isOwnKey(k) && isConfirmed(k)) : true;
+      return { ...r, name: wording ?? r.name, work, confirmed, hidden: r.reviewKeys.length > 0 && seen.some((x) => x?.hidden), unsure: r.unsure && !r.reviewKeys.some(isConfirmed), selfReported: r.proofs.every((p) => p.type === "own") };
     });
+}
+
+export type SourceGroup = { type: SkillProof["type"]; id: string; title: string; skills: PortfolioSkill[] };
+
+/**
+ * One group per place a skill came from (each class, event, thing she went to, thing she added), in first-seen order.
+ * A skill with proof from two places shows in both, so confirming it in one shows in the other.
+ * Hidden skills are left out; they live under "Skills you hid".
+ */
+export function groupBySource(skills: PortfolioSkill[]): SourceGroup[] {
+  const groups = new Map<string, SourceGroup>();
+  for (const s of skills) {
+    if (s.hidden) continue;
+    for (const p of s.proofs) {
+      const id = p.type === "class" ? p.code : p.id;
+      const key = `${p.type}:${id}`;
+      const g = groups.get(key) ?? { type: p.type, id, title: p.type === "class" ? p.code : p.title, skills: [] };
+      if (!g.skills.includes(s)) g.skills.push(s);
+      groups.set(key, g);
+    }
+  }
+  return [...groups.values()];
 }

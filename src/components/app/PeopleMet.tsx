@@ -2,9 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Check, Copy, IdCard, Mail, Pencil, UserPlus, Users } from "lucide-react";
-import { FriendButton, useKnown } from "@/components/app/WhoGoing";
-import { tieWith } from "@/lib/going";
-import { goTogetherEvent, student, type EventPeer } from "@/data/scenario";
+import { FriendButton } from "@/components/app/WhoGoing";
+import { goTogetherEvent, opportunities, student, type EventPeer } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,13 @@ import { contactHref, usePeerState } from "@/components/app/GoTogether";
 import { metStudents, people } from "@/data/people";
 import { PersonPhoto } from "@/components/app/PersonPhoto";
 import { callName, lowerFirst, notesFor, promiseEmail, promiseId } from "@/lib/event";
+import { eventName, mergeMet, type MetPerson } from "@/components/app/mobile/atEvent";
+import { FollowUpComposer } from "@/components/app/mobile/FollowUp";
+
+const metEventName = (id: string) => {
+  const o = opportunities.find((x) => x.id === id);
+  return o ? eventName(o) : "An event";
+};
 
 /** Everyone she's written a note about, with every note, newest event last. Private. */
 export function PeopleMet() {
@@ -25,10 +31,9 @@ export function PeopleMet() {
       <FriendRequests />
       <MatchCard />
       <div>
-        <h2 className="text-xl font-semibold">People you've met</h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Notes you wrote after talking to someone, and anything you said you'd do. Only you see these. They come back before you see that person again.</p>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"><h2 className="text-xl font-semibold">People you've met</h2><span className="text-xs text-muted-foreground">Only you see your notes</span></div>
         <ul className="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-          {metStudents.map((m) => <MetStudentItem key={m.peerId} met={m} />)}
+          {mergeMet(metStudents, j.metAt, metEventName).map((m) => <MetStudentItem key={m.peerId} met={m} />)}
           {met.map((p) => (
             <li key={p.id} className="surface flex flex-col p-6">
               <div className="flex items-center gap-4">
@@ -46,27 +51,39 @@ export function PeopleMet() {
   );
 }
 
-/** A student she met: her note, and their card exactly as they share it. */
-function MetStudentItem({ met }: { met: { peerId: string; event: string; date: string; text: string } }) {
+/** A student she met (scripted, or picked on the phone's share sheet): each event with her note, a follow-up for the ones met with the sheet, and their card exactly as they share it. */
+function MetStudentItem({ met }: { met: MetPerson }) {
   const [open, setOpen] = useState(false);
+  const [following, setFollowing] = useState<string | null>(null);
   const peer = goTogetherEvent.visiblePeers.find((p) => p.id === met.peerId);
   if (!peer) return null;
-  const when = new Date(`${met.date}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const when = (date: string) => new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   return (
     <li className="surface flex flex-col p-6">
       <div className="flex items-center gap-4">
         <PersonPhoto photo={peer.photo} org={peer.org} size="lg" />
         <div className="min-w-0"><div className="font-semibold">{peer.name}</div><div className="text-sm text-muted-foreground">{peer.standing}, {peer.major} · Bayview</div></div>
       </div>
-      <div className="mt-5 text-sm">
-        <div className="text-xs text-muted-foreground">{met.event} · {when}</div>
-        <p className="mt-1.5 flex items-start gap-2"><Pencil className="mt-1 size-3.5 shrink-0 text-muted-foreground" aria-label="Your note" />{met.text}</p>
-      </div>
+      <ul className="mt-5 space-y-4 text-sm">
+        {met.entries.map((e) => (
+          <li key={`${e.event}-${e.date}`}>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">{e.event} · {when(e.date)}{e.live?.followedUp && <span className="aqua-chip rounded-full px-2 py-0.5 text-[11px] font-medium text-foreground">Followed up</span>}</div>
+            {e.text && <p className="mt-1.5 flex items-start gap-2"><Pencil className="mt-1 size-3.5 shrink-0 text-muted-foreground" aria-label="Your note" />{e.text}</p>}
+            {e.live && !e.live.followedUp && <Button size="sm" variant="outline" className="mt-2" onClick={() => setFollowing(e.live!.eventId)}><Mail className="size-4" aria-hidden="true" />Follow up</Button>}
+          </li>
+        ))}
+      </ul>
       <div className="mt-auto pt-5"><Button size="sm" variant="outline" onClick={() => setOpen(true)}><IdCard className="size-4" aria-hidden="true" />See {callName(peer.name)}'s card</Button></div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] overflow-y-auto bg-card sm:max-w-md">
           <DialogHeader><DialogTitle>{peer.name}'s card</DialogTitle><DialogDescription>Only what {callName(peer.name)} chose to share. Click the card to flip it.</DialogDescription></DialogHeader>
           <PeerPathCard peer={peer} />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!following} onOpenChange={(o) => !o && setFollowing(null)}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] overflow-y-auto bg-card sm:max-w-lg">
+          <DialogHeader><DialogTitle>Follow up with {callName(peer.name)}</DialogTitle><DialogDescription>You send it yourself. Nothing goes out for you.</DialogDescription></DialogHeader>
+          {following && <FollowUpComposer peer={peer} eventId={following} onDone={() => setFollowing(null)} />}
         </DialogContent>
       </Dialog>
     </li>
@@ -122,7 +139,6 @@ function NoteItem({ personName, personId, note: n }: { personName: string; perso
 /** Friend requests she got (accept or not now), the ones she sent (still waiting), and her friends. Friends need both people to say yes. */
 function FriendRequests() {
   const j = useJourney();
-  const known = useKnown();
   const [card, setCard] = useState<EventPeer | null>(null);
   const everyone = goTogetherEvent.visiblePeers;
   const find = (ids: string[]) => ids.map((id) => everyone.find((p) => p.id === id)).filter((p): p is EventPeer => !!p);
@@ -132,20 +148,16 @@ function FriendRequests() {
   if (!incoming.length && !sent.length && !friends.length) return null;
   return (
     <section aria-labelledby="friends-title">
-      <h2 id="friends-title" className="text-xl font-semibold">Friends</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Friends show first when you look at who's going. You're friends once you both say yes.</p>
+      <h2 id="friends-title" className="text-xl font-semibold">{incoming.length ? `Friend requests · ${incoming.length}` : "Friends"}</h2>
       {incoming.length > 0 && (
         <>
-          <h3 className="mt-5 text-sm font-semibold">Friend requests · {incoming.length}</h3>
-          <ul className="surface mt-2 divide-y overflow-hidden">
+          <ul className="surface mt-4 divide-y overflow-hidden">
             {incoming.map((p) => {
-              const tie = tieWith(p, known, everyone);
               return (
                 <li key={p.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-3.5">
                   <button type="button" onClick={() => setCard(p)} aria-label={`See ${callName(p.name)}'s card`} className="shrink-0 rounded-full"><PersonPhoto photo={p.photo} org={p.org} size="md" /></button>
                   <div className="min-w-0 flex-1 basis-56">
                     <div className="flex flex-wrap items-baseline gap-x-2"><span className="font-semibold">{p.name}</span><span className="text-sm text-muted-foreground">{p.standing} · {p.major}</span></div>
-                    <p className="text-xs text-muted-foreground">Wants to be friends{tie ? ` · ${tie.text}` : ""}</p>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
                     <Button size="sm" variant="ghost" onClick={() => setCard(p)}><IdCard className="size-4" aria-hidden="true" />See card</Button>
@@ -192,9 +204,9 @@ function MatchCard() {
   const shown = goTogetherEvent.visiblePeers.filter((p) => state(p) === "asked-you" || state(p) === "matched");
   if (shown.length === 0) {
     return (
-      <section aria-labelledby="match-title" className="surface flex flex-wrap items-center gap-4 p-5">
-        <span className="grid size-9 place-items-center rounded-xl aqua-chip"><Users className="size-4" aria-hidden="true" /></span>
-        <div className="min-w-0 flex-1 basis-60"><h2 id="match-title" className="font-semibold">Going together</h2><p className="text-xs text-muted-foreground">Say you're going to an event to see who else is going and pick who to go with.</p></div>
+      <section aria-labelledby="match-title" className="notice flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2 pl-3">
+        <span className="grid size-7 shrink-0 place-items-center rounded-full aqua-chip"><Users className="size-3.5" aria-hidden="true" /></span>
+        <h2 id="match-title" className="min-w-0 flex-1 text-sm font-semibold">Going together</h2>
         <Button asChild size="sm" variant="outline"><Link to="/explore" search={{ open: goTogetherEvent.id }}>See who's going to {goTogetherEvent.name}</Link></Button>
       </section>
     );

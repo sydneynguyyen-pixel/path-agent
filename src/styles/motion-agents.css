@@ -1,0 +1,56 @@
+/* Agents: micro-interactions for Activity cards, runs and the options panel.
+   One easing everywhere; every motion becomes a plain fade (or nothing) with reduced motion. */
+:root { --settle: cubic-bezier(.22,.8,.2,1); }
+
+/* Behind the scenes */
+.bts-row.is-lit, .bts-node.is-lit { box-shadow: 0 0 0 2px var(--aqua-ring-end); }
+.bts-row { animation: bts-in 180ms var(--settle) both; }
+.bts-bar { transform-origin: left center; animation: bts-grow 320ms var(--settle) both; }
+.bts-node { box-shadow: 0 0 0 1.5px var(--border); transition: box-shadow 180ms var(--settle), opacity 180ms; }
+.bts-node.is-ran { box-shadow: 0 0 0 1.5px var(--alert); }
+.bts-node.is-kept { box-shadow: none; outline: 1.5px dashed color-mix(in oklab, var(--foreground) 30%, transparent); outline-offset: -1.5px; }
+.bts-node.is-ran.is-lit, .bts-node.is-kept.is-lit { box-shadow: 0 0 0 2px var(--aqua-ring-end); }
+.bts-fact { animation: bts-pulse 900ms var(--settle) 1; }
+.bts-check { animation: bts-in 160ms var(--settle) both; }
+.bts-sentback { animation: bts-shake 240ms var(--settle) 1; }
+.bts-swap { animation: bts-swap 280ms var(--settle) both; }
+
+/* Activity: light one-line cards that ease open (height via grid rows, plus opacity) */
+.act-item { transition: box-shadow 220ms var(--settle); }
+.act-item.is-open { box-shadow: 0 6px 18px -14px rgb(15 23 42 / .35); }
+.act-body { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 300ms var(--settle), opacity 220ms var(--settle); }
+.act-item.is-open > .act-body { grid-template-rows: 1fr; opacity: 1; }
+.act-chevron { transition: transform 240ms var(--settle); }
+.act-item.is-open .act-chevron { transform: rotate(180deg); }
+
+/* Runs */
+.run-drop { animation: run-drop 260ms var(--settle) both; }
+.run-settle { animation: run-settle 300ms var(--settle) both; }
+
+/* Options panel: steps stream in */
+.run-stream li { animation: bts-in 200ms var(--settle) both; }
+.run-type { overflow: hidden; white-space: nowrap; animation: run-type 420ms steps(28, end) both; }
+.run-progress { height: 3px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.run-progress > span { display: block; height: 100%; background: var(--foreground); border-radius: 999px; transition: width 300ms var(--settle); }
+
+@keyframes bts-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes bts-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes bts-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--alert) 30%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+@keyframes bts-shake { 0%, 100% { transform: none; } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+@keyframes bts-swap { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes run-drop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes run-settle { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes run-type { from { max-width: 0; } to { max-width: 100%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .bts-row, .bts-bar, .bts-check, .bts-sentback, .bts-fact, .run-drop, .run-settle, .run-stream li, .run-type { animation: bts-fade 120ms linear both; }
+  .bts-swap { animation: bts-fade 120ms linear both; }
+  .act-item, .act-body, .act-chevron { transition: none; }
+  @keyframes bts-fade { from { opacity: 0; } to { opacity: 1; } }
+}
+
+/* An earlier activity's steps as a thin timeline, like an agent's work log. */
+.act-flow { position: relative; display: grid; gap: 6px; padding-left: 2px; }
+.act-flow::before { content: ""; position: absolute; left: 11px; top: 10px; bottom: 10px; width: 1px; background: var(--border); }
+.act-flow-step { position: relative; display: flex; align-items: center; gap: 8px; }
+.act-flow-step > :first-child { position: relative; z-index: 1; box-shadow: 0 0 0 3px var(--card); border-radius: 999px; }

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { AgentAvatar } from "./Brand";
 import { SourceChip } from "./bits";
 import { Ink } from "./Ink";
+import "@/styles/motion-agents.css";
 
 /** A source chip only for sources the app knows, so a new id from the backend never breaks the page. */
 function Source({ id }: { id: string }) {
@@ -19,7 +20,7 @@ export function RecheckBanner({ run }: { run: TraceRun }) {
   if (!run.stale) return null;
   const running = run.status === "running";
   return (
-    <div role="status" className="run-recheck flex items-start gap-3 rounded-2xl p-4 text-sm">
+    <div key={run.stale.facts.join()} role="status" className="run-recheck run-drop flex items-start gap-3 rounded-2xl p-4 text-sm">
       <RotateCw className={cn("mt-0.5 size-4 shrink-0", running && "animate-spin [animation-duration:2s]")} aria-hidden="true" />
       <div className="min-w-0">
         <p className="font-medium">{recheckLine(run.stale.facts, !running)}</p>
@@ -38,17 +39,20 @@ export function RunTrace({ run, waitingOn, pickedName }: { run: TraceRun; waitin
   const off = glance.filter((g) => g.state === "off");
 
   if (run.status === "running") {
-    const latest = run.steps.at(-1);
+    // Every step so far stays on screen and each new one types in, so she can follow the work as it lands.
+    const started = run.startedAt?.getTime() ?? null;
+    const last = run.entries.at(-1)?.at.getTime() ?? started;
+    const elapsed = started && last ? Math.max(0, last - started) : 0;
     return (
       <div className="space-y-3">
-        <div aria-live="polite" className="flex min-h-11 items-center gap-2 text-sm">
-          <Ink />
-          {latest ? (
-            <span key={run.steps.length} className="step-in flex items-center gap-2"><AgentAvatar agent={latest.helper} /><span><span className="font-medium">{HELPER_NAME[latest.helper]}</span> · {latest.text}</span></span>
-          ) : (
-            <span className="text-muted-foreground">{run.trigger === "recheck" ? "Re-checking…" : "Getting started…"}</span>
-          )}
-        </div>
+        <ol aria-live="polite" className="run-stream space-y-2 text-sm">
+          {run.steps.map((s, i) => (
+            <li key={i} className="flex items-center gap-2"><AgentAvatar agent={s.helper} /><span className={cn("min-w-0", i === run.steps.length - 1 && "run-type")}><span className="font-medium">{HELPER_NAME[s.helper]}</span> · {s.text}</span></li>
+          ))}
+          <li className="flex min-h-9 items-center gap-2 text-muted-foreground"><Ink />{run.steps.length ? "Working on the next step…" : run.trigger === "recheck" ? "Re-checking…" : "Getting started…"}</li>
+        </ol>
+        <div className="run-progress" aria-hidden="true"><span style={{ width: `${Math.min(92, 18 + run.steps.length * 18)}%` }} /></div>
+        <p className="text-xs text-muted-foreground">Finding a usable option · {(elapsed / 1000).toFixed(1)}s</p>
         <Glance glance={glance} />
       </div>
     );

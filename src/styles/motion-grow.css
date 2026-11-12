@@ -1,0 +1,36 @@
+/* Grow: small motions that show a skill or a person moving forward. One easing, never looping. */
+
+/* A check that strokes itself in (and out, on Undo). */
+.grow-check path { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.grow-check-draw path { animation: grow-check-draw 200ms cubic-bezier(.22,.8,.2,1) var(--grow-delay, 0ms) both; }
+.grow-check-erase path { animation: grow-check-draw 180ms cubic-bezier(.22,.8,.2,1) var(--grow-delay, 0ms) reverse both; }
+@keyframes grow-check-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+/* Chart segments ease to their new size, and grow once when a skill in them is confirmed. */
+.grow-seg { transition: flex-grow 300ms cubic-bezier(.22,.8,.2,1), opacity 180ms cubic-bezier(.22,.8,.2,1), min-width 300ms cubic-bezier(.22,.8,.2,1); }
+.grow-seg:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.grow-seg-pulse { animation: grow-seg-pulse 300ms cubic-bezier(.22,.8,.2,1); }
+@keyframes grow-seg-pulse { 40% { transform: scaleY(1.22); } }
+.grow-bar { transition: width 300ms cubic-bezier(.22,.8,.2,1); }
+
+/* A skill row the chart is pointing at. */
+.grow-lit { border-radius: 0.75rem; background: var(--secondary); box-shadow: 0 0 0 6px var(--secondary); transition: background-color 180ms cubic-bezier(.22,.8,.2,1), box-shadow 180ms cubic-bezier(.22,.8,.2,1); }
+.grow-unlit { transition: background-color 180ms cubic-bezier(.22,.8,.2,1), box-shadow 180ms cubic-bezier(.22,.8,.2,1); }
+
+/* Event, During: the talked circle fills, the note fields unfold. */
+.grow-dot { transition: background-color 200ms cubic-bezier(.22,.8,.2,1), border-color 200ms cubic-bezier(.22,.8,.2,1); }
+.grow-unfold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 220ms cubic-bezier(.22,.8,.2,1), opacity 220ms cubic-bezier(.22,.8,.2,1); }
+.grow-unfold[data-open="true"] { grid-template-rows: 1fr; opacity: 1; }
+/* A little padding so input focus rings are not clipped. */
+.grow-unfold > * { min-height: 0; overflow: hidden; padding: 3px; margin: -3px; }
+
+/* Event, After: the old level strikes and fades, the new one slides in. */
+.grow-level-old { display: inline-block; text-decoration: line-through; opacity: .55; animation: grow-level-old 280ms cubic-bezier(.22,.8,.2,1) both; }
+@keyframes grow-level-old { from { text-decoration-color: transparent; opacity: 1; } }
+.grow-level-new { display: inline-block; animation: grow-level-new 280ms cubic-bezier(.22,.8,.2,1) 140ms both; }
+@keyframes grow-level-new { from { opacity: 0; transform: translateX(-6px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .grow-check-draw path, .grow-check-erase path, .grow-seg-pulse, .grow-level-old, .grow-level-new { animation: none; }
+  .grow-seg, .grow-bar, .grow-lit, .grow-unlit, .grow-dot, .grow-unfold { transition: none; }
+}

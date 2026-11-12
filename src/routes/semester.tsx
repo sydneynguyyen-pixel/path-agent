@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { syllabi, options, terms, WINTER_2027_START, WINTER_2027_WEEKS, FALL_2026_START, FALL_2026_WEEKS, fallWork } from "@/data/scenario";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
@@ -18,6 +18,8 @@ import { useSlidingPill } from "@/hooks/use-sliding-pill";
 import { psychologyDegree } from "@/data/degree";
 import { useDegreeAudit } from "@/hooks/use-degree-audit";
 import { placeOf } from "@/lib/degree";
+import { courseAt, lightCourse, usePileupOnce } from "@/lib/motion-plan";
+import "@/styles/motion-plan.css";
 
 export const Route = createFileRoute("/semester")({
   validateSearch: (search: Record<string, unknown>): { term?: string } => {
@@ -59,11 +61,19 @@ function ClassLines({ termId, course }: { termId: string; course: (typeof terms)
   );
 }
 
+/** Every class code a due chip or class row can name, so hovering one can find the other. */
+const LINKABLE = [...new Set([...terms.flatMap((t) => t.courses.map((c) => c.code)), ...syllabi.map((s) => s.course), ...options.map((o) => o.course.replace("BCC ", "")), ...fallWork.map((w) => w.course)])];
+
 function Semester() {
   const j = useJourney();
   const search = Route.useSearch();
   const [localSel, setSel] = useState<string>();
   const { containerRef, pillRef } = useSlidingPill<HTMLDivElement>('[aria-pressed="true"]');
+  // A due chip and its class row light each other while either is hovered or focused.
+  const page = useRef<HTMLDivElement>(null);
+  const [hot, setHot] = useState<string | null>(null);
+  usePileupOnce(page);
+  useEffect(() => lightCourse(page.current, hot, LINKABLE), [hot]);
   const current = terms.find((t) => t.status === "in_progress");
   const sel = localSel ?? search.term ?? current?.id ?? "w27";
   const term = terms.find((t) => t.id === sel);
@@ -74,9 +84,10 @@ function Semester() {
     ...(chosen ? [{ course: chosen.course.replace("BCC ", ""), items: chosen.deadlines.map((d) => ({ week: d.week, label: d.label.split(" ").slice(2).join(" "), worth: undefined })), sourceId: chosen.sourceIds[0]!, isNew: true }] : []),
   ];
   const winterDue: DueItem[] = winter.flatMap((r) => r.items.map((i) => ({ course: r.course, date: fridayOf(WINTER_2027_START, i.week), label: i.label, worth: i.worth })));
+  const pointAt = (target: EventTarget | null) => setHot(courseAt(target, LINKABLE));
 
   return (
-    <div>
+    <div ref={page} className="plan-link" onPointerOver={(e) => pointAt(e.target)} onPointerLeave={() => setHot(null)} onFocus={(e) => pointAt(e.target)} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setHot(null); }}>
       <PageBanner src={sceneTerms} position="50% 86%" />
       <PageHeader title="Your terms" sub="Your classes and what's due, term by term." />
       {/* The padding gives shadows room inside the scroller; the negative margins keep the row in place. */}
@@ -109,7 +120,7 @@ function Semester() {
             </div>
             <ul className="mt-3 grid gap-x-6 divide-y sm:grid-cols-2 sm:divide-y-0">
               {winter.map((r) => (
-                <li key={r.course} className="flex min-w-0 items-start gap-3 py-2.5 text-sm">
+                <li key={r.course} data-plan-course={r.course} className="flex min-w-0 items-start gap-3 py-2.5 text-sm">
                   <SubjectIcon course={r.course} />
                   <span className="min-w-0 flex-1"><span className="font-medium"><CourseLink course={r.course} /></span>{r.isNew && <span className="text-xs text-muted-foreground"> · Seat held by you</span>}<CountsToward termId={term.id} course={term.courses.find((c) => c.code === r.course) ?? { code: r.course, title: r.course, ...(r.isNew ? { flag: "qr1" } : {}) }} /></span>
                   <SourceChip id={r.sourceId} />

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 // Everything on the card is synthetic, like the rest of the demo.
 
 export type Tier = "school" | "school-staff" | "everyone";
-const TIERS: { id: Tier; name: string; sub: string; note: string }[] = [
+export const TIERS: { id: Tier; name: string; sub: string; note: string }[] = [
   { id: "school", name: "Bayview students", sub: "Going to the same event", note: "Only Bayview students going to the same event see your card." },
   { id: "school-staff", name: "Bayview students and staff", sub: "Counselors, faculty, club advisors", note: "Staff can see your card. Only students can ask to go together." },
   { id: "everyone", name: "Everyone at the event", sub: "Other schools and professionals too", note: "Everyone at the event sees your card. Only students can ask to go together, and staff and professionals never see your contact info." },
@@ -145,7 +145,7 @@ export function PathCardStudio({ skills, editing = true, onEdit, about }: { skil
         <div className="pc-panel-head">
           <h2 className="text-base font-semibold">Make it yours</h2>
           <p className="mt-1 text-sm text-muted-foreground">Your card only shows at events you turn it on for.</p>
-          <div className="pc-tabs" role="tablist" aria-label="Card settings">
+          <div className="pc-tabs segmented" role="tablist" aria-label="Card settings">
             {PANELS.map((t) => <button key={t.id} type="button" role="tab" aria-selected={panel === t.id} onClick={() => setPanel(t.id)} className="pc-tab-btn">{t.label}</button>)}
           </div>
         </div>

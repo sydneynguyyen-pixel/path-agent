@@ -9,6 +9,7 @@ import { useSlidingPill } from "@/hooks/use-sliding-pill";
 import type { DegreeAudit } from "@/lib/degree";
 import { useJourney } from "@/lib/journey";
 import { cn } from "@/lib/utils";
+import "@/styles/motion-overview.css";
 import { changedSlots, explain, NO_CHANGE, type WhatIf, OFF_TERM, parseWhatIf, project, STATS_CHOICES, statsFromSeat, statsName, WINTER_CLASSES, termsMoved, type StatsChoice, type TransferStatus } from "@/lib/whatif";
 
 const SUGGESTIONS = ["Drop BIO 12", "Take MATH 13 instead", "Take Spring 2028 off", "Take winter off"];
@@ -65,11 +66,22 @@ export function useTryChange(audit: DegreeAudit) {
   return { changed };
 }
 
+/** True once the value has differed from what it was when this mounted, so first paint never animates. */
+function useHasChanged(value: string) {
+  const [first] = useState(value);
+  const [changed, setChanged] = useState(false);
+  if (value !== first && !changed) setChanged(true);
+  return changed || value !== first;
+}
+
 export function TryStrip() {
   const { next, moved } = useProjection();
+  const grad = `${next.graduation}, ${moveLabel(moved)}`;
+  // Graduation is the effect, so it settles a beat after the cards it depends on.
+  const settle = useHasChanged(grad);
   return (
     <div className="map-glass try-strip" aria-live="polite">
-      <span><GraduationCap aria-hidden="true" />Graduate <b>{next.graduation}</b>, {moveLabel(moved)}</span>
+      <span key={grad} className={settle ? "motion-settle" : undefined}><GraduationCap aria-hidden="true" />Graduate <b>{next.graduation}</b>, {moveLabel(moved)}</span>
       <span><School aria-hidden="true" />{TRANSFER[next.transfer](next.transferTerm)}</span>
       <span><Wallet aria-hidden="true" />Tuition <b>{money(next.tuition)}</b></span>
       <span><CalendarDays aria-hidden="true" />Busy weeks <b>{next.pileups.length ? `Week ${next.pileups.join(", ")}` : "None"}</b></span>

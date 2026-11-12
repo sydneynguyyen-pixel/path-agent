@@ -1,0 +1,213 @@
+/* Career → Resume: two views (Build, Applications). Build has the "Drop a job" zone and the tailoring review on
+   top, then the page on the same dotted board as Your card (.pc-stage) with the panel (.pc-panel, .pc-tabs) beside it.
+   Only resume-specific layout and the paper live here. */
+
+.pc-stage.rs-stage { align-items: start; }
+@media (max-width: 639px) {
+  .pc-stage.rs-stage { padding: 16px; border-radius: 24px; gap: 16px; }
+  .rs-stage .pc-panel-head { padding: 18px 16px 14px; }
+  .rs-stage .pc-panel-body { padding: 16px 16px 20px; }
+}
+@media (min-width: 1024px) {
+  .pc-stage.rs-stage { grid-template-columns: minmax(0, 1fr) 380px; height: auto; min-height: 0; }
+  .rs-stage .pc-panel { position: sticky; top: 16px; height: auto; max-height: calc(100vh - 32px); }
+  .rs-stage .pc-panel-body { flex: 1 1 auto; min-height: 0; }
+}
+
+/* The column the page sits in: a small toolbar, then the page centered and scaled to fit. */
+.rs-canvas { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 14px; }
+.rs-toolbar { display: flex; width: 100%; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.rs-count { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; background: var(--card); padding: 6px 12px; font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; box-shadow: 0 1px 2px rgb(15 23 42 / .06), 0 6px 16px -10px rgb(15 23 42 / .3); }
+.rs-fit { width: 100%; display: flex; justify-content: center; overflow-x: clip; }
+.rs-fit-box { position: relative; max-width: 100%; }
+.rs-fit-inner { position: absolute; top: 0; left: 0; width: 816px; transform-origin: top left; }
+.rs-break { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px dashed color-mix(in oklab, var(--foreground) 28%, transparent); pointer-events: none; }
+.rs-break span { position: absolute; right: 10px; top: 6px; border-radius: 9999px; background: var(--muted); padding: 2px 8px; font-size: 11px; color: var(--muted-foreground); }
+
+/* The paper. Always white with dark ink, like a printed page, in every theme. */
+.rs-paper {
+  --rs-rule: #d7dbe2; --rs-ink-body: #1b2230; --rs-muted: #4b5466;
+  position: relative; width: 816px; min-height: 1056px; padding: 60px 68px 64px;
+  background: #fff; color: var(--rs-ink-body); border-radius: 4px;
+  box-shadow: 0 1px 2px rgb(15 23 42 / .06), 0 24px 48px -28px rgb(15 23 42 / .35);
+  font-family: var(--font-sans); font-size: 13.5px; line-height: 1.45; text-wrap: pretty;
+}
+.rs-paper section { margin-top: 18px; }
+.rs-head { padding-bottom: 2px; }
+.brand-app .rs-paper .rs-name, .rs-paper .rs-name { font-size: 32px; font-weight: 700; letter-spacing: -.025em; line-height: 1.05; color: #0e131c; }
+.rs-headline { margin-top: 6px; font-size: 14.5px; font-weight: 500; color: var(--rs-ink-body); }
+.rs-contact { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; row-gap: 2px; font-size: 12.5px; color: var(--rs-muted); }
+.rs-contact li + li::before { content: ""; display: inline-block; width: 1px; height: 11px; margin: 0 10px; vertical-align: -1px; background: currentColor; opacity: .4; }
+.brand-app .rs-paper .rs-h, .rs-paper .rs-h { margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--rs-rule); font-family: var(--font-sans); font-size: 11.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #0e131c; }
+.rs-list { display: grid; gap: 10px; }
+.rs-list-tight { display: grid; gap: 3px; }
+.rs-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.rs-role { font-weight: 650; color: #0e131c; }
+.rs-org { color: var(--rs-ink-body); }
+.rs-org-line { font-style: italic; }
+.rs-detail { margin-top: 2px; color: var(--rs-muted); }
+.rs-date { flex: none; font-size: 12.5px; color: var(--rs-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rs-bullets { margin-top: 3px; padding-left: 18px; list-style: disc; }
+.rs-bullets li { padding-left: 2px; }
+.rs-bullets li::marker { color: var(--rs-muted); }
+.rs-skills { display: grid; gap: 3px; }
+.rs-skills b { font-weight: 650; color: #0e131c; }
+.rs-new { margin-left: 4px; border-radius: 9999px; padding: 0 6px; font-size: 10px; font-weight: 600; vertical-align: 1px; }
+.rs-letter { margin-top: 28px; display: grid; gap: 12px; max-width: 600px; }
+.rs-date-line { color: var(--rs-muted); margin-bottom: 8px; }
+
+/* Modern: left aligned, a thin accent rule under the header, headings in the accent's ink. */
+.rs-paper[data-template="modern"] .rs-head { padding-bottom: 14px; border-bottom: 3px solid var(--rs-accent); }
+.rs-paper[data-template="modern"] .rs-h { color: var(--rs-ink); border-bottom-color: color-mix(in oklab, var(--rs-accent) 45%, white); }
+.rs-paper[data-template="modern"] .rs-bullets li::marker { color: var(--rs-accent); }
+
+/* Classic: centered serif name, small-caps headings, black hairlines. */
+.rs-paper[data-template="classic"] .rs-head { text-align: center; }
+.rs-paper[data-template="classic"] .rs-contact { justify-content: center; }
+.brand-app .rs-paper[data-template="classic"] .rs-name, .rs-paper[data-template="classic"] .rs-name { font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif; font-weight: 600; letter-spacing: -.01em; font-size: 34px; }
+.brand-app .rs-paper[data-template="classic"] .rs-h, .rs-paper[data-template="classic"] .rs-h { font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif; font-size: 14px; font-weight: 600; letter-spacing: .08em; text-transform: none; font-variant: small-caps; border-bottom-color: #1b2230; color: #0e131c; }
+.rs-paper[data-template="classic"] .rs-head { padding-bottom: 6px; border-bottom: 1px solid var(--rs-accent); }
+
+/* Compact: tighter, so more fits on one page. */
+.rs-paper[data-template="compact"] { padding: 40px 52px 44px; font-size: 12.5px; line-height: 1.36; }
+.rs-paper[data-template="compact"] section { margin-top: 12px; }
+.rs-paper[data-template="compact"] .rs-name { font-size: 26px; }
+.rs-paper[data-template="compact"] .rs-head { display: grid; padding-bottom: 8px; border-bottom: 2px solid var(--rs-accent); }
+.rs-paper[data-template="compact"] .rs-h { margin-bottom: 5px; padding-bottom: 2px; }
+.rs-paper[data-template="compact"] .rs-list { gap: 6px; }
+
+/* Blocks: a click opens the field; the field being edited rings the block briefly. */
+.rs-block { border-radius: 6px; outline: 3px solid transparent; outline-offset: 4px; transition: outline-color 300ms cubic-bezier(.22,.8,.2,1); }
+.rs-block[title] { cursor: pointer; }
+.rs-block[title]:hover { outline-color: color-mix(in oklab, var(--aqua-ring-start) 35%, transparent); }
+.rs-block[data-flash] { outline-color: var(--aqua-ring-start); }
+.rs-block .rs-block { outline-offset: 2px; }
+
+/* The panel: form fields that a page click lands on get the same aqua ring for a moment. */
+.rs-field { scroll-margin-top: 12px; border-radius: 16px; transition: box-shadow 300ms cubic-bezier(.22,.8,.2,1); }
+.rs-field[data-flash] { box-shadow: 0 0 0 3px color-mix(in oklab, var(--aqua-ring-start) 70%, transparent); }
+.rs-stage .pc-tabs { grid-template-columns: repeat(3, 1fr); }
+
+/* Content tab: a stack of light cards, one per part of the page. A closed card is one line; one opens at a time. */
+.rs-stage .pc-panel-body:has(> .rs-cards) { gap: 0; }
+.rs-cards { display: grid; gap: 8px; min-width: 0; }
+.rs-field.rs-card { border: 1px solid var(--border); border-radius: 14px; background: var(--card); min-width: 0; transition: box-shadow 260ms cubic-bezier(.22,.8,.2,1), border-color 260ms cubic-bezier(.22,.8,.2,1); }
+.rs-card { border: 1px solid var(--border); border-radius: 14px; background: var(--card); min-width: 0; }
+.rs-card[data-open] { border-color: color-mix(in oklab, var(--foreground) 16%, transparent); box-shadow: 0 1px 2px rgb(15 23 42 / .04), 0 10px 24px -20px rgb(15 23 42 / .4); }
+.rs-field.rs-card[data-flash] { box-shadow: 0 0 0 3px color-mix(in oklab, var(--aqua-ring-start) 70%, transparent); }
+.rs-card[data-dim] .rs-card-btn > svg:first-child { opacity: .5; }
+.rs-card-head { display: flex; align-items: center; gap: 2px; padding-right: 6px; min-width: 0; }
+.rs-card-btn { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; gap: 10px; padding: 11px 10px 11px 12px; text-align: left; }
+.rs-card-btn:hover { background: color-mix(in oklab, var(--foreground) 3%, transparent); }
+.rs-chev { transition: transform 260ms cubic-bezier(.22,.8,.2,1); }
+.rs-card[data-open] > .rs-card-head .rs-chev { transform: rotate(180deg); }
+.rs-eye { display: grid; flex: none; place-items: center; width: 32px; height: 32px; color: var(--muted-foreground); }
+.rs-eye:hover { color: var(--foreground); background: var(--muted); }
+.rs-eye[aria-pressed="false"] { color: color-mix(in oklab, var(--muted-foreground) 70%, transparent); }
+.rs-card-body { display: grid; gap: 16px; min-width: 0; padding: 4px 14px 16px; }
+.rs-idea-badge { flex: none; border-radius: 9999px; background: var(--aqua-gradient); padding: 2px 8px; font-size: 11px; font-weight: 600; white-space: nowrap; color: var(--foreground); }
+.rs-ideas { background: color-mix(in oklab, var(--aqua-ring-start) 5%, var(--card)); }
+
+/* Rows inside a card: an entry or project that opens to its bullets, and Sprout's ideas. */
+.rs-field.rs-sub { border: 1px solid var(--border); border-radius: 12px; background: var(--card); min-width: 0; }
+.rs-sub[data-open] { background: color-mix(in oklab, var(--foreground) 1.5%, var(--card)); }
+.rs-idea { border-radius: 12px; background: var(--muted); padding: 10px 12px; min-width: 0; overflow-wrap: anywhere; }
+
+/* Opening and closing: height and fade, never a loop. */
+.rs-collapse { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows 260ms cubic-bezier(.22,.8,.2,1), opacity 220ms cubic-bezier(.22,.8,.2,1); }
+@starting-style { .rs-collapse { grid-template-rows: 0fr; opacity: 0; } }
+.rs-collapse[data-closing] { grid-template-rows: 0fr; opacity: 0; }
+/* Room for focus rings, without the space showing when closed. */
+.rs-collapse-inner { min-height: 0; min-width: 0; overflow: hidden; padding: 3px; margin: -3px; }
+
+/* Status chips on applications. */
+.rs-status { display: inline-flex; align-items: center; border-radius: 9999px; padding: 2px 9px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.rs-status[data-s="saved"] { background: var(--muted); color: var(--foreground); }
+.rs-status[data-s="applied"] { background: var(--aqua-gradient); color: var(--foreground); }
+.rs-status[data-s="interviewing"] { background: var(--warning-soft); color: var(--foreground); }
+.rs-status[data-s="offer"] { background: var(--success-soft); color: var(--foreground); }
+.rs-status[data-s="closed"] { background: var(--muted); color: var(--muted-foreground); }
+
+/* Build | Applications. */
+
+/* Drop a job: Sprout's ask box on a plain card. The glass rim glows aqua on focus and while a file is dragged over. */
+.rs-drop { display: flex; gap: 24px; align-items: flex-start; padding: 20px; }
+.rs-ask { --pa-r: 24px; position: relative; isolation: isolate; display: flex; align-items: flex-end; gap: 8px; padding: 10px 10px 10px 18px; border-radius: var(--pa-r);
+  background: rgba(255,255,255,.6); border: 1px solid rgba(20,40,60,.1);
+  -webkit-backdrop-filter: blur(12px) saturate(1.7); backdrop-filter: blur(12px) saturate(1.7);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.95), 0 14px 34px -18px rgba(20,40,60,.38);
+  transition: border-color 300ms cubic-bezier(.22,.8,.2,1), box-shadow 300ms cubic-bezier(.22,.8,.2,1); }
+.rs-ask:focus-within, .rs-ask[data-over] { border-color: transparent; }
+.rs-ask:focus-within::after, .rs-ask[data-over]::after { opacity: 1; --pa-spin: 200deg; }
+.rs-ask[data-over] { box-shadow: inset 0 1px 1px rgba(255,255,255,.95), 0 0 0 4px color-mix(in oklab, var(--aqua-ring-start) 45%, transparent), 0 14px 34px -18px rgba(20,40,60,.38); }
+.rs-ask-input { min-width: 0; flex: 1; min-height: 72px; padding: 6px 0; resize: vertical; background: transparent; font-size: 15px; line-height: 1.45; color: var(--foreground); }
+.rs-ask-input::placeholder { color: #4d5866; }
+.brand-app .rs-ask .rs-ask-input:focus-visible, .rs-ask .rs-ask-input:focus { outline: none !important; box-shadow: none !important; }
+.rs-chip { display: inline-flex; max-width: 100%; align-items: center; gap: 6px; border-radius: 9999px; padding: 4px 10px; font-size: 12.5px; font-weight: 500; background: var(--card); box-shadow: 0 1px 2px rgb(15 23 42 / .06), 0 4px 12px -8px rgb(15 23 42 / .3); cursor: text; }
+.rs-chip input, .rs-chip select { min-width: 4ch; max-width: 28ch; field-sizing: content; background: transparent; outline: none; font: inherit; color: inherit; appearance: none; cursor: pointer; }
+.rs-chip input { cursor: text; }
+.rs-chip input::placeholder { color: var(--muted-foreground); }
+.rs-chip:focus-within { box-shadow: 0 0 0 2px color-mix(in oklab, var(--aqua-ring-start) 70%, transparent); }
+.rs-tailor { border-radius: 28px; padding: 20px; background: var(--card); box-shadow: 0 1px 2px rgb(15 23 42 / .05), 0 10px 30px -18px rgb(15 23 42 / .35); }
+@media (min-width: 640px) { .rs-drop, .rs-tailor { padding: 24px; } }
+
+/* Tailoring: a small page beside the steps, each section lighting up in turn. */
+.rs-run { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 20px; }
+.rs-mini { position: relative; flex: none; overflow: hidden; border-radius: 4px; background: #fff; box-shadow: 0 1px 2px rgb(15 23 42 / .08), 0 10px 22px -14px rgb(15 23 42 / .4); }
+.rs-mini-inner { position: absolute; top: 0; left: 0; width: 816px; transform-origin: top left; pointer-events: none; }
+.rs-mini .rs-paper { box-shadow: none; }
+.rs-mini .rs-block { transition: background-color 300ms cubic-bezier(.22,.8,.2,1), box-shadow 300ms cubic-bezier(.22,.8,.2,1); }
+.rs-mini[data-lit="summary"] [data-block="summary"], .rs-mini[data-lit="skills"] [data-block="skills"], .rs-mini[data-lit="education"] [data-block="education"], .rs-mini[data-lit="entry"] [data-block^="entry:"] {
+  background: color-mix(in oklab, var(--aqua-ring-start) 45%, transparent); box-shadow: 0 0 0 14px color-mix(in oklab, var(--aqua-ring-start) 45%, transparent);
+}
+.rs-step { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; align-items: start; transition: opacity 260ms cubic-bezier(.22,.8,.2,1); }
+.rs-step[data-state="pending"] { opacity: .5; }
+.rs-step-dot { display: grid; place-items: center; width: 20px; height: 20px; margin-top: 1px; border-radius: 9999px; background: var(--card); box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--foreground) 16%, transparent); transition: background-color 260ms cubic-bezier(.22,.8,.2,1), box-shadow 260ms cubic-bezier(.22,.8,.2,1); }
+.rs-step[data-state="active"] .rs-step-dot { box-shadow: 0 0 0 3px color-mix(in oklab, var(--aqua-ring-start) 70%, transparent); }
+.rs-step[data-state="done"] .rs-step-dot { background: var(--success-soft); box-shadow: none; }
+.rs-step-line { opacity: 1; translate: 0 0; transition: opacity 300ms cubic-bezier(.22,.8,.2,1), translate 300ms cubic-bezier(.22,.8,.2,1); }
+@starting-style { .rs-step-line { opacity: 0; translate: 0 4px; } }
+
+/* Review: one card per section, before and after. */
+.rs-review { padding: 14px 16px; overflow-wrap: anywhere; }
+.rs-review[data-decided] { background: color-mix(in oklab, var(--card) 80%, transparent); }
+.rs-diff { font-size: 13.5px; }
+.rs-diff.flex li > * { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; padding: 3px 10px; background: var(--muted); }
+.rs-diff ins { text-decoration: none; background: color-mix(in oklab, var(--aqua-ring-start) 55%, var(--card)); border-radius: 8px; padding: 2px 6px; }
+.rs-diff.flex li > ins { background: color-mix(in oklab, var(--aqua-ring-start) 55%, var(--card)); }
+.rs-diff del { color: var(--muted-foreground); text-decoration-thickness: 1px; }
+.rs-diff.flex li > del { background: transparent; box-shadow: inset 0 0 0 1px var(--border); }
+.rs-moved { display: inline-flex; align-items: center; gap: 2px; margin-left: 2px; font-size: 11px; font-weight: 600; color: var(--muted-foreground); }
+.rs-review-foot {
+  position: sticky; bottom: calc(var(--agent-clear, 96px) + 8px); z-index: 2;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px 10px 16px; border-radius: 20px;
+  background: color-mix(in oklab, var(--card) 92%, transparent); backdrop-filter: blur(12px);
+  box-shadow: 0 1px 2px rgb(15 23 42 / .06), 0 12px 28px -16px rgb(15 23 42 / .4);
+}
+
+/* Applications: base resumes as small pages, then one row per application. */
+.rs-bases { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.rs-base { display: flex; width: 100%; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; background: var(--card); box-shadow: 0 1px 2px rgb(15 23 42 / .05), 0 6px 16px -12px rgb(15 23 42 / .3); transition: background-color 200ms cubic-bezier(.22,.8,.2,1); }
+.rs-base:hover { background: color-mix(in oklab, var(--foreground) 3%, var(--card)); }
+.rs-app { display: flex; gap: 14px; min-width: 0; border-radius: 20px; padding: 14px; background: var(--card); box-shadow: 0 1px 2px rgb(15 23 42 / .05), 0 6px 16px -12px rgb(15 23 42 / .3); }
+.rs-app-thumb { flex: none; width: 64px; height: 83px; overflow: hidden; border-radius: 10px; }
+.rs-app-thumb:hover .rs-mini { box-shadow: 0 0 0 3px color-mix(in oklab, var(--aqua-ring-start) 70%, transparent); }
+.rs-snippet { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.rs-status.rs-status-select { appearance: none; border: 0; cursor: pointer; padding-right: 22px; background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%); background-position: right 11px center, right 7px center; background-size: 4px 4px; background-repeat: no-repeat; }
+.rs-status.rs-status-select[data-s="applied"] { background-color: color-mix(in oklab, var(--aqua-ring-start) 55%, var(--card)); }
+.rs-empty { border-radius: 24px; border: 1.5px dashed color-mix(in oklab, var(--foreground) 16%, transparent); padding: 20px; }
+@media (max-width: 479px) { .rs-app { padding: 12px; gap: 10px; } .rs-app-thumb { width: 48px; height: 62px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-block, .rs-field, .rs-field.rs-card, .rs-collapse, .rs-chev, .rs-ask, .rs-step, .rs-step-dot, .rs-step-line, .rs-mini .rs-block, .rs-base { transition: none; }
+}
+
+/* Download as PDF prints only the page. */
+.rs-print-root { display: none; }
+@media print {
+  @page { size: letter; margin: 0; }
+  body > *:not(.rs-print-root) { display: none !important; }
+  .rs-print-root { display: block !important; }
+  .rs-print-root .rs-paper { box-shadow: none; border-radius: 0; min-height: 0; width: 8.5in; }
+  .rs-print-root .rs-block { outline: none !important; }
+}

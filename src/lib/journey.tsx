@@ -4,11 +4,11 @@ import type { Checks } from "@/lib/experiences";
 import { askLive, recover } from "@/lib/agent/client";
 import type { World } from "@/lib/agent/tools";
 import type { AgentEvent } from "@/lib/agent/loop";
-import { applyRunEvent, newTraceRun, type RunEvent, type TraceRun } from "@/lib/run";
+import { applyRunEvent, newTraceRun, recordRun, type RunEvent, type TraceRun } from "@/lib/run";
 import { FILLED_BY, NEEDS_NOTE } from "@/data/edge-runs";
 import { constraintFrom, forget, noteFrom, remember, type Constraint } from "@/lib/steer";
 import { addAsk, addReply, type Thread } from "@/lib/chat";
-import { goTogetherEvent, options, student, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist } from "@/data/scenario";
+import { goTogetherEvent, opportunities, options, student, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
 import { cleanDesk, DEFAULT_DESK, type Desk } from "@/lib/desktop";
 import { askToGo as askPeer, passAsk } from "@/lib/opportunities";
@@ -18,6 +18,10 @@ import { electiveClasses } from "@/data/degree";
 import { symposiumEvent } from "@/data/event";
 import { people } from "@/data/people";
 import { addGoal, goalsFor, makeMain, MAX_GOALS, removeGoal } from "@/lib/goals";
+import { activityId, type Activity, type SingleSkill } from "@/lib/activities";
+import { addName, blankContact, dropName, migrateJobFolders, removeApplication, removeDoc, saveApplication, saveDoc, type Application, type ResumeContact, type ResumeDoc, type ResumeFolder } from "@/lib/resume";
+import { addMeet, eventName, type Meet } from "@/components/app/mobile/atEvent";
+import type { Tier } from "@/components/app/PathCard";
 import { callName, eventAccountsFor, eventPlanFor, filledEventPlan, followUp, pathBuiltFor, inviteDraft, type DeckChoice, type DemoFill, type EventPlan } from "@/lib/event";
 
 export type Stage = "idle" | "failed" | "chosen";
@@ -52,7 +56,8 @@ const noGoTogether: GoTogether = { showMe: false, shownAt: null, sentTo: [], sen
 
 export type DetailsFocus = { tab: "people"; peer?: string };
 
-export type OwnSkill = { id: string; name: string; where: "class" | "event" | "work" | "own"; detail: string; link?: string };
+export type OwnSkill = SingleSkill;
+export type { Activity };
 
 type State = {
   savedOpportunities: string[];
@@ -66,6 +71,8 @@ type State = {
   skillReviews: Record<string, SkillReview>;
   /** Skills the student added herself. They are marked "Added by you" and never count as verified. */
   ownSkills: OwnSkill[];
+  /** Things she did that no integration sees (jobs, caring for family, clubs…). Self-reported, never verified. */
+  activities: Activity[];
   draftCourses: string[];
   /** The sandbox behind Try a change on the Degree tree. Nothing reads it as the real plan. */
   whatIf: WhatIf;
@@ -82,6 +89,24 @@ type State = {
   /** Skills she chose to build for each goal. A goal with no entry uses what the role asks for that she doesn't have yet. */
   buildSkills: Record<string, string[]>;
   careerInterests: string[];
+  /** Resume, CV and cover letter drafts she edited or made (Career → Resume). Defaults come from her goals. Never sent anywhere. */
+  resumes: ResumeDoc[];
+  /** Skill names on her resume. Confirmed skills join here (auto-add) or when she adds them. */
+  resumeSkills: string[];
+  /** Skills added for her since she last looked, shown with a "New" mark and an Undo. */
+  resumeNew: string[];
+  /** Skills she took off her resume, so auto-add doesn't put them back. */
+  resumeDismissed: string[];
+  /** The skills she had confirmed before first opening Resume went on quietly. */
+  resumeSeeded: boolean;
+  /** New confirmed skills go on her resume by themselves. A preference, so Reset demo keeps it. */
+  autoAddSkills: boolean;
+  /** Legacy job folders. Folders are retired: any here become applications at once (migrateJobFolders). */
+  resumeFolders: ResumeFolder[];
+  /** Applications she saved or recorded herself (Career → Resume → Applications), each with the resume version for it. Sprout never applies or sends. */
+  applications: Application[];
+  /** Phone, location and links she typed for her resume header. Empty until she does. */
+  resumeContact: ResumeContact;
   event: EventPlan;
   agentOn: Record<AgentId, boolean>;
   access: Record<AccessKey, boolean>;
@@ -103,6 +128,8 @@ type State = {
   watchingRegistration: boolean;
   agentTimes: Record<string, Date>;
   agentRun: TraceRun | null;
+  /** Finished runs, newest last (at most 20). A re-check links to the run it changed through parentRunId. Reset demo clears them. */
+  runs: TraceRun[];
   /** Sections a re-check found filled while she was deciding. */
   justFilled: string[];
   /** Notes she gave the helpers ("No classes before 10 am"). They keep using them until she removes one. */
@@ -132,6 +159,10 @@ type State = {
   friendIncoming: string[];
   /** Asks she sent at events other than the scripted UX night, with her note. */
   eventAsks: Record<string, { sentTo: string[]; notes: Record<string, string> }>;
+  /** People she met at an event and picked on the share sheet (Scan a card / Tap phones), with her private note. Reset demo clears them. */
+  metAt: Meet[];
+  /** Who can see her card (the card's "Who can see it"), also set from the share sheet. */
+  cardSeenBy: Tier;
   guide: boolean;
   /** Sprout has found the full section so she can join its waitlist herself. */
   waitlistGuide: boolean;
@@ -151,11 +182,21 @@ const initial: State = {
   goTogether: noGoTogether,
   skillReviews: { observation: { confirmed: true } },
   ownSkills: [],
+  activities: [],
   draftCourses: [],
   interestedRoles: goalsFor("filled"),
   dismissedRoles: [],
   buildSkills: {},
   careerInterests: [],
+  resumes: [],
+  resumeSkills: [],
+  resumeNew: [],
+  resumeDismissed: [],
+  resumeSeeded: false,
+  autoAddSkills: true,
+  resumeFolders: [],
+  applications: [],
+  resumeContact: blankContact,
   event: filledEventPlan,
   agentOn: { reader: true, planner: true, backup: true, drafter: true },
   access: { registration: true, canvas: true, sis: true, audit: true, articulation: true, handshake: true, email: true },
@@ -175,6 +216,7 @@ const initial: State = {
   watchingRegistration: false,
   agentTimes: {},
   agentRun: null,
+  runs: [],
   justFilled: [],
   notes: [],
   awayRun: false,
@@ -190,6 +232,8 @@ const initial: State = {
   friendSent: [],
   friendIncoming: ["mei", "devon"],
   eventAsks: {},
+  metAt: [],
+  cardSeenBy: "school",
   guide: false,
   waitlistGuide: false,
   mapMasters: false,
@@ -213,8 +257,12 @@ type Ctx = State & {
   /** Home's wallpaper and widgets. A preference like helper choices, so Reset demo keeps it. */
   desk: Desk;
   setDesk: (f: (d: Desk) => Desk) => void;
-  addOwnSkill: (skill: Omit<OwnSkill, "id">) => void;
+  /** Pass an id to put back one she removed (Undo). Returns the id. */
+  addOwnSkill: (skill: Omit<OwnSkill, "id"> & { id?: string }) => string;
   removeOwnSkill: (id: string) => void;
+  /** Pass an id to put back one she removed (Undo). Returns the id. */
+  addActivity: (activity: Omit<Activity, "id"> & { id?: string }) => string;
+  removeActivity: (id: string) => void;
   setShowMeGoing: (on: boolean) => void;
   askToGo: (peerId: string, note?: string) => void;
   requestFriend: (peerId: string) => void;
@@ -222,6 +270,13 @@ type Ctx = State & {
   answerFriend: (peerId: string, accept: boolean) => void;
   removeFriend: (peerId: string) => void;
   askAtEvent: (eventId: string, peerId: string, note?: string) => void;
+  /** She met someone at an event (picked them on the share sheet). Meeting them again there keeps one entry. */
+  meet: (peerId: string, eventId: string, note?: string) => void;
+  setMeetNote: (peerId: string, eventId: string, note: string) => void;
+  forgetMeet: (peerId: string, eventId: string) => void;
+  /** She sent or copied a follow-up herself. Logged in decisions; nothing goes out. */
+  followUpMeet: (peerId: string, eventId: string, how: "trellis" | "copy" | "email") => void;
+  setCardSeenBy: (tier: Tier) => void;
   notNow: (peerId: string) => void;
   reviewSkill: (id: string, review: SkillReview) => void;
   addDraftCourse: (code: string) => void;
@@ -235,6 +290,25 @@ type Ctx = State & {
   setGoals: (ids: string[]) => void;
   setBuildSkills: (roleId: string, skills: string[]) => void;
   dismissRole: (id: string, dismissed: boolean) => void;
+  /** Puts a skill on her resume (by name). Used by Resume and by Your skills' "Add to resume". */
+  addResumeSkill: (name: string) => void;
+  /** Takes a skill off her resume; auto-add won't put it back. */
+  removeResumeSkill: (name: string) => void;
+  /** Clears the "New" mark on skills added for her. */
+  seenResumeSkills: (names?: string[]) => void;
+  /** First-visit and auto-add sync from src/lib/resume.ts (syncResumeSkills). */
+  syncResumeSkills: (next: { resumeSkills: string[]; resumeNew: string[]; seeded: boolean }) => void;
+  setAutoAddSkills: (on: boolean) => void;
+  /** Saves a draft (insert or replace by id). */
+  saveResume: (doc: ResumeDoc) => void;
+  /** Removes a saved draft. A default document goes back to its template. */
+  removeResume: (id: string) => void;
+  /** Legacy: restores an old job folder, which becomes an application with its drafts right away. */
+  saveResumeFolder: (folder: ResumeFolder) => void;
+  /** Records or edits an application (insert or replace by id). */
+  saveApplication: (app: Application) => void;
+  removeApplication: (id: string) => void;
+  setResumeContact: (patch: Partial<ResumeContact>) => void;
   /** Whether the demo opens with Maya's built path or as a new student. */
   demoFill: DemoFill;
   setDemoFill: (fill: DemoFill) => void;
@@ -344,6 +418,13 @@ ${draftSignoff()}`;
 
 let clockRef = { startedAt: 0 };
 const scriptNow = () => SCRIPT_START + (clockRef.startedAt ? Date.now() - clockRef.startedAt : 0);
+/** Applies a run event to the latest run, and keeps the run in the history once it finishes. */
+function advanceRun(p: Pick<State, "agentRun" | "runs">, e: RunEvent | AgentEvent, at: Date, parentRunId?: string | null): Pick<State, "agentRun" | "runs"> {
+  const event = (e.type === "start" ? { ...e, runId: e.runId ?? `run_${at.getTime()}`, ...(parentRunId ? { parentRunId } : {}) } : e) as RunEvent;
+  const agentRun = applyRunEvent(p.agentRun, event, at);
+  return { agentRun, runs: event.type === "done" ? recordRun(p.runs, agentRun) : p.runs };
+}
+
 const log = (what: string, evidence: string[], suggested?: string, next?: string): Decision => ({ id: crypto.randomUUID(), who: student.name, what, when: new Date(scriptNow()), evidence, suggested, next });
 
 /** The facts the agent should work from right now: seats seen filling and the notes she gave the helpers. */
@@ -383,6 +464,11 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Job folders are retired: any that turn up become applications, their drafts the tailored versions.
+  useEffect(() => {
+    if (s.resumeFolders.length) set((p) => (p.resumeFolders.length ? { ...p, ...migrateJobFolders(p) } : p));
+  }, [s.resumeFolders]);
+
   const latest = useRef(s);
   latest.current = s;
   const runControl = useRef<AbortController | null>(null);
@@ -391,7 +477,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
   const restart = useCallback((fill: DemoFill) => {
     clockRef.startedAt = Date.now();
     runControl.current?.abort();
-    set((p) => ({ ...initial, event: eventPlanFor(fill), eventAccounts: eventAccountsFor(fill), interestedRoles: goalsFor(fill), startedAt: clockRef.startedAt, agentOn: p.agentOn, access: p.access, notify: p.notify, watchingRegistration: p.watchingRegistration }));
+    set((p) => ({ ...initial, event: eventPlanFor(fill), eventAccounts: eventAccountsFor(fill), interestedRoles: goalsFor(fill), startedAt: clockRef.startedAt, agentOn: p.agentOn, access: p.access, notify: p.notify, autoAddSkills: p.autoAddSkills, watchingRegistration: p.watchingRegistration }));
   }, []);
   const applyFill = useCallback((fill: DemoFill) => {
     window.localStorage.setItem("pa-demo-fill", fill);
@@ -411,7 +497,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       const control = new AbortController();
       runControl.current = control;
       const apply = (e: AgentEvent) => {
-        if (!control.signal.aborted) set((p) => ({ ...p, agentRun: applyRunEvent(p.agentRun, e, new Date(scriptNow())) }));
+        if (!control.signal.aborted) set((p) => ({ ...p, ...advanceRun(p, e, new Date(scriptNow())) }));
       };
       // A fresh run: no seats seen filling yet, but the notes she gave the helpers still apply.
       void recover(agentOn, apply, control.signal, { world: worldOf({ ...latest.current, justFilled: [] }) });
@@ -434,7 +520,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         const event = e as RunEvent;
         set((p) => ({
           ...p,
-          agentRun: applyRunEvent(p.agentRun, event, new Date(scriptNow())),
+          ...advanceRun(p, event, new Date(scriptNow())),
           awayRun: event.type === "done" ? !p.panelOpen : p.awayRun,
           justFilled: event.type === "stale" ? [...new Set([...p.justFilled, ...event.facts.map((f) => FILLED_BY[f]).filter((x): x is string => !!x)])] : p.justFilled,
         }));
@@ -450,11 +536,13 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     runControl.current?.abort();
     const control = new AbortController();
     runControl.current = control;
+    // The run this one re-checks, so the history can nest it under that run.
+    const parent = latest.current.agentRun?.runId ?? latest.current.runs.at(-1)?.runId ?? null;
     const apply = (event: AgentEvent) => {
       if (control.signal.aborted) return;
       set((p) => ({
         ...p,
-        agentRun: applyRunEvent(p.agentRun, event, new Date(scriptNow())),
+        ...advanceRun(p, event, new Date(scriptNow()), parent),
         awayRun: event.type === "done" ? !p.panelOpen : p.awayRun,
         justFilled: event.type === "stale" ? [...new Set([...p.justFilled, ...event.facts.map((f) => FILLED_BY[f]).filter((x): x is string => !!x)])] : p.justFilled,
       }));
@@ -469,7 +557,9 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     const started = Date.now();
     const go = () => {
       const run = latest.current.agentRun;
-      if (run && run.status !== "done" && Date.now() - started < 30000) return void window.setTimeout(go, 300);
+      // Wait for the first run's state to land (stage turns "failed") and for that run to finish, so the re-check has a run to nest under.
+      const pending = latest.current.stage !== "failed" || (run && run.status !== "done");
+      if (pending && Date.now() - started < 30000) return void window.setTimeout(go, 300);
       // A moment on the first answer, so the change reads as a change. Then the real agent re-checks with MATH 13 full.
       window.setTimeout(() => rerun("recheck", ["seats.math13"], worldOf(latest.current, ["math13"])), run ? 1200 : 0);
     };
@@ -553,8 +643,18 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         return { ...p, wentTo };
       }),
       skipSuggestion: (id) => set((p) => ({ ...p, skippedSuggestions: [...p.skippedSuggestions, id] })),
-      addOwnSkill: (skill) => set((p) => ({ ...p, ownSkills: [...p.ownSkills, { ...skill, id: `own-${p.ownSkills.length + 1}-${skill.name.toLowerCase().replace(/\W+/g, "-")}` }] })),
+      addOwnSkill: (skill) => {
+        const id = skill.id ?? `own-${Date.now().toString(36)}-${skill.name.toLowerCase().replace(/\W+/g, "-")}`;
+        set((p) => ({ ...p, ownSkills: [...p.ownSkills.filter((x) => x.id !== id), { ...skill, id }] }));
+        return id;
+      },
       removeOwnSkill: (id) => set((p) => ({ ...p, ownSkills: p.ownSkills.filter((x) => x.id !== id) })),
+      addActivity: (activity) => {
+        const id = activity.id ?? activityId(activity.title, Date.now());
+        set((p) => ({ ...p, activities: [...p.activities.filter((x) => x.id !== id), { ...activity, id }] }));
+        return id;
+      },
+      removeActivity: (id) => set((p) => ({ ...p, activities: p.activities.filter((x) => x.id !== id) })),
       clearHomeItem: (id, how) => set((p) => ({ ...p, homeCleared: { ...p.homeCleared, [id]: how } })),
       restoreHomeItem: (id) => set((p) => {
         const { [id]: _cleared, ...homeCleared } = p.homeCleared;
@@ -573,6 +673,23 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         const text = note?.trim();
         return { ...p, eventAsks: { ...p.eventAsks, [eventId]: { sentTo: [...cur.sentTo, peerId], notes: text ? { ...cur.notes, [peerId]: text } : cur.notes } } };
       }),
+      meet: (peerId, eventId, note) => set((p) => ({ ...p, metAt: addMeet(p.metAt, peerId, eventId, new Date(scriptNow()), note) })),
+      setMeetNote: (peerId, eventId, note) => set((p) => ({ ...p, metAt: p.metAt.map((m) => (m.peerId === peerId && m.eventId === eventId ? { ...m, note: note.trim() ? note : undefined } : m)) })),
+      forgetMeet: (peerId, eventId) => set((p) => ({ ...p, metAt: p.metAt.filter((m) => !(m.peerId === peerId && m.eventId === eventId)) })),
+      followUpMeet: (peerId, eventId, how) => set((p) => {
+        const peer = goTogetherEvent.visiblePeers.find((x) => x.id === peerId);
+        const ev = opportunities.find((o) => o.id === eventId);
+        if (!peer) return p;
+        const name = callName(peer.name);
+        const at = ev ? ` from ${eventName(ev)}` : "";
+        const what = how === "trellis" ? `Sent a follow-up to ${name}${at} in Trellis` : how === "email" ? `Opened a follow-up to ${name}${at} in your email` : `Copied a follow-up to ${name}${at} to send yourself`;
+        return {
+          ...p,
+          metAt: p.metAt.map((m) => (m.peerId === peerId && m.eventId === eventId ? { ...m, followedUp: new Date(scriptNow()) } : m)),
+          decisions: [...p.decisions, log(what, [], p.agentOn.drafter ? "Drafter wrote it from your note. You could edit anything first." : "You wrote this one yourself.", how === "trellis" ? "You sent it yourself. Demo only: no message went out." : "Demo only: nothing was sent.")],
+        };
+      }),
+      setCardSeenBy: (tier) => set((p) => ({ ...p, cardSeenBy: tier })),
       requestFriend: (peerId) => set((p) => p.friendIncoming.includes(peerId)
         ? { ...p, friendIncoming: p.friendIncoming.filter((x) => x !== peerId), friends: [...p.friends, peerId] }
         : p.friends.includes(peerId) || p.friendSent.includes(peerId) ? p : { ...p, friendSent: [...p.friendSent, peerId] }),
@@ -617,6 +734,17 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       setGoals: (ids) => set(p => ({ ...p, interestedRoles: ids.slice(0, MAX_GOALS) })),
       setBuildSkills: (roleId, skills) => set(p => ({ ...p, buildSkills: { ...p.buildSkills, [roleId]: skills } })),
       dismissRole: (id, dismissed) => set(p => ({ ...p, dismissedRoles: dismissed ? [...new Set([...p.dismissedRoles, id])] : p.dismissedRoles.filter(i => i !== id) })),
+      addResumeSkill: (name) => set((p) => ({ ...p, resumeSkills: addName(p.resumeSkills, name), resumeDismissed: dropName(p.resumeDismissed, name) })),
+      removeResumeSkill: (name) => set((p) => ({ ...p, resumeSkills: dropName(p.resumeSkills, name), resumeNew: dropName(p.resumeNew, name), resumeDismissed: addName(p.resumeDismissed, name) })),
+      seenResumeSkills: (names) => set((p) => ({ ...p, resumeNew: names ? names.reduce(dropName, p.resumeNew) : [] })),
+      syncResumeSkills: (next) => set((p) => (p.resumeSkills === next.resumeSkills && p.resumeNew === next.resumeNew && p.resumeSeeded === next.seeded ? p : { ...p, resumeSkills: next.resumeSkills, resumeNew: next.resumeNew, resumeSeeded: next.seeded })),
+      setAutoAddSkills: (on) => set((p) => ({ ...p, autoAddSkills: on })),
+      saveResume: (doc) => set((p) => ({ ...p, resumes: saveDoc(p.resumes, doc) })),
+      removeResume: (id) => set((p) => ({ ...p, resumes: removeDoc(p.resumes, id) })),
+      saveResumeFolder: (folder) => set((p) => ({ ...p, resumeFolders: p.resumeFolders.some((f) => f.id === folder.id) ? p.resumeFolders.map((f) => (f.id === folder.id ? folder : f)) : [...p.resumeFolders, folder] })),
+      saveApplication: (app) => set((p) => ({ ...p, applications: saveApplication(p.applications, app) })),
+      removeApplication: (id) => set((p) => ({ ...p, applications: removeApplication(p.applications, id) })),
+      setResumeContact: (patch) => set((p) => ({ ...p, resumeContact: { ...p.resumeContact, ...patch } })),
       demoFill,
       setDemoFill: applyFill,
       setEventGoal: (goal) => set((p) => ({ ...p, event: { ...p.event, goal } })),

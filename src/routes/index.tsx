@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FALL_2026_START, FALL_2026_WEEKS, student } from "@/data/scenario";
+import { FALL_2026_START, FALL_2026_WEEKS, progress, student } from "@/data/scenario";
 import { currentWeek } from "@/lib/weeks";
 import { BlankHome } from "@/components/app/BlankState";
 import { DeskWidgets } from "@/components/app/Desktop";
 import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
 import { ICONS, WidgetBody } from "@/components/app/HomeWidgets";
+import { OverviewCountUp } from "@/components/app/OverviewCountUp";
+import type { Placed } from "@/lib/desktop";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -33,7 +35,14 @@ function Home() {
           <h1 className="desk-hello">Hi {student.name.split(" ")[0]}, you're on track.</h1>
         </div>
       </div>
-      <DeskWidgets icons={ICONS} render={(w) => <WidgetBody w={w} />} />
+      <DeskWidgets icons={ICONS} render={renderTile} />
     </div>
   );
+}
+
+function renderTile(w: Placed) {
+  // Units count up as the bar fills; the suggestion marks itself as a plan card so saving flies its flyer to the Map tab.
+  if (w.kind === "path") return <OverviewCountUp value={progress.earned}><WidgetBody w={w} /></OverviewCountUp>;
+  if (w.kind === "next") return <div className="contents" data-plan-card=""><WidgetBody w={w} /></div>;
+  return <WidgetBody w={w} />;
 }

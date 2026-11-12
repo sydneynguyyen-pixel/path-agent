@@ -44,7 +44,7 @@ export function useAlerts(): Alert[] {
   }
   if (j.seatHeld && chosen && !j.counselor) {
     const hold = recoveryPath(chosen) === "hold";
-    list.push({ id: "seat", level: "update", icon: <AgentAvatar agent="planner" bare className="size-5" />, title: hold ? `You hold a seat in ${chosen.course}` : `You're set with ${chosen.course}`, body: hold ? `Counselor confirmation is pending. Drop by ${DROP_DEADLINE} if not confirmed.` : "It counts toward Statistics.", action: <Button size="sm" variant="outline" className="desk-btn" asChild><Link to="/agents" search={{ tab: "decisions" }}>Decisions</Link></Button> });
+    list.push({ id: "seat", level: "update", icon: <AgentAvatar agent="planner" bare className="size-5" />, title: hold ? `You hold a seat in ${chosen.course}` : `You're set with ${chosen.course}`, body: hold ? `Counselor confirmation is pending. Drop by ${DROP_DEADLINE} if not confirmed.` : "It counts toward Statistics.", action: <Button size="sm" variant="outline" className="desk-btn" asChild><Link to="/agents">Activity</Link></Button> });
   } else if (j.counselor === "confirmed" && chosen) {
     list.push({ id: "confirmed", level: "update", icon: <CheckCircle2 className="size-4" aria-hidden="true" />, title: "All set for winter", body: `${student.counselor} confirmed ${chosen.course} counts toward Statistics.`, action: <Button size="sm" variant="outline" className="desk-btn" asChild><Link to="/semester" search={{ term: "w27" }}>See Winter</Link></Button> });
   } else if (!j.atRisk) {

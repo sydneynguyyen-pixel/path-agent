@@ -3,6 +3,9 @@ import { ArrowRight, Briefcase, CalendarCheck, CalendarDays, CalendarPlus, Check
 import { memo, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type MutableRefObject, type ReactElement } from "react";
 import { toast } from "sonner";
 import { Visual } from "@/components/app/MapParts";
+import { useNewestGrowIn } from "@/components/app/OverviewGrowIn";
+import { linesToGoal, relatedTo } from "@/lib/motionOverview";
+import "@/styles/motion-overview.css";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { pathCategories, pathConnections, pathGoal, pathItems, type PathCategory, type PathItem, type PathState } from "@/data/map";
@@ -73,6 +76,11 @@ export function PathView({ mode, memory, onShowMap }: { mode: "map" | "list"; me
   const routes = useMemo(() => routeLinks(layout, pathConnections, focusId).filter((r) => !connectId || r.active), [layout, focusId, connectId]);
   const linked = useMemo(() => (connectId ? new Set([connectId, ...connectionsOf(connectId, pathConnections, items).map((c) => c.item.id)]) : null), [connectId, items]);
   const selected = selectedId ? items.find((i) => i.id === selectedId) ?? null : null;
+  // Picking a card (outside "Show connections", which already dims harder) lets the rest step back and lights its line to the goal.
+  const focusCard = !connectId && selectedId ? layout.cards.find((c) => c.id === selectedId) ?? null : null;
+  const near = useMemo(() => (focusCard ? relatedTo(focusCard.id, pathConnections) : null), [focusCard]);
+  const toGoal = useMemo(() => (focusCard ? linesToGoal(focusCard, layout.cards) : null), [focusCard, layout.cards]);
+  const grownId = useNewestGrowIn((id) => layout.cards.some((c) => c.id === id));
 
   const clearFocus = () => {
     setConnectId(null);
@@ -199,9 +207,9 @@ export function PathView({ mode, memory, onShowMap }: { mode: "map" | "list"; me
         onKeyDown={onKeyDown}
       >
         <div className="map-world" style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.s})` }}>
-          <Board layout={layout} selectedId={selectedId} matchIds={filtering ? matchIds : null} linked={linked} calendar={j.mapCalendar} notesLine={notesLine} onNotes={openNotes} actions={actions} items={items} />
+          <Board layout={layout} selectedId={selectedId} matchIds={filtering ? matchIds : null} linked={linked} near={near} toGoal={toGoal} grownId={grownId} calendar={j.mapCalendar} notesLine={notesLine} onNotes={openNotes} actions={actions} items={items} />
           <svg className="map-svg" width="1" height="1" aria-hidden="true">
-            {routes.map((r) => <path key={r.id} d={r.d} className="pm-link" data-active={r.active || undefined} />)}
+            {routes.map((r) => <path key={r.id} d={r.d} className="pm-link" data-active={r.active || undefined} data-dim={(near && !r.active) || undefined} />)}
           </svg>
         </div>
         {routes.map((r) => {
@@ -360,12 +368,12 @@ function ItemMenu({ item, items, inCalendar, actions, children }: { item: PathIt
 }
 
 /** Rendered once per layout, so moving the camera only touches one transform. */
-const Board = memo(function Board({ layout, selectedId, matchIds, linked, calendar, notesLine, onNotes, actions, items }: { layout: PathLayout; selectedId: string | null; matchIds: Set<string> | null; linked: Set<string> | null; calendar: string[]; notesLine: string; onNotes: () => void; actions: Actions; items: PathItem[] }) {
+const Board = memo(function Board({ layout, selectedId, matchIds, linked, near, toGoal, grownId, calendar, notesLine, onNotes, actions, items }: { layout: PathLayout; selectedId: string | null; matchIds: Set<string> | null; linked: Set<string> | null; near: Set<string> | null; toGoal: Set<string> | null; grownId: string | null; calendar: string[]; notesLine: string; onNotes: () => void; actions: Actions; items: PathItem[] }) {
   const box = (b: { x: number; y: number; w: number; h: number }) => ({ left: b.x, top: b.y, width: b.w, height: b.h });
   return (
     <>
       <svg className="map-svg" width="1" height="1" aria-hidden="true">
-        {layout.lines.map((l) => <path key={l.id} d={l.d} className="pm-line" data-solid={l.solid || undefined} />)}
+        {layout.lines.map((l) => <path key={l.id} d={l.d} className="pm-line" data-solid={l.solid || undefined} data-focus={toGoal?.has(l.id) || undefined} data-dim={(toGoal && !toGoal.has(l.id)) || undefined} />)}
       </svg>
       <div className="pm-goal" style={box(layout.goal)}>
         <span>Goal</span>
@@ -405,6 +413,8 @@ const Board = memo(function Board({ layout, selectedId, matchIds, linked, calend
             data-state={c.state}
             data-selected={selectedId === c.id || undefined}
             data-off={(matchIds && !matchIds.has(c.id)) || (linked && !linked.has(c.id)) || undefined}
+            data-dim={(near && !near.has(c.id)) || undefined}
+            data-grown={grownId === c.id || undefined}
             onClick={() => actions.pick(c.id)}
             onDoubleClick={() => actions.open(c)}
           >

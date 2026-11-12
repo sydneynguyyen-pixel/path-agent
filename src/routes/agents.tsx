@@ -18,7 +18,7 @@ export const Route = createFileRoute("/agents")({
     { title: "Agents — Academic Sprout" },
     { name: "description", content: "See what your helpers did and control what each may read or prepare." },
     { property: "og:title", content: "Agents — Academic Sprout" },
-    { property: "og:description", content: "One place for agent activity, your decisions and helper controls." },
+    { property: "og:description", content: "What Sprout and the helpers did, what you decided, and what they may do." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),
   component: Agents,
@@ -30,8 +30,8 @@ function Agents() {
     <div className="w-full min-w-0">
       <PageBanner src={sceneHome} position="50% 70%" />
       <div role="tablist" aria-label="Agent views" className="sub-tabs mb-7 inline-flex max-w-full gap-1 overflow-x-auto rounded-full border bg-card p-1.5 text-sm">
-        {([["timeline", "Activity"], ["decisions", "Your decisions"], ["controls", "Agent controls"]] as const).map(([value, label]) => (
-          <Link key={value} role="tab" aria-selected={tab === value} to="/agents" search={{ tab: value }} className={cn("inline-flex h-9 shrink-0 items-center rounded-full px-5", tab === value ? "glass-active" : "text-muted-foreground hover:text-foreground")}>{label}</Link>
+        {([["timeline", "Runs"], ["controls", "Controls"]] as const).map(([value, label]) => (
+          <Link key={value} role="tab" aria-selected={value === "controls" ? tab === "controls" : tab !== "controls"} to="/agents" search={{ tab: value }} className={cn("inline-flex h-9 shrink-0 items-center rounded-full px-5", (value === "controls" ? tab === "controls" : tab !== "controls") ? "glass-active" : "text-muted-foreground hover:text-foreground")}>{label}</Link>
         ))}
       </div>
       {tab === "controls" ? <Controls embedded /> : <Activity embedded tab={tab} helper={helper} />}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Check, Plus, Sparkles, X } from "lucide-react";
@@ -11,11 +11,12 @@ import { distinct } from "@/lib/opportunities";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CareerMark } from "@/components/app/CareerMark";
+import { cn } from "@/lib/utils";
 
 const BUILDABLE = distinct(opportunities.flatMap((o) => o.fills));
 
-/** On Plan: her goal as one sentence, with the skills she's building for it. Edits are a draft until she presses Save; the button reads "Saved" when nothing is pending. Explore's "Builds …" shelves and Home's goal widget follow the saved list. */
-export function BuildSkills({ role, onRole }: { role: CareerRole; onRole: (id: string) => void }) {
+/** On Plan: her goal as one sentence, with the skills she's building for it. Edits are a draft until she presses Save; the button reads "Saved" when nothing is pending. Save sits at the end of the sentence and `action` (Add to your goals) at the row's right edge, so the goal reads as one row. Explore's "Builds …" shelves and Home's goal widget follow the saved list. */
+export function BuildSkills({ role, onRole, action }: { role: CareerRole; onRole: (id: string) => void; action?: ReactNode }) {
   const j = useJourney();
   const navigate = useNavigate();
   const saved = buildSkillsFor(role, j.buildSkills);
@@ -26,28 +27,27 @@ export function BuildSkills({ role, onRole }: { role: CareerRole; onRole: (id: s
     toast("Saved", { description: "Explore and Home now follow these skills.", action: { label: "See on Explore", onClick: () => void navigate({ to: "/explore" }) } });
   };
   return (
-    <div className="space-y-4">
-      <section aria-label="Skills you're building" className="flex flex-wrap items-center gap-x-2 gap-y-2.5 text-base">
-        <span className="text-muted-foreground">I want to be a</span>
-        <Select value={role.id} onValueChange={onRole}>
-          <SelectTrigger aria-label="Career to plan toward" className="h-9 w-auto gap-2 rounded-full border-0 bg-card/80 pr-3 pl-1.5 text-base font-medium shadow-soft"><SelectValue /></SelectTrigger>
-          <SelectContent>{careerRoles.map((r) => <SelectItem key={r.id} value={r.id}><span className="flex items-center gap-2"><CareerMark id={r.id} size="sm" />{r.title}</span></SelectItem>)}</SelectContent>
-        </Select>
-        <span className="text-muted-foreground">and build my</span>
-        {draft.map((n) => (
-          <span key={n} className="inline-flex h-9 items-center rounded-full bg-card/80 pl-3.5 text-sm font-medium shadow-soft">
-            {n}
-            <button type="button" onClick={() => setDraft(draft.filter((b) => b !== n))} aria-label={`Stop building ${n}`} className="mr-1 ml-1 grid size-7 place-items-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground"><X className="size-3.5" aria-hidden="true" /></button>
-          </span>
-        ))}
-        <AddBuildSkill role={role} picked={draft} onAdd={(n) => setDraft([...draft, n])} />
-        <span className="text-muted-foreground">skills.</span>
-      </section>
-      <div className="flex items-center gap-2">
-        <Button size="sm" disabled={!dirty} onClick={save}>{dirty ? "Save" : <><Check className="size-3.5" aria-hidden="true" />Saved</>}</Button>
+    <section aria-label="Skills you're building" className="flex flex-wrap items-center gap-x-2 gap-y-2.5 text-base">
+      <span className="text-muted-foreground">I want to be a</span>
+      <Select value={role.id} onValueChange={onRole}>
+        <SelectTrigger aria-label="Career to plan toward" className="h-9 w-auto gap-2 rounded-full border-0 bg-card/80 pr-3 pl-1.5 text-base font-medium shadow-soft"><SelectValue /></SelectTrigger>
+        <SelectContent>{careerRoles.map((r) => <SelectItem key={r.id} value={r.id}><span className="flex items-center gap-2"><CareerMark id={r.id} size="sm" />{r.title}</span></SelectItem>)}</SelectContent>
+      </Select>
+      <span className="text-muted-foreground">and build my</span>
+      {draft.map((n) => (
+        <span key={n} className="inline-flex h-9 items-center rounded-full bg-card/80 pl-3.5 text-sm font-medium shadow-soft">
+          {n}
+          <button type="button" onClick={() => setDraft(draft.filter((b) => b !== n))} aria-label={`Stop building ${n}`} className="mr-1 ml-1 grid size-7 place-items-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground"><X className="size-3.5" aria-hidden="true" /></button>
+        </span>
+      ))}
+      <AddBuildSkill role={role} picked={draft} onAdd={(n) => setDraft([...draft, n])} />
+      <span className="text-muted-foreground">skills.</span>
+      <span className="inline-flex items-center gap-1 sm:ml-1">
+        <Button size="sm" variant={dirty ? "default" : "ghost"} disabled={!dirty} onClick={save} className={cn(!dirty && "text-muted-foreground disabled:opacity-100")}>{dirty ? "Save" : <><Check className="size-3.5" aria-hidden="true" />Saved</>}</Button>
         {dirty && <Button size="sm" variant="ghost" onClick={() => setDraft(saved)}>Discard</Button>}
-      </div>
-    </div>
+      </span>
+      {action && <span className="w-full sm:ml-auto sm:w-auto">{action}</span>}
+    </section>
   );
 }
 

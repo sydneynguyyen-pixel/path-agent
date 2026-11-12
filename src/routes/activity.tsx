@@ -1,19 +1,16 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Check, Ban } from "lucide-react";
+import { PageHeader } from "@/components/app/bits";
+import { useEvents, useScriptNow } from "@/components/app/activityBits";
+import { useJourney, type AgentId } from "@/lib/journey";
+import { runGroups, type RunGroup } from "@/lib/run";
+import { needsHer, NeedsYou, RunCard } from "@/components/app/RunCard";
+import { EventCard } from "@/components/app/ActivityItem";
+import type { ActivityEvent } from "@/lib/activity";
 import { useState } from "react";
-import { Search as SearchIcon, ArrowDownUp, ChevronDown, Check, Ban, ArrowRight, Download, SlidersHorizontal } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { filterActivity, type ActivityFilters } from "@/lib/activity-filters";
-import { PageHeader, SourceChip } from "@/components/app/bits";
-import { useEvents, useScriptNow, When, PermChip, EventStatusChip } from "@/components/app/activityBits";
-import { lastActive, type ActivityEvent } from "@/lib/activity";
-import { useJourney, fmtClock, fmtStamp, fmtStampSec, type AgentId } from "@/lib/journey";
-import { AgentAvatar } from "@/components/app/Brand";
 import { Spot } from "@/components/app/Illustrations";
-import { cn } from "@/lib/utils";
 
+// `tab=decisions` is an old link (Your decisions used to be its own view). It still parses so those links land here, and is ignored.
 type Search = { tab?: "timeline" | "decisions" | undefined; helper?: AgentId | undefined };
 const HELPERS: AgentId[] = ["reader", "planner", "backup", "drafter"];
 
@@ -47,236 +44,76 @@ function ActivityPage() {
   return <Activity tab={tab} helper={helper} />;
 }
 
-export function Activity({ embedded = false, tab, helper }: { embedded?: boolean; tab?: "timeline" | "decisions" | undefined; helper?: AgentId | undefined }) {
+/**
+ * Activity: one list, newest first, of everything Sprout's helpers did. Each run (with its re-checks
+ * and re-plans) and each earlier item is a light one-line card that opens to show how they found it
+ * and what she decided on it. The live conversation is in the chat; this is the history.
+ */
+export function Activity({ embedded = false }: { embedded?: boolean; tab?: "timeline" | "decisions" | undefined; helper?: AgentId | undefined }) {
   return (
     <div className="w-full min-w-0">
-      <PageHeader title="Activity" sub="Everything Sprout has done for you." right={<Spot name="journal" className="hidden w-32 sm:block" />} />
-      {!embedded && <div role="tablist" className="mb-6 inline-flex gap-1 rounded-full border bg-card p-1.5 text-sm">
-        {([["timeline", "Timeline"], ["decisions", "Your decisions"]] as const).map(([k, l]) => {
-          const active = (tab ?? "timeline") === k;
-          return <Link key={k} role="tab" aria-selected={active} to="/activity" search={k === "decisions" ? { tab: "decisions" } : {}} className={cn("inline-flex h-9 items-center rounded-full px-5", active ? "glass-active" : "text-muted-foreground hover:text-foreground")}>{l}</Link>;
-        })}
-      </div>}
-      {tab === "decisions" ? <Decisions /> : <Timeline helper={helper} embedded={embedded} />}
+      <PageHeader title="Activity" sub="What Sprout and your helpers did, and what you decided along the way." />
+      <Feed />
       <CanCantStrip embedded={embedded} />
     </div>
   );
 }
 
-function Timeline({ helper, embedded = false }: { helper?: AgentId | undefined; embedded?: boolean }) {
+type Item = { kind: "run"; key: string; at: number; group: RunGroup; until: number } | { kind: "event"; key: string; at: number; e: ActivityEvent };
+
+function Feed() {
   const j = useJourney();
   const events = useEvents();
   const now = useScriptNow();
-  const navigate = useNavigate();
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<ActivityFilters["status"]>("all");
-  const [order, setOrder] = useState<ActivityFilters["order"]>("newest");
-  const shown = filterActivity(events, { query, helper, status, order });
-  const filtered = Boolean(query || helper || status !== "all");
-  const clear = () => { setQuery(""); setStatus("all"); navigate(embedded ? { to: "/agents", search: { tab: "timeline" } } : { to: "/activity", search: {} }); };
+  // Finished runs, plus the one in progress if it has started and isn't in the history yet.
+  const live = j.agentRun?.startedAt && !j.runs.some((r) => r.runId === j.agentRun!.runId) ? [j.agentRun] : [];
+  const all = [...j.runs, ...live];
+  const groups = runGroups(all);
+  const latest = all.at(-1) ?? null;
+  // The scripted "STAT 2 is full" item is the same thing as the first run, so it only shows before any run.
+  const earlier = events.filter((e) => !(groups.length && e.id === "stat2-full"));
+  const lastOf = (g: RunGroup) => (g.rechecks.at(-1) ?? g.root).startedAt?.getTime() ?? 0;
+  const items: Item[] = [
+    ...groups.map((g, i): Item => ({ kind: "run", key: `run-${g.root.runId ?? i}`, at: lastOf(g), group: g, until: groups[i - 1]?.root.startedAt?.getTime() ?? Infinity })),
+    ...earlier.map((e): Item => ({ kind: "event", key: `ev-${e.id}`, at: e.at.getTime(), e })),
+  ].sort((a, b) => b.at - a.at);
+  // The newest run that needs her opens by default; anything she opens or closes stays that way.
+  // Only the newest run can still be waiting on her; older ones were superseded.
+  const newest = groups[0];
+  const newestNeeds = !!newest && needsHer(newest.rechecks.at(-1) ?? newest.root, j);
+  const defaultKey = newest && newestNeeds ? `run-${newest.root.runId ?? 0}` : null;
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
+  const isOpen = (k: string) => toggled[k] ?? k === defaultKey;
+  const toggle = (k: string) => setToggled((t) => ({ ...t, [k]: !isOpen(k) }));
+
   return (
-    <>
-      <div className="mb-4 flex flex-wrap items-center gap-3" role="search" aria-label="Activity filters">
-        <div className="relative min-w-[200px] flex-1">
-          <SearchIcon className="pointer-events-none absolute left-3 top-2.5 size-4 text-muted-foreground" />
-          <Input aria-label="Search activity" placeholder="Search activity, classes, or sources…" value={query} onChange={e => setQuery(e.target.value)} className="bg-card pl-9" />
-        </div>
-        <Select value={helper ?? "all"} onValueChange={value => navigate(embedded ? { to: "/agents", search: value === "all" ? { tab: "timeline" } : { tab: "timeline", helper: value as AgentId } } : { to: "/activity", search: value === "all" ? {} : { helper: value as AgentId } })}>
-          <SelectTrigger aria-label="Filter by task" className="w-[160px] bg-card"><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="all">All tasks</SelectItem>{HELPERS.map(h => <SelectItem key={h} value={h}>{helperInfo[h].name}</SelectItem>)}</SelectContent>
-        </Select>
-        <Select value={status} onValueChange={value => setStatus(value as ActivityFilters["status"])}>
-          <SelectTrigger aria-label="Filter by status" className="w-[190px] bg-card"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem><SelectItem value="attention">Needs your attention</SelectItem>
-            <SelectItem value="done">Done</SelectItem><SelectItem value="waiting">Waiting on counselor</SelectItem><SelectItem value="nothing">Nothing needed</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" size="sm" onClick={() => setOrder(order === "newest" ? "oldest" : "newest")}><ArrowDownUp className="size-4" />{order === "newest" ? "Newest first" : "Oldest first"}</Button>
-      </div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span aria-live="polite">{shown.length} of {events.length} records{helper ? ` · ${helperInfo[helper].name}` : ""}</span>
-        {filtered && <Button size="sm" variant="ghost" onClick={clear}>Clear filters</Button>}
-      </div>
-      {shown.length === 0 ? (
-        <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground">
-          <Spot name="rocks" className="mx-auto mb-3 w-28" />
-          {filtered ? "No activity matches your search or filters." : "No activity yet."}
+    <div className="space-y-3">
+      <NeedsYou latest={latest} />
+      {items.length === 0 ? (
+        <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
+          <Spot name="rocks" className="mx-auto mb-3 w-24" />
+          <p className="font-medium text-foreground">Nothing yet</p>
+          <p className="mt-1 text-sm text-balance">When a class you try to add is full, Sprout's helpers start a run. It shows up here with how they found your options.</p>
         </div>
       ) : (
-        <div className="surface overflow-hidden">
-          <div className="hidden grid-cols-[120px_minmax(0,1fr)_180px_180px_24px] gap-4 border-b bg-secondary px-5 py-3 text-xs font-medium text-muted-foreground lg:grid"><span>Time</span><span>Activity</span><span>Tasks</span><span>Status</span><span /></div>
-          <ol>{shown.map((e, i) => {
-            const date = e.at.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-            const previous = shown[i - 1];
-            const newDate = !previous || previous.at.toDateString() !== e.at.toDateString();
-            return <EventCard key={e.id} e={e} now={now} helper={helper} dateLabel={newDate ? date : undefined} />;
-          })}</ol>
-        </div>
+        <ol aria-label="Activity, newest first" className="space-y-2">
+          {items.map((it) => it.kind === "run"
+            ? <RunCard key={it.key} group={it.group} decisions={j.decisions} until={it.until} needs={newestNeeds && it.group === newest} open={isOpen(it.key)} onToggle={() => toggle(it.key)} now={now} />
+            : <EventCard key={it.key} e={it.e} now={now} open={isOpen(it.key)} onToggle={() => toggle(it.key)} />)}
+        </ol>
       )}
-
-      <details className="surface group mt-8">
-        <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl p-4 font-medium focus-visible:ring-2 focus-visible:ring-ring">
-          What Sprout does <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
-        </summary>
-        <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2">
-          {HELPERS.map((h) => {
-            const t = lastActive(events, h);
-            return (
-              <div key={h} className={cn("rounded-xl border p-4", !j.agentOn[h] && "opacity-60")}>
-                <div className="flex items-center gap-2 font-semibold"><AgentAvatar agent={h} />{helperInfo[h].name}</div>
-                <p className="mt-1 text-sm">{helperInfo[h].plain}</p>
-                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{!j.agentOn[h] ? "Off" : t ? `Last active ${fmtStamp(t)}` : "Not active yet"}</span>
-                  <Link to={embedded ? "/agents" : "/activity"} search={embedded ? { tab: "timeline", helper: h } : { helper: h }} className="text-primary underline">See steps</Link>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </details>
-    </>
-  );
-}
-
-function EventCard({ e, now, helper, dateLabel }: { e: ActivityEvent; now: number | null; helper?: AgentId | undefined; dateLabel?: string | undefined }) {
-  const j = useJourney();
-  const navigate = useNavigate();
-  const act = () => {
-    if (!e.action) return;
-    if (e.action.kind === "portal") { j.setGuide(true); navigate({ to: "/portal" }); }
-    else if (e.action.kind === "counselor") navigate({ to: "/counselor" });
-    else if (e.action.kind === "explore") navigate({ to: "/explore" });
-    else j.setPanelOpen(true);
-  };
-  const steps = helper ? e.steps.filter((s) => s.helper === helper) : e.steps;
-  return (
-    <li id={`event-${e.id}`} className="border-b last:border-b-0">
-      {dateLabel && <div className="border-b bg-secondary/50 px-5 py-2 text-xs font-semibold">{dateLabel}</div>}
-      <details className="group/record">
-        <summary className="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_24px] items-center gap-4 px-5 py-4 transition-colors hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring lg:grid-cols-[120px_minmax(0,1fr)_180px_180px_24px]">
-          <div className="hidden border-l-2 pl-3 lg:block"><time dateTime={e.at.toISOString()} className="block font-mono text-xs">{fmtClock(e.at)}</time><When d={e.at} now={now} /></div>
-          <div className="min-w-0"><h2 className="text-sm font-semibold">{e.headline}</h2><p className="mt-1 truncate text-xs text-muted-foreground">{e.found?.[0] ?? e.because}</p><div className="mt-2 flex flex-wrap items-center gap-2 lg:hidden"><time className="font-mono text-xs text-muted-foreground">{fmtClock(e.at)}</time><EventStatusChip s={e.status} /></div></div>
-          <div className="hidden items-center gap-1 lg:flex">{[...new Set(steps.map(s => s.helper))].map(h => <span key={h} title={helperInfo[h].name}><AgentAvatar agent={h} /></span>)}</div>
-          <div className="hidden lg:block"><EventStatusChip s={e.status} /></div>
-          <ChevronDown className="size-4 text-muted-foreground transition-transform group-open/record:rotate-180" />
-        </summary>
-        <div className="border-t bg-secondary/20 px-5 py-5 lg:pl-[160px]">
-      <p className="mt-2 text-sm"><b>Because:</b> {e.because}</p>
-
-      <ol className="mt-3 space-y-1.5 border-l-2 pl-4">
-        {steps.map((s, i) => (
-          <li key={i} className={cn("flex flex-wrap items-center gap-x-3 gap-y-1 text-sm", s.skipped && "text-muted-foreground line-through")}>
-            <AgentAvatar agent={s.helper} />
-            <time className="w-16 shrink-0 font-mono text-xs text-muted-foreground" title={fmtStampSec(s.at)}>{fmtClock(s.at)}</time>
-            <span className="min-w-0 flex-1">{s.text}{s.skipped && <span className="ml-1 no-underline">(skipped, this task is off)</span>}</span>
-            <PermChip p={s.perm} />
-          </li>
-        ))}
-      </ol>
-
-      <div className="mt-4 grid gap-6 text-sm sm:grid-cols-3">
-        {e.found && <Outcome title="What I found" items={e.found} />}
-        {e.suggest && <Outcome title="What I suggest" items={e.suggest} />}
-        <Outcome title="What I did NOT do" items={e.didNot} icon="no" />
-      </div>
-
-      {e.handoff && <p className="mt-4 rounded-xl bg-warning-soft p-3 text-sm"><b>Your turn.</b> Add the class in your school's portal.</p>}
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        {e.action && <Button size="sm" onClick={act}>{e.action.label} <ArrowRight className="size-4" /></Button>}
-        {e.change && (
-          <details className="relative">
-            <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full border px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-              <SlidersHorizontal className="size-3.5" /> Change what I'm doing
-            </summary>
-            <div className="absolute z-10 mt-1 w-64 rounded-xl border bg-card p-1 shadow-frame">
-              {e.change.map((c) => (
-                <button key={c} className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-secondary" onClick={(ev) => { (ev.currentTarget.closest("details") as HTMLDetailsElement).open = false; toast(`Got it: “${c}”`, { description: "Demo only — I'll remember this preference next time." }); }}>
-                  {c}
-                </button>
-              ))}
-            </div>
-          </details>
-        )}
-      </div>
-
-      <details className="group mt-4">
-        <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-sm text-primary focus-visible:ring-2 focus-visible:ring-ring">
-          <ChevronDown className="size-4 transition-transform group-open:rotate-180" /> Show the details
-        </summary>
-        <div className="mt-3 grid gap-4 rounded-xl bg-secondary p-4 text-sm md:grid-cols-2">
-          <div><div className="text-xs font-semibold text-muted-foreground">Inputs read</div><ul className="mt-1 list-disc space-y-0.5 pl-4">{e.details.inputs.map((x) => <li key={x}>{x}</li>)}</ul></div>
-          <div><div className="text-xs font-semibold text-muted-foreground">Outputs produced</div><ul className="mt-1 list-disc space-y-0.5 pl-4">{e.details.outputs.map((x) => <li key={x}>{x}</li>)}</ul></div>
-          <div className="md:col-span-2"><div className="text-xs font-semibold text-muted-foreground">Source passages (click to read)</div><div className="mt-1 flex flex-wrap gap-1.5">{e.details.sourceIds.map((s) => <SourceChip key={s} id={s} />)}</div></div>
-          {e.details.confidence && <div className="md:col-span-2"><div className="text-xs font-semibold text-muted-foreground">How sure (confidence)</div><p>{e.details.confidence}</p></div>}
-        </div>
-      </details>
-        </div>
-      </details>
-    </li>
-  );
-}
-
-function Outcome({ title, items, icon }: { title: string; items: string[]; icon?: "no" }) {
-  return (
-    <div>
-      <div className="text-xs font-semibold text-muted-foreground">{title}</div>
-      <ul className="mt-1 space-y-1">
-        {items.map((x) => (
-          <li key={x} className="flex gap-1.5">{icon === "no" ? <Ban className="mt-0.5 size-3.5 shrink-0 text-mark-no" aria-hidden /> : <Check className="mt-0.5 size-3.5 shrink-0 text-mark-yes" aria-hidden />}{x}</li>
-        ))}
-      </ul>
     </div>
-  );
-}
-
-function Decisions() {
-  const { decisions } = useJourney();
-  return (
-    <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">Choices you've made.</p>
-        <Button size="sm" variant="outline" disabled={!decisions.length} onClick={() => toast("Record exported (simulated)", { description: "Demo only: no file was created or shared." })}>
-          <Download className="size-4" /> Export record
-        </Button>
-      </div>
-      {decisions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed p-10 text-center text-muted-foreground"><Spot name="flowers" className="mx-auto mb-3 w-24" />No decisions yet.</div>
-      ) : (
-        <div className="surface overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead className="bg-secondary text-left text-xs text-muted-foreground">
-              <tr><th className="p-3">When</th><th className="p-3">You decided</th><th className="p-3">What Sprout suggested</th><th className="p-3">What happened next</th></tr>
-            </thead>
-            <tbody>
-              {decisions.map((d) => (
-                <tr key={d.id} className="border-t align-top">
-                  <td className="whitespace-nowrap p-3">{fmtStamp(d.when)}</td>
-                  <td className="p-3">{d.who !== "Maya Torres" && <span className="text-xs text-muted-foreground">{d.who} decided: </span>}<b>{d.what}</b></td>
-                  <td className="p-3"><AgentAvatar agent={d.what.startsWith("Approved") ? "drafter" : "planner"} /> {d.suggested ?? "—"}<div className="mt-1.5 flex flex-wrap gap-1">{[...new Set(d.evidence)].map((e) => <SourceChip key={e} id={e} />)}</div></td>
-                  <td className="p-3">{d.next ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </>
   );
 }
 
 export function CanCantStrip({ embedded = false }: { embedded?: boolean }) {
   return (
-    <div className="sticky bottom-4 z-30 mt-8 flex flex-col gap-3 rounded-3xl border bg-card/95 px-5 py-4 text-sm shadow-frame backdrop-blur sm:flex-row sm:items-center sm:gap-6">
-      {/* Two aligned rows, label then list, so the eye reads straight down; the change link sits apart as a button. */}
-      <dl className="grid min-w-0 flex-1 grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2">
-        <dt className="inline-flex items-center gap-1.5 font-semibold"><Check className="size-4 text-mark-yes" aria-hidden="true" />Can</dt>
-        <dd className="text-muted-foreground">Read your files, suggest classes, draft emails, say how sure it is.</dd>
-        <dt className="inline-flex items-center gap-1.5 font-semibold"><Ban className="size-4 text-mark-no" aria-hidden="true" />Can't</dt>
-        <dd className="text-muted-foreground">Register you, send anything without your OK, change your degree record, see anything you haven't shared.</dd>
+    <div className="mt-6 flex flex-col gap-2 rounded-xl border bg-card px-3 py-2.5 text-[13px] sm:flex-row sm:items-center sm:gap-4 sm:px-4">
+      <dl className="min-w-0 flex-1 space-y-1 sm:space-y-0.5">
+        <div className="flex gap-2"><dt className="inline-flex shrink-0 items-center gap-1 font-semibold"><Check className="size-3.5 text-mark-yes" aria-hidden="true" />Can</dt><dd className="text-muted-foreground">Read your files, suggest classes, draft emails.</dd></div>
+        <div className="flex gap-2"><dt className="inline-flex shrink-0 items-center gap-1 font-semibold"><Ban className="size-3.5 text-mark-no" aria-hidden="true" />Can't</dt><dd className="text-muted-foreground">Register you, send anything without your OK, change your degree record, see anything you haven't shared.</dd></div>
       </dl>
-      <Link to={embedded ? "/agents" : "/permissions"} search={embedded ? { tab: "controls" } : {}} className="inline-flex h-9 shrink-0 items-center self-start rounded-full border bg-background px-4 text-sm font-medium hover:bg-muted sm:self-center">Change what it can do</Link>
+      <Link to={embedded ? "/agents" : "/permissions"} search={embedded ? { tab: "controls" } : {}} className="shrink-0 self-start text-sm font-medium underline underline-offset-4 hover:text-foreground sm:self-center">Change what it can do</Link>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ArrowRight, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   eventPlatforms,
@@ -22,6 +22,8 @@ import { PostingLink } from "@/components/app/PostingLink";
 import { AgentAvatar } from "@/components/app/Brand";
 import { Flyer } from "@/components/app/Flyer";
 import { Button } from "@/components/ui/button";
+import { crossFade, jumpTarget, jumpTo, useIsoLayoutEffect } from "@/lib/motion-plan";
+import "@/styles/motion-plan.css";
 
 const VIEWS = [
   { id: "upcoming", label: "Upcoming" },
@@ -68,6 +70,16 @@ export function EventsBoard({ query = "" }: { query?: string }) {
   const selected =
     shown.find((e) => e.id === picked) ?? shown.find((e) => e.id === symposiumEvent.id) ?? shown[0];
   const days = [...new Set(shown.map((e) => e.date))];
+  // A day picked on the month calendar: the timeline scrolls to it and its row pulses once.
+  const timeline = useRef<HTMLElement>(null);
+  const [jump, setJump] = useState<{ date: string; n: number } | null>(null);
+  const jumpRow = jump ? jumpTarget(shown, jump.date, picked) : null;
+  useEffect(() => {
+    if (!jump || !jumpRow) return;
+    const root = timeline.current;
+    jumpTo(root?.querySelector<HTMLElement>(`[data-event="${CSS.escape(jumpRow)}"]`) ?? null, root?.querySelector<HTMLElement>(`[data-plan-day="${jump.date}"]`) ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jump]);
 
   return (
     <div>
@@ -81,6 +93,7 @@ export function EventsBoard({ query = "" }: { query?: string }) {
               setDay(d);
               const first = items.find((e) => e.date === d);
               if (first) setPicked(first.id);
+              setJump((j) => ({ date: d, n: (j?.n ?? 0) + 1 }));
             }}
             selectedDate={selected?.date}
           />
@@ -129,7 +142,7 @@ export function EventsBoard({ query = "" }: { query?: string }) {
           </fieldset>
         </aside>
 
-        <section aria-label="Upcoming events" className="relative min-w-0 pl-6">
+        <section ref={timeline} aria-label="Upcoming events" className="relative min-w-0 pl-6">
           <span
             aria-hidden="true"
             className="absolute bottom-8 left-1 top-5 border-l-[1.5px] border-dashed border-border"
@@ -144,7 +157,7 @@ export function EventsBoard({ query = "" }: { query?: string }) {
             </button>
           )}
           {days.map((d) => (
-            <div key={d} className="relative grid grid-cols-[96px_minmax(0,1fr)] gap-3 pb-4">
+            <div key={d} data-plan-day={d} className="relative grid grid-cols-[96px_minmax(0,1fr)] gap-3 pb-4">
               <div className="relative pt-2">
                 <span
                   aria-hidden="true"
@@ -222,6 +235,7 @@ function EventRow({
   return (
     <button
       type="button"
+      data-event={e.id}
       onClick={onPick}
       aria-pressed={selected}
       className={cn(
@@ -271,10 +285,21 @@ function Details({ e, planned }: { e: EventItem; planned: boolean }) {
         .filter((p) => !!p)
     : [];
   const item = e.experience ?? e.opportunity;
+  // Picking another event cross-fades the panel from the last one shown.
+  const panel = useRef<HTMLElement>(null);
+  const last = useRef<HTMLElement | null>(null);
+  useIsoLayoutEffect(() => crossFade(panel.current, last.current), [e.id]);
+  // Keep a copy of what's on screen after every change, so the next fade starts from it.
+  useIsoLayoutEffect(() => {
+    const copy = (panel.current?.cloneNode(true) as HTMLElement | undefined) ?? null;
+    copy?.querySelectorAll(".plan-fade-ghost").forEach((g) => g.remove());
+    last.current = copy;
+  });
   return (
     <aside
+      ref={panel}
       aria-label={`${e.title} details`}
-      className="hidden overflow-hidden rounded-[1.75rem] bg-card shadow-soft scroll-pane xl:block"
+      className="plan-fade-root hidden overflow-hidden rounded-[1.75rem] bg-card shadow-soft scroll-pane xl:block"
     >
       <div className="relative">
         {e.opportunity?.flyer ? (

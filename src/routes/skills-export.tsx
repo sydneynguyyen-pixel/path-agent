@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-/** Resume text now lives on Portfolio's Share tab. */
+/** Resume text is a sheet on Career now. */
 export const Route = createFileRoute("/skills-export")({
-  beforeLoad: () => { throw redirect({ to: "/portfolio", search: { tab: "share" }, replace: true }); },
+  beforeLoad: () => { throw redirect({ to: "/career", search: { tab: "skills", resume: true }, replace: true }); },
 });

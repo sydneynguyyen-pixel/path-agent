@@ -8,7 +8,7 @@ export type WhatIf = { dropped: string[]; stats: StatsChoice | null; internship:
 export const NO_CHANGE: WhatIf = { dropped: [], stats: null, internship: false, termOff: false, early: false };
 
 export const OFF_TERM = "Spring 2028";
-export const SUMMER_CLASSES = syllabi.map((s) => s.course);
+export const WINTER_CLASSES = syllabi.map((s) => s.course);
 
 const STATS: Record<StatsChoice, { name: string; units: number; quarter: number; optionId?: string }> = {
   stat2: { name: "STAT 2", units: 3.3, quarter: 5 },
@@ -33,7 +33,8 @@ const CATCH_UP_COURSE = 3;
 const WEEKS = 8;
 
 const unitsOf = (label: string) => parseFloat(label);
-const plannedTerms = terms.filter((t) => t.status === "planned").map((t) => ({ id: t.id, name: t.name, units: t.courses.reduce((n, c) => n + unitsOf(c.units), 0) }));
+/** Terms after transfer. Bayview terms other than Winter are fixed and only count toward transfer units. */
+const plannedTerms = terms.filter((t) => t.status === "planned" && t.school === "northgate").map((t) => ({ id: t.id, name: t.name, units: t.courses.reduce((n, c) => n + unitsOf(c.units), 0) }));
 
 const termOrder = (name: string) => {
   const [season, year] = name.split(" ");
@@ -53,7 +54,7 @@ export type Projection = {
   stats: StatsChoice;
   graduation: string;
   unitsAtTransfer: number;
-  summerUnits: number;
+  winterUnits: number;
   transfer: TransferStatus;
   transferTerm: string;
   weekLoad: number[];
@@ -74,9 +75,9 @@ function weekLoads(dropped: string[], stats: StatsChoice) {
 /** Works out a plan from the same rules every time, so the same change always gives the same answer. */
 export function project(change: WhatIf, currentStats: StatsChoice): Projection {
   const stats = change.stats ?? currentStats;
-  const kept = SUMMER_CLASSES.filter((c) => !change.dropped.includes(c));
-  const summerUnits = round1(kept.length * CLASS_UNITS + STATS[stats].units);
-  const unitsAtTransfer = round1(progress.earned + progress.inProgress + summerUnits);
+  const kept = WINTER_CLASSES.filter((c) => !change.dropped.includes(c));
+  const winterUnits = round1(kept.length * CLASS_UNITS + STATS[stats].units);
+  const unitsAtTransfer = round1(progress.earned + progress.inProgress + progress.planned + winterUnits);
 
   const blocked = unitsAtTransfer < TRANSFER_MIN_UNITS || stats === "skip";
   const transfer: TransferStatus = blocked ? "blocked" : stats === "bus21" ? "review" : stats === "psyc5" ? "conditional" : "ready";
@@ -119,7 +120,7 @@ export function project(change: WhatIf, currentStats: StatsChoice): Projection {
   const finalTotal = active.reduce((n, t) => n + t.units, 0);
   const movedToNorthgate = Math.max(0, finalTotal - plannedTotal);
   const quarterKept = kept.length * CLASS_QUARTER + STATS[stats].quarter;
-  const quarterBase = SUMMER_CLASSES.length * CLASS_QUARTER + STATS[currentStats].quarter;
+  const quarterBase = WINTER_CLASSES.length * CLASS_QUARTER + STATS[currentStats].quarter;
   const tuition = movedToNorthgate * TUITION_PER_UNIT.northgate - (quarterBase - quarterKept) * TUITION_PER_UNIT.bayview;
 
   const weekLoad = weekLoads(change.dropped, stats);
@@ -127,7 +128,7 @@ export function project(change: WhatIf, currentStats: StatsChoice): Projection {
     stats,
     graduation: active.at(-1)!.name,
     unitsAtTransfer,
-    summerUnits,
+    winterUnits,
     transfer,
     transferTerm: blocked ? nextTerm(firstTerm.name) : firstTerm.name,
     weekLoad,
@@ -163,8 +164,8 @@ export function explain(change: WhatIf, base: Projection, next: Projection): Not
     const over = bar.units > TERM_LOAD_LIMIT;
     notes.push({ text: `${bar.name} goes from ${bar.baseUnits} to ${bar.units} units${over ? ", which needs advisor approval" : ""}.`, ...(over ? { sourceId: "nsu-admit", alert: true } : {}) });
   }
-  if (next.summerUnits > 0) for (const w of next.pileups) if (!base.pileups.includes(w)) notes.push({ text: `Week ${w} of Summer becomes a pile-up.`, alert: true });
-  if (next.summerUnits > 0) for (const w of base.pileups) if (!next.pileups.includes(w)) notes.push({ text: `Week ${w} of Summer is no longer a pile-up.` });
+  if (next.winterUnits > 0) for (const w of next.pileups) if (!base.pileups.includes(w)) notes.push({ text: `Week ${w} of Winter becomes a pile-up.`, alert: true });
+  if (next.winterUnits > 0) for (const w of base.pileups) if (!next.pileups.includes(w)) notes.push({ text: `Week ${w} of Winter is no longer a pile-up.` });
   if (change.internship) notes.push({ text: "Adds 8 hours a week and fills your usability testing gap." });
   return notes;
 }
@@ -185,7 +186,7 @@ export function parseWhatIf(text: string, current: WhatIf): WhatIf | null {
   const t = text.toLowerCase().trim();
   if (!t) return null;
   if (/\b(reset|start over|undo all|clear)\b/.test(t)) return NO_CHANGE;
-  if (/\bsummer\s+off\b/.test(t)) return { ...current, dropped: SUMMER_CLASSES, stats: "skip" };
+  if (/\bwinter\s+off\b/.test(t)) return { ...current, dropped: WINTER_CLASSES, stats: "skip" };
 
   const removing = /\b(drop|remove|skip|without|cut|no)\b/.test(t);
   const restoring = /\b(keep|add back|put back|restore)\b/.test(t);

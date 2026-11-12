@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { symposiumEvent } from "@/data/event";
 import { people } from "@/data/people";
 import { experiences, postings } from "@/data/scenario";
-import { eventAccountsFor, eventPlanFor, pathBuiltFor, filledEventPlan, freshEventPlan, followUp, inviteDraft, promiseId, nextCard, nextStep, notesFor, recall, toMeet, visibleClassmates } from "@/lib/event";
+import { eventAccountsFor, eventPlanFor, pathBuiltFor, filledEventPlan, freshEventPlan, followUp, inviteDraft, promiseEmail, promiseId, nextCard, nextStep, notesFor, recall, toMeet, visibleClassmates } from "@/lib/event";
 import { evidenceFor } from "@/lib/skills";
 import { ledgerSkills } from "@/data/scenario";
 
@@ -129,5 +129,18 @@ describe("event wiring", () => {
     const skill = ledgerSkills.find((s) => s.id === symposiumEvent.skillId)!;
     expect(evidenceFor(skill)).toBe("Taught");
     expect(evidenceFor(skill, { practiced: true })).toBe("Practiced");
+  });
+});
+
+describe("promiseEmail", () => {
+  it("drafts an email for a send-something to-do", () => {
+    const d = promiseEmail("Dr. Elena Reyes", "Psych Research Symposium", "Email Dr. Reyes my ANTH 2 poster", "Maya Torres")!;
+    expect(d.subject).toBe("My ANTH 2 poster from Psych Research Symposium");
+    expect(d.body).toContain("Hi Dr. Reyes,");
+    expect(d.body).toContain("here is my ANTH 2 poster.");
+    expect(d.body.endsWith("Maya")).toBe(true);
+  });
+  it("returns null for to-dos that aren't something you send", () => {
+    expect(promiseEmail("Priya Shah", "Info session", "Look up the lab's open roles", "Maya Torres")).toBeNull();
   });
 });

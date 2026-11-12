@@ -3,12 +3,12 @@ import { useCallback, useState, type CSSProperties } from "react";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { AccountStep, ConfirmStep, ConnectStep, SchoolsStep, VerifyStep, type SchoolChoices } from "@/components/app/OnboardingSteps";
+import { AccountStep, ConfirmStep, ConnectStep, GoalsStep, SchoolsStep, VerifyStep, type SchoolChoices } from "@/components/app/OnboardingSteps";
 import { SetupTour } from "@/components/app/SetupTour";
 import { schoolSignIns, type SchoolSignIn } from "@/components/app/sourcesData";
 import { useJourney } from "@/lib/journey";
 import { isSignupCode } from "@/lib/onboarding";
-import { BrandLogo, AgentAvatar } from "@/components/app/Brand";
+import { BrandLogo, Wordmark, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
 import valleyHero from "@/assets/valley-hero.jpg";
 
@@ -17,16 +17,16 @@ export const Route = createFileRoute("/welcome")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { title: "Welcome — Path Agent" },
-      { name: "description", content: "See how Path Agent works, create your account, connect your schools, and choose what it may do." },
-      { property: "og:title", content: "Welcome — Path Agent" },
-      { property: "og:description", content: "A two-minute setup for your transfer path agent." },
+      { title: "Welcome — Trellis" },
+      { name: "description", content: "See how Sprout works, create your account, connect your schools, and choose what it may do." },
+      { property: "og:title", content: "Welcome — Trellis" },
+      { property: "og:description", content: "A two-minute setup for Sprout, your transfer agent." },
     ],
   }),
   component: Welcome,
 });
 
-const STEPS = ["Welcome", "Tour", "Account", "Verify", "Schools", "Connect", "Confirm", "Rules"] as const;
+const STEPS = ["Welcome", "Tour", "Account", "Verify", "Schools", "Connect", "Confirm", "Goals", "Rules"] as const;
 const CONTINUE_LABEL: Partial<Record<(typeof STEPS)[number], string>> = {
   Welcome: "See how it works",
   Account: "Email me a code",
@@ -41,6 +41,7 @@ function Welcome() {
   const [index, setIndex] = useState(0);
   const [code, setCode] = useState("");
   const [choices, setChoices] = useState<SchoolChoices>({ college: null, transfer: null, major: null });
+  const [goals, setGoals] = useState<string[]>([]);
   const [connected, setConnected] = useState<SchoolSignIn["id"][]>([]);
   const step = STEPS[index]!;
   const back = () => setIndex((i) => i - 1);
@@ -52,7 +53,11 @@ function Welcome() {
     j.skipToDemo();
     navigate({ to: "/" });
   };
-  const next = () => (step === "Rules" ? finish() : setIndex((i) => i + 1));
+  const next = () => {
+    if (step === "Goals") j.setGoals(goals);
+    if (step === "Rules") finish();
+    else setIndex((i) => i + 1);
+  };
   const onConnected = useCallback((id: SchoolSignIn["id"]) => setConnected((c) => (c.includes(id) ? c : [...c, id])), []);
   const ready =
     step === "Verify" ? isSignupCode(code)
@@ -66,8 +71,8 @@ function Welcome() {
       <div className={cn("welcome-card w-full rounded-[1.75rem] border bg-card p-8 shadow-frame transition-[max-width] duration-500 md:p-10", step === "Tour" ? "max-w-4xl" : "max-w-xl")}>
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BrandLogo />
-            <span className="font-semibold">Path Agent</span>
+            <BrandLogo className="!size-9" />
+            <Wordmark className="text-[24px]" />
           </div>
           <div className="path-progress" role="img" aria-label={`Step ${index + 1} of ${STEPS.length}`} style={{ "--p": `${((index + 1) / STEPS.length) * 100}%` } as CSSProperties}><span /></div>
         </div>
@@ -76,7 +81,7 @@ function Welcome() {
         {step === "Welcome" && (
           <div>
             <h1 className="text-3xl font-medium">Keep your transfer on track.</h1>
-            <p className="mt-3 text-muted-foreground">Path Agent reads your school records so you always know what counts toward your degree.</p>
+            <p className="mt-3 text-muted-foreground">Sprout reads your school records so you always know what counts toward your degree.</p>
             <ul className="stagger mt-6 space-y-3 text-sm">
               {[
                 ["reader", "Shows where every answer comes from", "Each claim links to the exact policy or record."],
@@ -101,10 +106,11 @@ function Welcome() {
         {step === "Schools" && <SchoolsStep choices={choices} onChange={setChoices} />}
         {step === "Connect" && <ConnectStep connected={connected} onConnected={onConnected} />}
         {step === "Confirm" && <ConfirmStep />}
+        {step === "Goals" && <GoalsStep picked={goals} onChange={setGoals} />}
 
         {step === "Rules" && (
           <div>
-            <h1 className="text-2xl font-medium">Your rules for Path Agent</h1>
+            <h1 className="text-2xl font-medium">Your rules for Sprout</h1>
             <p className="mt-2 text-muted-foreground">These are on by default. The last two can't be turned off.</p>
             <div className="mt-6 divide-y rounded-2xl border">
               <Row title="Watch my registration page" desc="So it can help the moment a class is full." on={j.access.registration} onChange={(v) => j.setAccess("registration", v)} />
@@ -123,7 +129,7 @@ function Welcome() {
           <div className="mt-10 flex items-center justify-between">
             {index > 0 ? <Button variant="ghost" onClick={back}>Back</Button> : <Button variant="ghost" onClick={skip}>Skip to the demo</Button>}
             <Button onClick={next} disabled={!ready}>
-              {CONTINUE_LABEL[step] ?? "Continue"} <ArrowRight className="size-4" />
+              {step === "Goals" && goals.length === 0 ? "Not sure yet, skip" : CONTINUE_LABEL[step] ?? "Continue"} <ArrowRight className="size-4" />
             </Button>
           </div>
         )}

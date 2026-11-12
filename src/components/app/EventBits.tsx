@@ -96,11 +96,11 @@ export function ConnectDialog({ platform, onClose }: { platform: EventPlatform |
         {platform && info && (
           <>
             <div className="flex items-center gap-3"><PlatformMark platform={platform} /><DialogTitle>Connect {info.name}</DialogTitle></div>
-            <DialogDescription>You sign in on {info.signIn}, so Path Agent never sees your password.</DialogDescription>
+            <DialogDescription>You sign in on {info.signIn}, so Sprout never sees your password.</DialogDescription>
             {step === "ask" ? (
               <>
                 <div className="grid gap-3 text-sm sm:grid-cols-2">
-                  <div className="rounded-xl bg-secondary p-3"><div className="mb-1.5 text-xs font-medium text-muted-foreground">Path Agent can read</div><ul className="space-y-1"><li>Events you registered for</li><li>Check-ins, if the host scans you</li><li>Event descriptions</li></ul></div>
+                  <div className="rounded-xl bg-secondary p-3"><div className="mb-1.5 text-xs font-medium text-muted-foreground">Sprout can read</div><ul className="space-y-1"><li>Events you registered for</li><li>Check-ins, if the host scans you</li><li>Event descriptions</li></ul></div>
                   <div className="rounded-xl bg-secondary p-3"><div className="mb-1.5 text-xs font-medium text-muted-foreground">It can't</div><ul className="space-y-1"><li>Register or RSVP for you</li><li>Message hosts or guests</li><li>See payments</li></ul></div>
                 </div>
                 <div className="flex justify-end gap-2"><Button variant="ghost" onClick={onClose}>Not now</Button><Button onClick={() => setStep("signing")}>Continue to {info.signIn}</Button></div>

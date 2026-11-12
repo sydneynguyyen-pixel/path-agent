@@ -24,10 +24,10 @@ export const Route = createFileRoute("/activity")({
   }),
   head: () => ({
     meta: [
-      { title: "Activity — Path Agent" },
-      { name: "description", content: "What Path Agent did for you, step by step, and what it left for you to decide." },
-      { property: "og:title", content: "Activity — Path Agent" },
-      { property: "og:description", content: "A plain-language timeline of everything Path Agent read, suggested and handed back to you." },
+      { title: "Activity — Trellis" },
+      { name: "description", content: "What Sprout did for you, step by step, and what it left for you to decide." },
+      { property: "og:title", content: "Activity — Trellis" },
+      { property: "og:description", content: "A plain-language timeline of everything Sprout read, suggested and handed back to you." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -50,11 +50,11 @@ function ActivityPage() {
 export function Activity({ embedded = false, tab, helper }: { embedded?: boolean; tab?: "timeline" | "decisions" | undefined; helper?: AgentId | undefined }) {
   return (
     <div className="w-full min-w-0">
-      <PageHeader title="Activity" sub="Everything Path Agent has done for you." right={<Spot name="journal" className="hidden w-32 sm:block" />} />
-      {!embedded && <div role="tablist" className="mb-6 inline-flex rounded-full border bg-card p-1 text-sm">
+      <PageHeader title="Activity" sub="Everything Sprout has done for you." right={<Spot name="journal" className="hidden w-32 sm:block" />} />
+      {!embedded && <div role="tablist" className="mb-6 inline-flex gap-1 rounded-full border bg-card p-1.5 text-sm">
         {([["timeline", "Timeline"], ["decisions", "Your decisions"]] as const).map(([k, l]) => {
           const active = (tab ?? "timeline") === k;
-          return <Link key={k} role="tab" aria-selected={active} to="/activity" search={k === "decisions" ? { tab: "decisions" } : {}} className={cn("rounded-full px-4 py-1.5", active ? "glass-active" : "text-muted-foreground hover:text-foreground")}>{l}</Link>;
+          return <Link key={k} role="tab" aria-selected={active} to="/activity" search={k === "decisions" ? { tab: "decisions" } : {}} className={cn("inline-flex h-9 items-center rounded-full px-5", active ? "glass-active" : "text-muted-foreground hover:text-foreground")}>{l}</Link>;
         })}
       </div>}
       {tab === "decisions" ? <Decisions /> : <Timeline helper={helper} embedded={embedded} />}
@@ -117,7 +117,7 @@ function Timeline({ helper, embedded = false }: { helper?: AgentId | undefined; 
 
       <details className="surface group mt-8">
         <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl p-4 font-medium focus-visible:ring-2 focus-visible:ring-ring">
-          What Path Agent does <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+          What Sprout does <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
         </summary>
         <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2">
           {HELPERS.map((h) => {
@@ -247,7 +247,7 @@ function Decisions() {
         <div className="surface overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-secondary text-left text-xs text-muted-foreground">
-              <tr><th className="p-3">When</th><th className="p-3">You decided</th><th className="p-3">What Path Agent suggested</th><th className="p-3">What happened next</th></tr>
+              <tr><th className="p-3">When</th><th className="p-3">You decided</th><th className="p-3">What Sprout suggested</th><th className="p-3">What happened next</th></tr>
             </thead>
             <tbody>
               {decisions.map((d) => (
@@ -268,12 +268,15 @@ function Decisions() {
 
 export function CanCantStrip({ embedded = false }: { embedded?: boolean }) {
   return (
-    <div className="sticky bottom-4 z-30 mt-8 rounded-2xl border bg-card/95 px-4 py-2.5 text-xs shadow-frame backdrop-blur">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span><Check className="mr-1 inline size-3.5 text-mark-yes" /><b>Can:</b> read your files, suggest classes, draft emails, say how sure it is.</span>
-        <span><Ban className="mr-1 inline size-3.5 text-mark-no" /><b>Can't:</b> register you, send anything without your OK, change your degree record, see anything you haven't shared.</span>
-        <Link to={embedded ? "/agents" : "/permissions"} search={embedded ? { tab: "controls" } : {}} className="text-primary underline">Change what it's allowed to do</Link>
-      </div>
+    <div className="sticky bottom-4 z-30 mt-8 flex flex-col gap-3 rounded-3xl border bg-card/95 px-5 py-4 text-sm shadow-frame backdrop-blur sm:flex-row sm:items-center sm:gap-6">
+      {/* Two aligned rows, label then list, so the eye reads straight down; the change link sits apart as a button. */}
+      <dl className="grid min-w-0 flex-1 grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2">
+        <dt className="inline-flex items-center gap-1.5 font-semibold"><Check className="size-4 text-mark-yes" aria-hidden="true" />Can</dt>
+        <dd className="text-muted-foreground">Read your files, suggest classes, draft emails, say how sure it is.</dd>
+        <dt className="inline-flex items-center gap-1.5 font-semibold"><Ban className="size-4 text-mark-no" aria-hidden="true" />Can't</dt>
+        <dd className="text-muted-foreground">Register you, send anything without your OK, change your degree record, see anything you haven't shared.</dd>
+      </dl>
+      <Link to={embedded ? "/agents" : "/permissions"} search={embedded ? { tab: "controls" } : {}} className="inline-flex h-9 shrink-0 items-center self-start rounded-full border bg-background px-4 text-sm font-medium hover:bg-muted sm:self-center">Change what it can do</Link>
     </div>
   );
 }

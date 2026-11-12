@@ -12,8 +12,7 @@ export const getRouter = () => {
     scrollRestoration: true,
     // Lets Query own freshness; set caching defaults on the QueryClient, not the router.
     defaultPreloadStaleTime: 0,
-    // Only page changes cross-fade; tab and filter search params stay in place.
-    defaultViewTransition: { types: ({ pathChanged }) => (pathChanged ? ["page"] : false) },
+    // No view transition on navigation: it snapshots the whole window, so the glass sidebar and header flashed like a reload.
   });
 
   return router;

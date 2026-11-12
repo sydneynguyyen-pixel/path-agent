@@ -4,9 +4,10 @@ import jennaPhoto from "@/assets/jenna.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEMO_SIGNUP_CODE, setupDirectory, student, UPLOAD_ORDER, uploadSamples, type DirectoryEntry, type UploadKey } from "@/data/scenario";
+import { careerRoles, DEMO_SIGNUP_CODE, setupDirectory, student, UPLOAD_ORDER, uploadSamples, type DirectoryEntry, type UploadKey } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { searchDirectory } from "@/lib/onboarding";
+import { MAX_GOALS, suggestedRoles } from "@/lib/goals";
 import { cn } from "@/lib/utils";
 import { SchoolLogo } from "./SchoolLogo";
 import { connectedSources, schoolSignIns, type SchoolSignIn } from "./sourcesData";
@@ -127,7 +128,7 @@ function SchoolSignInPage({ school, onCancel, onAllow }: { school: SchoolSignIn;
               <label className="block">Password<input className={field} type="password" value="demo-only" readOnly tabIndex={-1} /></label>
             </div>
             <div>
-              <b>Path Agent is asking to read:</b>
+              <b>Sprout is asking to read:</b>
               <ul className="mt-1 list-disc pl-5">{reads.map((s) => <li key={s.id}>{s.what}</li>)}</ul>
             </div>
             <div className="flex justify-end gap-2">
@@ -137,7 +138,7 @@ function SchoolSignInPage({ school, onCancel, onAllow }: { school: SchoolSignIn;
           </div>
         </div>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">You'll sign in on your school's own site. Path Agent never sees your password.</p>
+      <p className="mt-3 text-xs text-muted-foreground">You'll sign in on your school's own site. Sprout never sees your password.</p>
     </div>
   );
 }
@@ -237,6 +238,31 @@ export function ConfirmStep() {
         </div>
       </div>
       <p className="mt-4 text-xs text-muted-foreground">Quarter units convert to semester units using both schools' policies.</p>
+    </div>
+  );
+}
+
+/** Careers she's curious about. Optional, nothing is chosen for her, and it can change anytime on Goals. */
+export function GoalsStep({ picked, onChange }: { picked: string[]; onChange: (ids: string[]) => void }) {
+  const roles = suggestedRoles(careerRoles, [], [], []);
+  const full = picked.length >= MAX_GOALS;
+  const toggle = (id: string) => onChange(picked.includes(id) ? picked.filter((p) => p !== id) : full ? picked : [...picked, id]);
+  return (
+    <div>
+      <h1 className="text-2xl font-medium">What careers are you curious about?</h1>
+      <p className="mt-2 text-muted-foreground">Pick up to three. Sprout uses them to choose events, classes and skills for you. Not sure yet? Skip this and come back on Goals.</p>
+      <div className="mt-6 space-y-2" role="group" aria-label="Careers">
+        {roles.map((r) => {
+          const on = picked.includes(r.id);
+          return (
+            <button key={r.id} type="button" aria-pressed={on} disabled={!on && full} onClick={() => toggle(r.id)} className="pc-option disabled:opacity-50">
+              <span className="block text-sm font-medium">{r.title}{picked[0] === r.id && picked.length > 1 && <span className="ml-2 text-xs font-normal text-muted-foreground">Main goal</span>}</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">{r.description}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-4 text-xs text-muted-foreground">Listed by how well they fit your Psychology classes. None is picked for you. The first one you pick is your main goal.</p>
     </div>
   );
 }

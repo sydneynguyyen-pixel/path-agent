@@ -183,7 +183,7 @@ export function transferReadiness(requirements: Requirement[], input: AuditInput
       const item = { id: r.id, name: r.name, credits: Number.parseFloat(r.units) };
       if (r.id !== "qr1") return { ...item, status: statusOf[r.status], detail: r.detail };
       const fill = statisticsFill(input);
-      return { ...item, status: fill.status, detail: fill.code ? `${fill.code} · ${fill.detail ?? "Summer 2027"}` : fill.detail ?? "" };
+      return { ...item, status: fill.status, detail: fill.code ? `${fill.code} · ${fill.detail ?? "Winter 2027"}` : fill.detail ?? "" };
     });
 }
 
@@ -229,7 +229,8 @@ export type TreeLayout = {
 const columnOf = (termId?: string): TreeColumnId => {
   const t = terms.find((x) => x.id === termId);
   if (!t || t.status === "done") return "done";
-  return termId === "sp27" || termId === "su27" || termId === "fa27" ? termId : "later";
+  if (termId === "su27") return "sp27";
+  return termId === "f26" || termId === "w27" || termId === "sp27" || termId === "fa27" ? termId : "later";
 };
 
 /** "PSYC 1 · 2 · 14" when the subject repeats, otherwise the codes, with long lists cut short. */
@@ -253,8 +254,8 @@ function groupSub(slots: AuditSlot[], col: TreeColumnId): string {
     const s = slots[0]!;
     return s.code ? [s.title, s.grade].filter(Boolean).join(" · ") : s.hint ?? "";
   }
-  const closes = terms.find((t) => t.id === "su27")?.registration?.match(/closes (.+)$/)?.[1];
-  if (col === "su27" && closes) return `Register by ${closes}`;
+  const closes = terms.find((t) => t.id === "w27")?.registration?.match(/closes (.+)$/)?.[1];
+  if (col === "w27" && closes) return `Register by ${closes}`;
   return slots.every((s) => s.code) ? `${slots.length} classes · ${credits} credits` : `${credits} credits`;
 }
 
@@ -300,10 +301,10 @@ function rowStatus(id: TreeRowId, audit: DegreeAudit): string {
   if (id === "ux") return "Your electives";
   if (id === "statistics") {
     const s = slots.find((x) => x.id === "qr1")!;
-    return s.status === "open" ? "Pick one this summer" : s.status === "check" ? "Waiting on your counselor" : s.status === "now" ? "Registered" : "Planned for summer";
+    return s.status === "open" ? "Pick one this winter" : s.status === "check" ? "Waiting on your counselor" : s.status === "now" ? "Registered" : "Planned for winter";
   }
   const later = slots.filter((s) => s.row === "ge" && (columnOf(s.termId) === "fa27" || columnOf(s.termId) === "later")).length;
-  return `${later} left after summer`;
+  return `${later} left after winter`;
 }
 
 type Draft = Omit<TreeCard, "x" | "y" | "w" | "h" | "row" | "col">;
@@ -326,10 +327,10 @@ export function layoutTree(audit: DegreeAudit, input: AuditInput): TreeLayout {
     for (const [col, group] of groups) cells.set(col, [{ id: `${row}-${col}`, kind: "group", title: groupTitle(group), sub: groupSub(group, col), status: groupStatus(group), slots: group }]);
     if (row === "major") {
       const saved = input.savedOpportunities.includes("lcc-psyc20");
-      cells.set("su27", [{ id: "lcc-psyc20", kind: "option", title: outsideSchool.course.code, sub: `${outsideSchool.course.title} · needs a check`, status: saved ? "check" : "option", slots: [], optionId: "lcc-psyc20", about: outsideSchool.transfer.caution }]);
+      cells.set("sp27", [...(cells.get("sp27") ?? []), { id: "lcc-psyc20", kind: "option", title: outsideSchool.course.code, sub: `${outsideSchool.course.title} · needs a check`, status: saved ? "check" : "option", slots: [], optionId: "lcc-psyc20", about: outsideSchool.transfer.caution }]);
     }
     if (row === "statistics") {
-      cells.set("su27", statisticsWays(input).map((w) => ({ id: `way-${w.id}`, kind: "way", title: w.title, sub: waySub(w, qr), status: w.chosen ? qr.status : "option", slots: w.chosen ? [qr] : [], way: w })));
+      cells.set("w27", statisticsWays(input).map((w) => ({ id: `way-${w.id}`, kind: "way", title: w.title, sub: waySub(w, qr), status: w.chosen ? qr.status : "option", slots: w.chosen ? [qr] : [], way: w })));
     }
     if (row === "ux") {
       cells.set("fa27", electiveClasses.map((e) => ({ id: `elective-${e.id}`, kind: "option", title: e.code, sub: e.title, status: input.savedOpportunities.includes(e.id) ? "planned" : "option", slots: [], optionId: e.id, about: e.about })));
@@ -353,7 +354,7 @@ export function layoutTree(audit: DegreeAudit, input: AuditInput): TreeLayout {
       const top = hasOffLine ? (offLine(stack) ? y + TREE_CARD_H + STACK_GAP : y) : y + (h - stackH(stack.length)) / 2;
       stack.forEach((d, i) => cards.push({ ...d, row: r.id, col, x: colX(col), y: top + i * (TREE_CARD_H + STACK_GAP), w: TREE_CARD_W, h: TREE_CARD_H }));
     }
-    if (r.id === "statistics") branch = { x: colX("su27"), y: y - 8, count: cells.get("su27")!.length };
+    if (r.id === "statistics") branch = { x: colX("w27"), y: y - 8, count: cells.get("w27")!.length };
     y += h + ROW_GAP;
   }
   const bottom = y - ROW_GAP;
@@ -389,4 +390,18 @@ export function layoutTree(audit: DegreeAudit, input: AuditInput): TreeLayout {
   }
 
   return { cards, links, rows, columns, branch, bounds: { minX: 0, minY: 0, maxX: colX("grad") + TREE_CARD_W, maxY: bottom } };
+}
+
+const STANDINGS = [
+  { name: "Freshman", from: 0 },
+  { name: "Sophomore", from: 30 },
+  { name: "Junior", from: 60 },
+  { name: "Senior", from: 90 },
+] as const;
+
+/** Class standing from earned semester units, and the units that reach the next one. */
+export function standingOf(earned: number) {
+  const i = STANDINGS.filter((s) => earned >= s.from).length - 1;
+  const next = STANDINGS[i + 1];
+  return { name: STANDINGS[i]!.name, next: next ? { name: next.name, at: next.from } : undefined };
 }

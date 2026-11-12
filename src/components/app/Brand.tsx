@@ -1,4 +1,6 @@
 import { useId, type ReactNode } from "react";
+import trellisMark from "@/assets/trellis-mark.svg";
+import sproutFace from "@/assets/trellis-sprout.svg";
 import { cn } from "@/lib/utils";
 import reader from "@/assets/reader-watercolor.png";
 import planner from "@/assets/planner-watercolor.png";
@@ -58,6 +60,30 @@ export function TermIcon({ term, className }: { term: string; className?: string
 export function AgentAvatar({ agent, className, bare = false }: { agent: keyof typeof mascots; className?: string; bare?: boolean }) {
   return <span className={cn("agent-avatar bg-card", bare && "agent-bare", className)}><img src={mascots[agent]} alt="" className="agent-mascot" /></span>;
 }
+/** Trellis app mark (08A Leaf corner from the logo drafts in Figma). */
 export function BrandLogo({ className }: { className?: string }) {
-  return <svg viewBox="0 0 48 48" aria-hidden="true" className={cn("brand-logo", className)}><rect width="48" height="48" rx="13" fill="var(--primary)" /><path d="M12 28c-3 2-3 7 1 8 0 5 6 6 8 2h6c2 4 8 3 8-2 4-1 4-6 1-8l-1-6c-1-7-5-11-11-11s-10 4-11 11Z" fill="var(--primary-foreground)" /><g fill="var(--primary)"><circle cx="20" cy="24" r="1.6" /><circle cx="28" cy="24" r="1.6" /></g><g fill="none" stroke="var(--primary)" strokeWidth="1.6" strokeLinecap="round"><path d="M21 28q3 4 6 0M12 29q4-2 4 2m20-2q-4-2-4 2" /></g><path d="M17 13v5q7 4 14 0v-5" fill="var(--primary)" stroke="var(--primary-foreground)" strokeWidth="1.2" /><path d="m12 11 12-5 12 5-12 5Z" fill="var(--primary-foreground)" stroke="var(--primary)" strokeWidth="1" /><path d="M35 12v7" fill="none" stroke="var(--primary-foreground)" strokeWidth="1.4" strokeLinecap="round" /></svg>;
+  return <img src={trellisMark} alt="" aria-hidden="true" width={64} height={64} className={cn("brand-logo", className)} />;
+}
+
+/** The "trellis" wordmark, set in Geist like the Figma lockup. */
+export function Wordmark({ className }: { className?: string }) {
+  return <span className={cn("brand-wordmark", className)}>trellis</span>;
+}
+
+/** Sprout's face: the sprout buddy (01 in the logo drafts). Used wherever the agent itself speaks. */
+export function AgentFace({ className }: { className?: string }) {
+  return <img src={sproutFace} alt="" aria-hidden="true" width={112} height={112} className={cn("brand-logo", className)} />;
+}
+
+/** Anything Sprout says outside the chat looks like a chat message: her face, then a white bubble with the chat's blue rim. */
+export function SproutSays({ label, children, className }: { label?: string; children: ReactNode; className?: string }) {
+  return (
+    <div className={cn("sprout-says", className)}>
+      <AgentFace className="!size-8 shrink-0" />
+      <div className="sprout-bubble">
+        {label && <div className="text-xs text-muted-foreground">{label}</div>}
+        <div className="text-sm">{children}</div>
+      </div>
+    </div>
+  );
 }

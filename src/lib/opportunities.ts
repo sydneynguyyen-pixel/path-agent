@@ -28,7 +28,9 @@ export const goalGap = (o: Opportunity, gaps: string[]) => gaps.find((g) => o.fi
 /** Same as reasonFor, but honest about items that aren't one of your gaps. */
 export function whyLine(o: Opportunity, gaps: string[], free: WeekSlot[]) {
   const gap = goalGap(o, gaps);
-  return gap ? reasonFor(o, gap, free) : `${o.kind === "event" ? "Covers" : "Builds"} ${o.fills.map(inSentence).join(" and ")}. ${fitLine(o, free)}.`;
+  // "Data analysis in R" already says "data analysis", so only the more specific one is named.
+  const named = o.fills.filter((f, i, all) => !all.some((g, k) => k !== i && g.length > f.length && g.toLowerCase().includes(f.toLowerCase())));
+  return gap ? reasonFor(o, gap, free) : `${o.kind === "event" ? "Covers" : "Builds"} ${named.map(inSentence).join(" and ")}. ${fitLine(o, free)}.`;
 }
 
 /** Something you could do outside classes. A class takes units, so it never counts as free time. */
@@ -116,8 +118,32 @@ export function whoIsGoing(event: { going: number; visiblePeers: EventPeer[] }, 
   };
 }
 
+/** The first email after a match. It opens in the student's own mail app; nothing is sent for them. */
 export function helloDraft(peerName: string, eventName: string, studentName: string) {
-  return `Hi ${peerName.split(" ")[0]}, I saw you're going to the ${eventName} next Tuesday. I'm going too and don't know anyone there yet. Want to go together?\n\n${studentName.split(" ")[0]}`;
+  return `Hi ${peerName.split(" ")[0]}, glad we matched for the ${eventName} next Tuesday. Want to meet at the entrance a few minutes early?\n\n${studentName.split(" ")[0]}`;
+}
+
+/** Who asked whom. A match needs both people to say yes. */
+export type Asks = { sentTo: string[]; matched: string[]; passed: string[] };
+export type MatchState = "matched" | "asked-you" | "you-asked" | "none";
+
+export function matchState(id: string, g: Asks, asksYou: string[]): MatchState {
+  if (g.matched.includes(id)) return "matched";
+  if (g.sentTo.includes(id)) return "you-asked";
+  if (asksYou.includes(id) && !g.passed.includes(id)) return "asked-you";
+  return "none";
+}
+
+/** Asking someone who already asked you is a match. Otherwise it waits for their yes. */
+export function askToGo<T extends Asks>(g: T, id: string, asksYou: string[]): T {
+  if (g.matched.includes(id) || g.sentTo.includes(id)) return g;
+  if (asksYou.includes(id)) return { ...g, matched: [...g.matched, id], passed: g.passed.filter((x) => x !== id) };
+  return { ...g, sentTo: [...g.sentTo, id] };
+}
+
+/** "Not now" on someone's ask. They aren't told, and you can still ask them later. */
+export function passAsk<T extends Asks>(g: T, id: string): T {
+  return g.passed.includes(id) ? g : { ...g, passed: [...g.passed, id] };
 }
 
 /** The goal Explore and Home work toward: the first role you marked, otherwise the first one. */

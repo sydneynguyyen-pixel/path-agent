@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, CalendarCheck, Check, CircleDashed, LocateFixed, Minus, Plus, X } from "lucide-react";
+import { ArrowRight, CalendarCheck, Check, CircleDashed, LocateFixed, Minus, Plus, SlidersHorizontal, X } from "lucide-react";
 import { memo, useCallback, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type MutableRefObject } from "react";
 import { SubjectIcon } from "@/components/app/Brand";
 import { Visual } from "@/components/app/MapParts";
@@ -10,11 +10,12 @@ import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
 import { centerOn, clampCamera, clampScale, fitCamera, layoutMap, MAX_SCALE, MIN_SCALE, NEAR_SCALE, nodeScale, PPM, rulerTicks, STATUS_LABEL, zoomAt, type Camera, type Insets, type MapLayer, type MapLayout, type MapNode, type MapSchool, type MapStatus } from "@/lib/map";
 import { courseCode } from "@/lib/skills";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const VIEWS = [
+  { id: "timeline", label: "Timeline" },
   { id: "map", label: "Map" },
   { id: "list", label: "List" },
-  { id: "timeline", label: "Timeline" },
 ] as const;
 type MapView = (typeof VIEWS)[number]["id"];
 
@@ -22,9 +23,9 @@ export const Route = createFileRoute("/map")({
   validateSearch: (s: Record<string, unknown>): { view?: MapView } => (s["view"] === "map" || s["view"] === "list" ? { view: s["view"] } : {}),
   head: () => ({
     meta: [
-      { title: "Map — Path Agent" },
+      { title: "Map — Trellis" },
       { name: "description", content: "Every class, event, club and internship on one canvas, from your first term to graduation." },
-      { property: "og:title", content: "Map — Path Agent" },
+      { property: "og:title", content: "Map — Trellis" },
       { property: "og:description", content: "Every class, event, club and internship on one canvas." },
     ],
   }),
@@ -69,25 +70,41 @@ function MapPage() {
       <div className="map-ui map-top">
         <ViewSwitch value={view} onPick={pick} />
         <Link to="/degree" search={{ view: "tree", try: true }} state={{ backTo: "map" }} className="map-glass map-try">Try a change</Link>
-        {view === "timeline" && (
-          <>
-            <div className="map-layers map-glass" role="group" aria-label="Layers">
-              {LAYERS.map((l) => (
-                <button key={l.id} type="button" aria-pressed={layers[l.id]} onClick={() => setLayers((s) => ({ ...s, [l.id]: !s[l.id] }))} className="map-chip" style={{ "--c": COLOR[l.id] } as CSSProperties}>
-                  <span className="map-chip-dot" aria-hidden="true" />{l.label}
-                </button>
-              ))}
-            </div>
-            <div className="map-legend map-glass">
-              {STATUSES.map((s) => <span key={s}><StatusMark status={s} plain />{STATUS_LABEL[s]}</span>)}
-            </div>
-          </>
-        )}
-        {view === "map" && (
-          <div className="map-legend map-glass">
-            <span><i className="pm-key" data-solid="" aria-hidden="true" />On your plan</span>
-            <span><i className="pm-key" aria-hidden="true" />Suggested</span>
-          </div>
+        {view !== "list" && (
+          // Filters and the color key wait behind one button, so the map itself stays clear.
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="map-glass map-try gap-1.5"><SlidersHorizontal className="size-3.5" aria-hidden="true" />Key{view === "timeline" && LAYERS.some((l) => !layers[l.id]) ? ` · ${LAYERS.filter((l) => layers[l.id]).length} of ${LAYERS.length}` : ""}</button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="map-key w-60 rounded-2xl p-2">
+              {view === "timeline" && (
+                <section className="map-key-section">
+                  <h2 className="map-key-head">Show on the map</h2>
+                  <div className="flex flex-col" role="group" aria-label="Layers">
+                    {LAYERS.map((l) => (
+                      <button key={l.id} type="button" aria-pressed={layers[l.id]} onClick={() => setLayers((s) => ({ ...s, [l.id]: !s[l.id] }))} className="map-chip map-key-row" style={{ "--c": COLOR[l.id] } as CSSProperties}>
+                        <span className="map-chip-dot" aria-hidden="true" />{l.label}
+                        {layers[l.id] && <Check className="ml-auto size-3.5 text-muted-foreground" aria-hidden="true" />}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+              <section className="map-key-section">
+                <h2 className="map-key-head">What the marks mean</h2>
+                {view === "timeline" ? (
+                  <div className="map-key-marks">
+                    {STATUSES.map((s) => <span key={s}><StatusMark status={s} plain />{STATUS_LABEL[s]}</span>)}
+                  </div>
+                ) : (
+                  <div className="map-key-marks">
+                    <span><i className="pm-key" data-solid="" aria-hidden="true" />On your plan</span>
+                    <span><i className="pm-key" aria-hidden="true" />Suggested</span>
+                  </div>
+                )}
+              </section>
+            </PopoverContent>
+          </Popover>
         )}
       </div>
     </div>
@@ -117,9 +134,14 @@ function TimelineView({ layers, memory }: { layers: Record<MapLayer, boolean>; m
     maxScale: MAX_SCALE,
     zoom: zoomAt,
     clamp: (c, v) => (layoutRef.current ? clampCamera(c, layoutRef.current, v, insetsFor(v.w)) : c),
-    place: (v) => centerOn(0, layoutRef.current?.today ?? 0, 1, v, insetsFor(v.w)),
+    // Opens on the whole journey, first term to graduation, like the All button.
+    place: (v) => fitAll(v),
   });
 
+  function fitAll(v: { w: number; h: number }) {
+    const rough = fitCamera(layoutMap({ masters, today: SCRIPT_TODAY }).bounds, v, insetsFor(v.w));
+    return fitCamera(layoutMap({ masters, today: SCRIPT_TODAY, r: nodeScale(rough.s) / rough.s }).bounds, v, insetsFor(v.w));
+  }
   const ratio = Math.round((nodeScale(cam.s) / cam.s) * 100) / 100;
   const layout = useMemo(() => layoutMap({ masters, today: SCRIPT_TODAY, r: ratio }), [masters, ratio]);
   layoutRef.current = layout;
@@ -136,10 +158,7 @@ function TimelineView({ layers, memory }: { layers: Record<MapLayer, boolean>; m
     fly(centerOn(m.x, m.y, clampScale(c.s * factor), viewport, insets));
   };
   const pickFrame = (f: Frame) => {
-    if (f === "all") {
-      const rough = fitCamera(layoutMap({ masters, today: SCRIPT_TODAY }).bounds, viewport, insets);
-      return fly(fitCamera(layoutMap({ masters, today: SCRIPT_TODAY, r: nodeScale(rough.s) / rough.s }).bounds, viewport, insets));
-    }
+    if (f === "all") return fly(fitAll(viewport));
     const span = (size.h - insets.t - insets.b) / PPM;
     fly(centerOn(0, middle().y, f === "year" ? span / 12 : Math.max(2, span / 3), viewport, insets));
   };
@@ -319,7 +338,7 @@ function Inspector({ node: n, onClose, onRemove }: { node: MapNode; onClose: () 
         </div>
       )}
       {n.id === "ms-start" && <button type="button" className="map-section block w-full text-left text-muted-foreground hover:text-foreground" onClick={onRemove}>Remove this program</button>}
-      {n.to && <Link to={n.to} state={{ backTo: "map" }} className="map-section flex items-center gap-1 font-medium">{n.to === "/semester" ? "Open in Terms" : "Open in Portfolio"} <ArrowRight className="size-3.5" aria-hidden="true" /></Link>}
+      {n.to && <Link to={n.to} search={n.to === "/career" ? { tab: "skills" as const } : {}} state={{ backTo: "map" }} className="map-section flex items-center gap-1 font-medium">{n.to === "/semester" ? "Open in Terms" : "See your skills"} <ArrowRight className="size-3.5" aria-hidden="true" /></Link>}
     </aside>
   );
 }

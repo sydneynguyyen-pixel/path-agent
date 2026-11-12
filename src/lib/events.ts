@@ -15,7 +15,7 @@ export type EventItem = {
   via: EventPlatform[];
   /** She has an RSVP, ticket or check-in on a connected account. */
   registered: boolean;
-  /** Why it's worth her time, in Path Agent's words. */
+  /** Why it's worth her time, in Sprout's words. */
   why?: string | undefined;
   opportunity?: Opportunity | undefined;
   experience?: Found | undefined;

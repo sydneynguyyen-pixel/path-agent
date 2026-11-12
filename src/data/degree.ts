@@ -35,7 +35,7 @@ export const psychologyDegree: DegreeTemplate = {
       slots: [
         { id: "intro", need: "Intro to psychology", term: "f25", course: "PSYC 1", row: "major" },
         { id: "methods", need: "Research methods", term: "s26", course: "PSYC 2", row: "major" },
-        { id: "development", need: "Developmental psychology", term: "w27", course: "PSYC 14", row: "major" },
+        { id: "development", need: "Developmental psychology", term: "su27", course: "PSYC 14", row: "major" },
         { id: "lower-elective", need: "Psychology elective", term: "sp27", course: "PSYC 33", row: "major" },
         { id: "foundations", need: "Foundations of psychology", term: "fa27", course: "PSYC 100", row: "major" },
         { id: "design", need: "Research design", term: "fa27", course: "PSYC 110", row: "major" },
@@ -53,23 +53,23 @@ export const psychologyDegree: DegreeTemplate = {
     },
     {
       id: "statistics", name: "Statistics", about: "One approved statistics class", needed: 3, color: "var(--map-fair)",
-      slots: [{ id: "qr1", need: "Statistics", hint: "Any class approved for QR-1", term: "su27", source: "statistics", row: "statistics" }],
+      slots: [{ id: "qr1", need: "Statistics", hint: "Any class approved for QR-1", term: "w27", source: "statistics", row: "statistics" }],
     },
     {
       id: "general-ed", name: "General ed", about: "Writing, science, arts and society", needed: 45, color: "var(--map-club)",
       slots: [
         { id: "writing", need: "Written communication", term: "f25", course: "ENGL 1A", row: "ge" },
-        { id: "critical", need: "Critical thinking", term: "su27", course: "ENGL 1B", row: "ge" },
+        { id: "critical", need: "Critical thinking", term: "w27", course: "ENGL 1B", row: "ge" },
         { id: "speaking", need: "Oral communication", term: "w26", course: "COMM 1", row: "ge" },
         { id: "math", need: "Mathematics", term: "f25", course: "MATH 1A", row: "statistics" },
         { id: "lab-science", need: "Lab science", term: "w26", course: "BIO 10", row: "ge" },
-        { id: "life-science", need: "Life science", term: "su27", course: "BIO 12", row: "ge" },
+        { id: "life-science", need: "Life science", term: "w27", course: "BIO 12", row: "ge" },
         { id: "arts", need: "Arts", term: "f26", course: "ART 1", row: "ge" },
         { id: "humanities", need: "Humanities", term: "sp27", course: "HIST 17", row: "ge" },
         { id: "ethics", need: "Ethics", term: "s26", course: "PHIL 2", row: "ge" },
-        { id: "world-history", need: "World history", term: "su27", course: "HIST 18", row: "ge" },
+        { id: "world-history", need: "World history", term: "w27", course: "HIST 18", row: "ge" },
         { id: "society", need: "Society", term: "w26", course: "SOC 1", row: "ge" },
-        { id: "economics", need: "Economics", term: "w27", course: "ECON 1", row: "ge" },
+        { id: "economics", need: "Economics", term: "su27", course: "ECON 1", row: "ge" },
         { id: "social-science", need: "Social science", hint: "Any approved social science GE", term: "fa27", course: "GE-D", row: "ge" },
         { id: "upper-ge", need: "Upper-division GE", hint: "Any approved upper-division GE", term: "sp28", course: "UD-GE", upper: true, row: "ge" },
       ],
@@ -107,11 +107,13 @@ export const treeRows: { id: TreeRowId; name: string; color: string }[] = [
   { id: "ux", name: "Toward UX research", color: "var(--map-event)" },
 ];
 
-export type TreeColumnId = "done" | "sp27" | "su27" | "fa27" | "later" | "grad";
+/** "sp27" holds both Spring and Summer 2027, the Bayview terms after Winter. */
+export type TreeColumnId = "done" | "f26" | "w27" | "sp27" | "fa27" | "later" | "grad";
 export const treeColumns: { id: TreeColumnId; label: string; sub: string }[] = [
   { id: "done", label: "Done", sub: "Bayview" },
-  { id: "sp27", label: "Now", sub: "Spring 27" },
-  { id: "su27", label: "Summer 27", sub: "Bayview" },
+  { id: "f26", label: "Now", sub: "Fall 26" },
+  { id: "w27", label: "Winter 27", sub: "Bayview" },
+  { id: "sp27", label: "Spring + Summer 27", sub: "Bayview" },
   { id: "fa27", label: "Fall 27", sub: "Northgate" },
   { id: "later", label: "2028 to 2029", sub: "Northgate" },
   { id: "grad", label: "Graduate", sub: "Spring 29" },

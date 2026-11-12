@@ -36,7 +36,7 @@ export const tourSlides: TourSlide[] = [
     id: "register",
     agent: "backup",
     title: "Register like you always do",
-    body: "You sign up in your school's own portal. If a class is full, Path Agent steps in with backups.",
+    body: "You sign up in your school's own portal. If a class is full, Sprout steps in with backups.",
     beats: [{ ms: 700 }, { ms: 1000, cursor: "add" }, { ms: 1000, cursor: "add", click: true }, { ms: 1200, cursor: "add" }, { ms: 900, cursor: "see" }, { ms: 1600, cursor: "see", click: true }],
   },
   {

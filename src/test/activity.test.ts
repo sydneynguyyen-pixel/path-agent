@@ -9,14 +9,16 @@ const base: JourneyView = {
 describe("activity timeline", () => {
   it("logs going together only after opting in, without asking for attention", () => {
     const t = new Date(Date.UTC(2026, 10, 8, 4));
-    const g = { showMe: true, shownAt: t, draftTo: "tomas", draft: "Hi", draftedAt: t, sentTo: [], sentAt: null };
+    const g = { showMe: true, shownAt: t, sentTo: [], sentAt: null, matched: [], matchedAt: null, passed: [] };
     expect(buildEvents(base).some((e) => e.id === "go-together")).toBe(false);
-    const drafted = buildEvents({ ...base, goTogether: g });
-    expect(drafted[0]?.headline).toBe("I drafted a note to Tomás for the UX night");
-    expect(waitingCount(drafted)).toBe(0);
-    const sent = buildEvents({ ...base, goTogether: { ...g, draftTo: null, draftedAt: null, sentTo: ["tomas"], sentAt: t } });
+    const shown = buildEvents({ ...base, goTogether: g });
+    expect(shown[0]?.headline).toBe("You chose to show yourself as going to the UX night");
+    expect(waitingCount(shown)).toBe(0);
+    const sent = buildEvents({ ...base, goTogether: { ...g, sentTo: ["tomas"], sentAt: t } });
     expect(sent[0]?.status).toBe("done");
     expect(sent[0]?.headline).toBe("You asked Tomás to go to the UX night together");
+    const matched = buildEvents({ ...base, goTogether: { ...g, matched: ["lena"], matchedAt: t } });
+    expect(matched[0]?.headline).toBe("You and Lena are going to the UX night together");
   });
   it("times the class choice from its own decision, not a later note", () => {
     const early = new Date(Date.UTC(2026, 10, 8, 4));

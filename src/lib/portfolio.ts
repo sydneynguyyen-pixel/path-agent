@@ -24,11 +24,18 @@ export type PortfolioSkill = {
 
 const RANK: Record<EvidenceLevel, number> = { Taught: 1, Practiced: 2, Demonstrated: 3 };
 const OTHER_THEME = "From doing";
+/** Different sources name the same skill differently; they share one row. */
+const SAME_SKILL: Record<string, string> = {
+  "interviewing basics": "Interviewing",
+  "user interviews": "Interviewing",
+  "talking with researchers": "Professional networking",
+};
 
 /** Class, event and hands-on proof merged into one row per skill. */
 export function portfolioSkills(ledger: Skill[], events: EventSkill[], doing: { skill: string; via: { id: string; title: string } }[], reviews: Record<string, SkillReview>): PortfolioSkill[] {
   const rows = new Map<string, PortfolioSkill>();
-  const rowFor = (name: string, theme: string, level: EvidenceLevel) => {
+  const rowFor = (raw: string, theme: string, level: EvidenceLevel) => {
+    const name = SAME_SKILL[raw.toLowerCase()] ?? raw;
     const key = name.toLowerCase();
     const row = rows.get(key) ?? { key, name, theme, level, proofs: [], reviewKeys: [], confirmed: false, hidden: false, unsure: false };
     if (RANK[level] > RANK[row.level]) row.level = level;

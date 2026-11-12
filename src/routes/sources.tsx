@@ -19,10 +19,10 @@ export const Route = createFileRoute("/sources")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { title: "Your sources — Path Agent" },
-      { name: "description", content: "Canvas, the student system, degree audit, articulation data and email: what Path Agent reads and why." },
-      { property: "og:title", content: "Your sources — Path Agent" },
-      { property: "og:description", content: "See and control every system Path Agent reads from." },
+      { title: "Your sources — Trellis" },
+      { name: "description", content: "Canvas, the student system, degree audit, articulation data and email: what Sprout reads and why." },
+      { property: "og:title", content: "Your sources — Trellis" },
+      { property: "og:description", content: "See and control every system Sprout reads from." },
     ],
   }),
   component: Sources,
@@ -40,7 +40,7 @@ function Sources() {
   const publicSources = connectedSources.filter((s) => s.id === "articulation");
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Your sources" sub={manual ? "Add your records so Path Agent can use them." : "Turn off anything you don't want Path Agent to read."} right={<Spot name="stones" className="hidden w-40 sm:block" />} />
+      <PageHeader title="Your sources" sub={manual ? "Add your records so Sprout can use them." : "Turn off anything you don't want Sprout to read."} right={<Spot name="stones" className="hidden w-40 sm:block" />} />
       <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground" role="group" aria-label="Demo view">
         Demo view
         <div className="flex rounded-full border bg-card p-0.5">
@@ -93,13 +93,13 @@ function Sources() {
           {sample && (
             <>
               <DialogTitle>{sample.title}</DialogTitle>
-              <DialogDescription>{sample.why}. You check what Path Agent finds.</DialogDescription>
+              <DialogDescription>{sample.why}. You check what Sprout finds.</DialogDescription>
               <UploadFlow key={sample.key} upload={sample} onCancel={() => setOpen(null)} onDone={() => { j.addUpload(sample.key); setOpen(null); }} />
             </>
           )}
         </DialogContent>
       </Dialog>
-      <p className="mt-4 text-xs text-muted-foreground">{manual ? "If your school connects later, these stay up to date on their own." : "You sign in on your school's own site, so Path Agent never sees your password."} Demo only. All records are synthetic.</p>
+      <p className="mt-4 text-xs text-muted-foreground">{manual ? "If your school connects later, these stay up to date on their own." : "You sign in on your school's own site, so Sprout never sees your password."} Demo only. All records are synthetic.</p>
     </div>
   );
 }

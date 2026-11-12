@@ -1,12 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-const TAB = { timeline: "timeline", skills: "skills", people: "people", profile: "share" } as const;
-
-/** Experiences became Portfolio. Old links land on the matching tab. */
+/** Experiences became Portfolio, then Career and Explore. Old links land on the matching place. */
 export const Route = createFileRoute("/grow")({
   validateSearch: (s: Record<string, unknown>): { tab?: string } => (typeof s["tab"] === "string" ? { tab: s["tab"] } : {}),
   beforeLoad: ({ search }) => {
-    const tab = TAB[search.tab as keyof typeof TAB] ?? "timeline";
-    throw redirect({ to: "/portfolio", search: tab === "skills" ? {} : { tab }, replace: true });
+    if (search.tab === "people") throw redirect({ to: "/explore", search: { view: "people" }, replace: true });
+    if (search.tab === "profile") throw redirect({ to: "/career", search: { tab: "card" }, replace: true });
+    throw redirect({ to: "/career", replace: true });
   },
 });

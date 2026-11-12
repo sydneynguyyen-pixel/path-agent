@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { changedSlots, explain, NO_CHANGE, OFF_TERM, parseWhatIf, project, statsFromSeat, SUMMER_CLASSES, termsMoved, type WhatIf } from "@/lib/whatif";
+import { changedSlots, explain, NO_CHANGE, OFF_TERM, parseWhatIf, project, statsFromSeat, WINTER_CLASSES, termsMoved, type WhatIf } from "@/lib/whatif";
 
 const base = project(NO_CHANGE, "stat2");
 const run = (patch: Partial<WhatIf>) => project({ ...NO_CHANGE, ...patch }, "stat2");
@@ -28,7 +28,7 @@ describe("what-if projection", () => {
   });
 
   it("blocks transfer under the unit minimum and pushes graduation", () => {
-    const p = run({ dropped: SUMMER_CLASSES });
+    const p = run({ dropped: WINTER_CLASSES });
     expect(p.unitsAtTransfer).toBe(59.2);
     expect(p.transfer).toBe("blocked");
     expect(p.transferTerm).toBe("Spring 2028");
@@ -65,7 +65,7 @@ describe("what-if projection", () => {
   });
 
   it("never lets a plan fall short of the degree", () => {
-    const cases: Partial<WhatIf>[] = [{ dropped: ["BIO 12"] }, { dropped: ["BIO 12", "HIST 18"] }, { stats: "bus21" }, { termOff: true }, { early: true }, { dropped: SUMMER_CLASSES, stats: "skip", termOff: true }];
+    const cases: Partial<WhatIf>[] = [{ dropped: ["BIO 12"] }, { dropped: ["BIO 12", "HIST 18"] }, { stats: "bus21" }, { termOff: true }, { early: true }, { dropped: WINTER_CLASSES, stats: "skip", termOff: true }];
     for (const c of cases) {
       const p = run(c);
       expect(p.unitsAtTransfer + p.bars.reduce((n, b) => n + b.units, 0)).toBeGreaterThanOrEqual(120);
@@ -89,9 +89,9 @@ describe("typed changes", () => {
     expect(parseWhatIf("can I graduate early?", NO_CHANGE)?.early).toBe(true);
   });
 
-  it("takes the whole summer off", () => {
-    const next = parseWhatIf("take summer off", NO_CHANGE);
-    expect(next?.dropped).toEqual(SUMMER_CLASSES);
+  it("takes the whole winter off", () => {
+    const next = parseWhatIf("take winter off", NO_CHANGE);
+    expect(next?.dropped).toEqual(WINTER_CLASSES);
     expect(next?.stats).toBe("skip");
   });
 

@@ -1,19 +1,20 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, CalendarClock, CalendarDays, Check, GraduationCap, LayoutGrid, MapPin, Search, SlidersHorizontal, Sparkles, Users, X } from "lucide-react";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, CalendarClock, CalendarDays, Check, GraduationCap, MapPin, Search, SlidersHorizontal, Sparkles, Target, Users, X } from "lucide-react";
 import { careerRoles, freeTime, goTogetherEvent, opportunities, terms, type Opportunity, type OpportunityKind } from "@/data/scenario";
 import { SCRIPT_START, useJourney } from "@/lib/journey";
-import { gapSignal, goalFor, deadlineDate, deadlineLabel, detailLine, distinct, doableInFreeTime, exploreResults, fillsLine, gapProgress, goalGap, groupByDate, hostLine, matchesFilters, NO_FILTERS, notOnPlan, timeLeftLine, type ExploreFilters } from "@/lib/opportunities";
+import { gapSignal, deadlineDate, deadlineLabel, detailLine, distinct, doableInFreeTime, exploreResults, fillsLine, gapProgress, goalGap, groupByDate, hostLine, matchesFilters, NO_FILTERS, notOnPlan, timeLeftLine, type ExploreFilters } from "@/lib/opportunities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Flyer } from "@/components/app/Flyer";
-import { OrgLogo } from "@/components/app/SchoolLogo";
 import { PageBanner } from "@/components/app/SeasonBanner";
 import { EventsBoard } from "@/components/app/EventsBoard";
+import { OnYourPlan } from "@/components/app/OnYourPlan";
+import { PeopleMet } from "@/components/app/PeopleMet";
 import { cn } from "@/lib/utils";
-import { Careers, GapPlan } from "@/components/app/CareerDiscovery";
+import { buildSkillsFor, chosenGoals } from "@/lib/goals";
 import { DETAIL_WIDTH, HostRow, KIND, Photo, SaveButton, TONE, shortTitle, type Open, type Tone } from "@/components/app/OpportunityDetails";
 import { electiveClasses, psychologyDegree } from "@/data/degree";
 import { Roll } from "@/components/app/Roll";
@@ -23,18 +24,23 @@ import { PostingLink } from "@/components/app/PostingLink";
 import sceneOpportunities from "@/assets/scene-opportunities.jpg";
 
 export const Route = createFileRoute("/explore")({
-  validateSearch: (s: Record<string, unknown>): { role?: string; open?: string; fills?: string; view?: "careers" | "plan"; calendar?: boolean } => ({
+  validateSearch: (s: Record<string, unknown>): { role?: string; open?: string; fills?: string; view?: "careers" | "plan" | "people"; calendar?: boolean } => ({
     ...(typeof s["role"] === "string" ? { role: s["role"] } : {}),
     ...(typeof s["open"] === "string" ? { open: s["open"] } : {}),
     ...(typeof s["fills"] === "string" ? { fills: s["fills"] } : {}),
-    ...(s["view"] === "careers" || s["view"] === "plan" ? { view: s["view"] } : {}),
+    ...(s["view"] === "careers" || s["view"] === "plan" || s["view"] === "people" ? { view: s["view"] } : {}),
     ...(s["calendar"] === true || s["calendar"] === "true" ? { calendar: true } : {}),
   }),
+  // Careers moved to Goals. Old links still land in the right place.
+  beforeLoad: ({ search }) => {
+    if (search.view === "careers") throw redirect({ to: "/career" });
+    if (search.view === "plan") throw redirect({ to: "/career", search: search.role ? { plan: search.role } : {} });
+  },
   head: () => ({
     meta: [
-      { title: "Explore — Path Agent" },
+      { title: "Explore — Trellis" },
       { name: "description", content: "Classes, events, internships and clubs that fit your goal and your week." },
-      { property: "og:title", content: "Explore — Path Agent" },
+      { property: "og:title", content: "Explore — Trellis" },
       { property: "og:description", content: "Search classes, clubs, events and internships picked for your goal and schedule." },
     ],
   }),
@@ -143,8 +149,8 @@ function FilterMenu({ label, any, value, options, onChange }: { label: string; a
   );
 }
 
-function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
-  return <button type="button" aria-pressed={active} onClick={onClick} className={cn("inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm whitespace-nowrap transition-colors", active ? "glass-active font-medium" : "text-muted-foreground hover:bg-secondary hover:text-foreground")}>{children}</button>;
+function Pill({ active, onClick, children, className }: { active: boolean; onClick: () => void; children: ReactNode; className?: string }) {
+  return <button type="button" aria-pressed={active} onClick={onClick} className={cn(className, "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm whitespace-nowrap transition-colors", active ? "glass-active font-medium" : "text-muted-foreground hover:bg-secondary hover:text-foreground")}>{children}</button>;
 }
 
 /** A row of choices sharing one glass pill that glides to whichever is on. */
@@ -168,25 +174,12 @@ const SUBJECTS = menu((o) => [o.subject]);
 const PLACES = menu((o) => [o.place]);
 const INDUSTRIES = menu((o) => [o.industry]);
 
-/** Your goal, what's left to build for it, and each gap as a one-tap filter. */
-function GoalBar({ goalId, title, gaps, skill, onRole, onSkill }: { goalId: string; title: string; gaps: string[]; skill: string | null; onRole: (id: string) => void; onSkill: (s: string | null) => void }) {
+/** With no goal yet, Explore says so and points to Career. The goal and the skills she's building are edited on Career → Plan. */
+function NoGoal() {
   return (
-    <section aria-label="Your goal" className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-muted-foreground">Aiming for</span>
-        <Select value={goalId} onValueChange={onRole}>
-          <SelectTrigger aria-label="Your goal" className="h-9 w-auto gap-1.5 rounded-full font-medium"><SelectValue placeholder={title} /></SelectTrigger>
-          <SelectContent>{careerRoles.map((r) => <SelectItem key={r.id} value={r.id}>{r.title}</SelectItem>)}</SelectContent>
-        </Select>
-        <span className="text-muted-foreground">{gaps.length === 0 ? "Nothing left to build" : `${gaps.length} ${gaps.length === 1 ? "skill" : "skills"} to build`}</span>
-      </div>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {gaps.map((g) => <button key={g} type="button" aria-pressed={skill === g} onClick={() => onSkill(skill === g ? null : g)} className={cn("rounded-full px-3 py-1.5 text-xs", skill === g ? "glass-active font-medium" : "bg-secondary text-foreground hover:bg-secondary/70")}>{g}</button>)}
-      </div>
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <Link to="/explore" search={{ view: "careers" }} className="underline-offset-4 hover:text-foreground hover:underline">Other roles</Link>
-        <Link to="/explore" search={{ view: "plan", role: goalId }} className="underline-offset-4 hover:text-foreground hover:underline">Plan toward it</Link>
-      </div>
+    <section aria-label="Your goal" className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+      <span className="text-muted-foreground">No goal yet, so these are broad picks.</span>
+      <Button asChild size="sm" className="rounded-full"><Link to="/career"><Target className="size-3.5" aria-hidden="true" />Choose your goals</Link></Button>
     </section>
   );
 }
@@ -235,14 +228,14 @@ function StartHere({ o, gaps, onOpen }: { o: Opportunity; gaps: string[]; onOpen
 }
 
 /** The All tab: one pick, then shelves named for what they build, three cards each. */
-function GoalShelves({ results, gaps, onOpen, onSkill, onFree }: { results: Opportunity[]; gaps: string[]; onOpen: Open; onSkill: (s: string) => void; onFree: () => void }) {
+function GoalShelves({ results, gaps, goalTitle, onOpen, onSkill, onFree }: { results: Opportunity[]; gaps: string[]; goalTitle: string | undefined; onOpen: Open; onSkill: (s: string) => void; onFree: () => void }) {
   const [pick, ...rest] = results;
   if (!pick) return null;
   const used = new Set<string>([pick.id]);
   const shelves = gaps.map((g) => {
     const all = rest.filter((o) => o.fills.includes(g));
     all.forEach((o) => used.add(o.id));
-    return { key: g, title: `Builds ${g.toLowerCase()}`, sub: `One of the skills UX researcher roles ask for`, all, onSeeAll: () => onSkill(g) };
+    return { key: g, title: `Builds ${g.toLowerCase()}`, sub: goalTitle ? `A skill you chose to build toward ${goalTitle}` : "A skill you chose to build", all, onSeeAll: () => onSkill(g) };
   });
   const free = rest.filter((o) => !used.has(o.id) && doableInFreeTime(o, freeTime));
   free.forEach((o) => used.add(o.id));
@@ -272,67 +265,60 @@ function Explore() {
   const j = useJourney();
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const [view, setView] = useState<"browse" | "calendar">(search.calendar ? "calendar" : "browse");
-  // "All events" links (and the old /events page) open the calendar.
-  useEffect(() => { if (search.calendar) setView("calendar"); }, [search.calendar]);
+  // People is its own sub-page, set by the address. Everything else has one layout per type, no view toggle.
+  const people = search.view === "people";
+  const setPeople = (on: boolean) => { const { view: _view, ...rest } = search; void navigate({ to: "/explore", search: on ? { ...rest, view: "people" } : rest, replace: true, resetScroll: false }); };
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [local, setLocal] = useState<ExploreFilters>(() => (search.fills ? { ...NO_FILTERS, kind: "class" } : NO_FILTERS));
+  const [local, setLocal] = useState<ExploreFilters>(() => (search.fills ? { ...NO_FILTERS, kind: "class" } : search.calendar ? { ...NO_FILTERS, kind: "event" } : NO_FILTERS));
+  // "See the calendar" links land on Events, which is the calendar.
+  useEffect(() => { if (search.calendar) setLocal((f) => ({ ...f, kind: "event" })); }, [search.calendar]);
 
   // Links from other pages open a listing in the shared panel.
   useEffect(() => {
     if (search.open) j.openOpportunity(search.open);
-    else if (j.goTogether.draftTo) j.openOpportunity(goTogetherEvent.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.open]);
   useEffect(() => { if (search.fills) setLocal((f) => ({ ...f, kind: "class" })); }, [search.fills]);
 
-  const goal = careerRoles.find((r) => r.id === search.role) ?? goalFor(careerRoles, j.interestedRoles);
+  // Only a goal she chose ranks results. With none, nothing is assumed from her major.
+  const goal = careerRoles.find((r) => r.id === search.role && j.interestedRoles.includes(r.id)) ?? chosenGoals(careerRoles, j.interestedRoles)[0] ?? null;
+  const missing = goal ? buildSkillsFor(goal, j.buildSkills) : [];
   const filters: ExploreFilters = { ...local, careerGaps: null };
   const update = (patch: Partial<ExploreFilters>) => setLocal((f) => ({ ...f, ...patch }));
-  const setRole = (id: string) => navigate({ to: "/explore", search: { ...search, role: id }, replace: true, resetScroll: false });
   const clearFills = () => { const { fills: _fills, ...rest } = search; void navigate({ to: "/explore", search: rest, replace: true, resetScroll: false }); };
   const clear = () => { setLocal((f) => ({ ...NO_FILTERS, kind: f.kind, nearbySchools: f.nearbySchools })); clearFills(); };
 
   const onOpen: Open = (id) => j.openOpportunity(id);
   const saved = opportunities.filter((o) => j.savedOpportunities.includes(o.id));
   const went = Object.keys(j.wentTo);
-  const gaps = goal.missing.filter((g) => { const p = gapProgress(g, saved, went); return !p || p.stage === "planned"; });
+  const gaps = missing.filter((g) => { const p = gapProgress(g, saved, went); return !p || p.stage === "planned"; });
 
   const fillsSlot = search.fills ? psychologyDegree.categories.flatMap((c) => c.slots).find((s) => s.id === search.fills) : undefined;
   const fillers = fillsSlot ? electiveClasses.filter((e) => e.slot === fillsSlot.id).map((e) => e.id) : [];
   const candidates = opportunities.filter((o) => notOnPlan(o, j.savedOpportunities, j.draftCourses) && (!fillsSlot || (o.kind === "class" && (fillers.length === 0 || (fillers as string[]).includes(o.id)))));
 
-  const results = exploreResults(candidates, filters, goal.missing, freeTime);
+  const results = exploreResults(candidates, filters, missing, freeTime);
   const countFor = (kind: OpportunityKind) => candidates.filter((o) => o.kind === kind && matchesFilters(o, { ...filters, kind }, freeTime)).length;
   const allCount = candidates.filter((o) => matchesFilters(o, { ...filters, kind: "all" }, freeTime)).length;
   const activeFilters = [local.skill, local.subject, local.place, local.industry, local.freeTimeOnly].filter(Boolean).length;
   const hasFilters = !!(local.query || local.skill || local.subject || local.place || local.industry || local.freeTimeOnly || fillsSlot);
+  // One layout per type: events are a calendar (the date matters), classes and internships a list by deadline, clubs a grid, All the goal shelves.
   const byDeadline = local.kind === "class" || local.kind === "internship";
-  const shown = view === "calendar" && local.kind === "all" ? results.filter((o) => o.kind === "event" || o.kind === "club") : results;
-  // Events in the calendar get their own board: month calendar, timeline and details.
-  const eventsBoard = view === "calendar" && (local.kind === "all" || local.kind === "event");
+  const eventsBoard = local.kind === "event";
   const schoolScope = <SchoolScope nearby={local.nearbySchools} onChange={(nearbySchools) => update({ nearbySchools })} />;
 
-  if (search.view) {
-    return (
-      <div className="mx-auto max-w-5xl space-y-5">
-        <Button variant="ghost" size="sm" asChild className="-ml-2"><Link to="/explore" search={search.role ? { role: search.role } : {}}><ArrowLeft className="size-4" aria-hidden="true" />Back to Explore</Link></Button>
-        {search.view === "careers" ? <Careers /> : <GapPlan roleId={goal.id} onRole={(id) => void navigate({ to: "/explore", search: { view: "plan", role: id }, replace: true })} />}
-      </div>
-    );
-  }
 
   return (
     <div>
       <PageBanner src={sceneOpportunities} position="50% 64%" />
       <div className={"mx-auto max-w-7xl space-y-6"}>
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold md:text-[2rem]">What do you want to try next?</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Classes, clubs, events and internships picked for you.</p>
-            <div className="mt-3"><GoalBar goalId={goal.id} title={goal.title} gaps={gaps} skill={local.skill} onRole={setRole} onSkill={(skill) => update({ skill })} /></div>
+        <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5 pt-4 pb-2">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-semibold md:text-[2rem]">{people ? "People" : local.kind === "all" ? "What do you want to try next?" : KIND[local.kind].heading}</h1>
+            <p className="mt-2 text-muted-foreground">{people ? "Classmates who want to go with you, and people you've met." : local.kind === "event" ? "Picked for your goal, on the days you're free." : local.kind === "all" ? "Classes, clubs, events and internships picked for you." : "Picked for your goal."}</p>
+            {!goal && <div className="mt-6"><NoGoal /></div>}
           </div>
-          <div className="relative w-full max-w-sm">
+          <div className={cn("relative w-full max-w-sm", people && "hidden")}>
             <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input value={local.query} onChange={(e) => update({ query: e.target.value })} placeholder="Search classes, clubs, skills, places…" aria-label="Search opportunities" className="h-11 rounded-full bg-card pr-4 pl-11 shadow-soft" />
           </div>
@@ -340,24 +326,26 @@ function Explore() {
 
         <div className="space-y-3">
           {/* One toolbar: what kind, narrow it, how to view it. */}
-          <div className="flex flex-wrap items-center gap-2 border-y py-2">
-            <PillGroup>
+          {/* On People the toolbar has nothing to do; it stays only where the sidebar can't offer Events (phone, collapsed). */}
+          <div className={cn("flex flex-wrap items-center gap-2 border-y py-2", people && "sub-tabs")}>
+            <PillGroup className={cn(people && "hidden")}>
               <Pill active={local.kind === "all"} onClick={() => update({ kind: "all" })}>All <span className="text-xs opacity-70"><Roll value={allCount} /></span></Pill>
               {ORDER.map((k) => <Pill key={k} active={local.kind === k} onClick={() => update({ kind: k })}>{KIND[k].tab} <span className="text-xs opacity-70"><Roll value={countFor(k)} /></span></Pill>)}
             </PillGroup>
-            {!eventsBoard && (
+            {!eventsBoard && !people && (
               <button type="button" aria-expanded={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)} className={cn("inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm text-muted-foreground hover:text-foreground", (filtersOpen || activeFilters > 0) && "glass-active font-medium text-foreground")}>
                 <SlidersHorizontal className="size-3.5" aria-hidden="true" />Filters{activeFilters > 0 && <span className="grid size-5 place-items-center rounded-full count-badge text-[10px]">{activeFilters}</span>}
               </button>
             )}
             {!eventsBoard && fillsSlot && <button type="button" onClick={clearFills} className="glass-active inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium">Classes for your {fillsSlot.need.toLowerCase()} <X className="size-3.5" aria-hidden="true" /></button>}
             {!eventsBoard && hasFilters && <button type="button" onClick={clear} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><X className="size-3.5" aria-hidden="true" /> Clear</button>}
-            <PillGroup className="ml-auto rounded-full border bg-card p-1">
-              <Pill active={view === "browse"} onClick={() => setView("browse")}><LayoutGrid className="size-3.5" aria-hidden="true" /> Browse</Pill>
-              <Pill active={view === "calendar"} onClick={() => setView("calendar")}><CalendarDays className="size-3.5" aria-hidden="true" /> {byDeadline ? "Deadlines" : "Calendar"}</Pill>
+            {/* Events | People only where the sidebar can't show them (phone, collapsed). */}
+            <PillGroup className="sub-tabs ml-auto rounded-full border bg-card p-1">
+              <Pill active={!people} onClick={() => setPeople(false)}><CalendarDays className="size-3.5" aria-hidden="true" /> Events</Pill>
+              <Pill active={people} onClick={() => setPeople(true)}><Users className="size-3.5" aria-hidden="true" /> People</Pill>
             </PillGroup>
           </div>
-          <div className={cn("flex flex-wrap items-center gap-2 rounded-2xl bg-secondary/60 p-3", (eventsBoard || !filtersOpen) && "hidden")}>
+          <div className={cn("flex flex-wrap items-center gap-2 rounded-2xl bg-secondary/60 p-3", (eventsBoard || !filtersOpen || people) && "hidden")}>
             <FilterMenu label="Filter by skill" any="Any skill" value={local.skill} options={SKILLS} onChange={(skill) => update({ skill })} />
             <FilterMenu label="Filter by subject" any="Any subject" value={local.subject} options={SUBJECTS} onChange={(subject) => update({ subject })} />
             <FilterMenu label="Filter by school or place" any="Any school or place" value={local.place} options={PLACES} onChange={(place) => update({ place })} />
@@ -370,25 +358,28 @@ function Explore() {
         </div>
 
         <div aria-live="polite" className="sr-only">{results.length} results</div>
-        {local.kind === "class" && <div className="flex justify-end">{schoolScope}</div>}
-        {eventsBoard ? (
+        {local.kind === "class" && !people && <div className="flex justify-end">{schoolScope}</div>}
+        {!people && <OnYourPlan kind={local.kind} />}
+        {people ? (
+          <PeopleMet />
+        ) : eventsBoard ? (
           <EventsBoard query={local.query} />
-        ) : shown.length === 0 ? (
+        ) : results.length === 0 ? (
           <div className="surface p-10 text-center">
             <p className="font-medium">No matches. Try removing a filter.</p>
             <Button variant="outline" className="mt-3" onClick={clear}>Clear filters</Button>
           </div>
-        ) : view === "calendar" ? (
-          <Calendar items={shown} gaps={goal.missing} onOpen={onOpen} byDeadline={byDeadline} showKind={local.kind === "all"} />
+        ) : byDeadline ? (
+          <Calendar items={results} gaps={missing} onOpen={onOpen} byDeadline showKind={false} />
         ) : local.kind === "all" && !hasFilters ? (
-          <GoalShelves results={results} gaps={gaps} onOpen={onOpen} onSkill={(skill) => update({ skill })} onFree={() => update({ freeTimeOnly: true })} />
+          <GoalShelves results={results} gaps={gaps} goalTitle={goal?.title} onOpen={onOpen} onSkill={(skill) => update({ skill })} onFree={() => update({ freeTimeOnly: true })} />
         ) : local.kind === "all" ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{results.map((o) => <CompactCard key={o.id} o={o} gaps={goal.missing} onOpen={onOpen} />)}</div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{results.map((o) => <CompactCard key={o.id} o={o} gaps={missing} onOpen={onOpen} />)}</div>
         ) : (
-          <KindGrid items={results} gaps={goal.missing} onOpen={onOpen} />
+          <KindGrid items={results} gaps={missing} onOpen={onOpen} />
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-5 text-sm text-muted-foreground">
+        <div className={cn("flex flex-wrap items-center justify-between gap-3 border-t pt-5 text-sm text-muted-foreground", people && "hidden")}>
           <span className="flex items-center gap-2"><CalendarClock className="size-4 shrink-0" aria-hidden="true" /> {timeLeftLine(terms, results)}</span>
         </div>
       </div>

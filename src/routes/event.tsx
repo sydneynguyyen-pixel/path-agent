@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Bookmark, Check, Copy, MapPin, Pencil, Pin, RotateCcw, Send, Users, X } from "lucide-react";
 import { symposiumEvent as ev } from "@/data/event";
 import { people, type Person } from "@/data/people";
+import { PersonPhoto } from "@/components/app/PersonPhoto";
 import { ledgerSkills } from "@/data/scenario";
 import { callName, followUp, lowerFirst, nextCard, nextStep, promiseId, recall, toMeet, visibleClassmates, type DeckChoice } from "@/lib/event";
 import { useJourney } from "@/lib/journey";
@@ -26,9 +27,9 @@ export const Route = createFileRoute("/event")({
   validateSearch: (s: Record<string, unknown>): { step?: Step } => (STEPS.includes(s["step"] as Step) ? { step: s["step"] as Step } : {}),
   head: () => ({
     meta: [
-      { title: "Your plan for Thursday — Path Agent" },
+      { title: "Your plan for Thursday — Trellis" },
       { name: "description", content: "Plan who to meet at the Psych Research Symposium, keep notes, and follow up in your own words." },
-      { property: "og:title", content: "Your plan for Thursday — Path Agent" },
+      { property: "og:title", content: "Your plan for Thursday — Trellis" },
       { property: "og:description", content: "Who to meet, what to say, and a follow-up drafted from your own notes." },
     ],
   }),
@@ -178,9 +179,9 @@ function PersonCard({ person }: { person: Person }) {
   const back = recall(person.id, j.event.notes, j.event.promises);
   return (
     <div className="space-y-3">
-      <div className="pr-20">
-        <h3 className="text-lg font-medium leading-tight">{person.name}</h3>
-        <p className="text-sm text-muted-foreground">{person.role}</p>
+      <div className="flex items-center gap-4 pr-20">
+        <PersonPhoto photo={person.photo} org={person.org} size="lg" />
+        <div className="min-w-0"><h3 className="text-lg font-medium leading-tight">{person.name}</h3><p className="text-sm text-muted-foreground">{person.role}</p></div>
       </div>
       {back && (
         <div className="rounded-xl bg-secondary p-3 text-sm">
@@ -290,6 +291,7 @@ function TalkRow({ person }: { person: Person }) {
     <li className={cn("surface p-4", talked && "ring-1 ring-[var(--ring)]")}>
       <button onClick={() => j.markTalked(person.id, !talked)} aria-pressed={talked} className="flex w-full items-start gap-3 text-left">
         <span className={cn("mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border", talked && "glass-on border-transparent text-white")}>{talked && <Check className="size-3.5" />}</span>
+        <PersonPhoto photo={person.photo} org={person.org} size="md" />
         <span className="min-w-0 flex-1">
           <span className="block font-medium">{person.name}</span>
           <span className="block text-xs text-muted-foreground">{talked ? "Talked" : `“${person.opener}”`}</span>
@@ -341,7 +343,7 @@ function After() {
       </div>
       <div className="space-y-6">
       {j.event.followUp.copied.length > 0 && (
-        <Link to="/portfolio" className="surface flex items-center justify-between gap-3 p-4 text-sm hover:bg-foreground/[.02]">
+        <Link to="/career" search={{ tab: "skills" }} className="surface flex items-center justify-between gap-3 p-4 text-sm hover:bg-foreground/[.02]">
           <span><span className="font-medium">{skill.name}</span><span className="block text-xs text-muted-foreground">From {skill.course}, now with a real conversation behind it</span></span>
           <span className="shrink-0 text-xs">{skill.level} → <b>{evidenceFor(skill, j.skillReviews[skill.id])}</b></span>
         </Link>

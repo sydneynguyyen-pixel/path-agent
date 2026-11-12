@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronDown } from "lucide-react";
+import { ArrowRight, ChevronDown, GraduationCap } from "lucide-react";
+import { SchoolLogo } from "@/components/app/SchoolLogo";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { SourceChip } from "@/components/app/bits";
 import { DegreeMark } from "@/components/app/DegreeMark";
@@ -8,7 +9,7 @@ import { outsideSchool, requirements } from "@/data/scenario";
 import { useDegreeAudit } from "@/hooks/use-degree-audit";
 import sceneRegistration from "@/assets/scene-registration.jpg";
 import { useJourney } from "@/lib/journey";
-import { formatCredits, transferReadiness, type AuditCategory, type AuditRule, type AuditSlot, type DegreeAudit, type TransferItem } from "@/lib/degree";
+import { formatCredits, standingOf, transferReadiness, type AuditCategory, type AuditRule, type AuditSlot, type DegreeAudit, type TransferItem } from "@/lib/degree";
 
 const share = (n: number, of: number) => `${(n / of) * 100}%`;
 /** Matches the CSS breakpoint where the audit splits into list + details. */
@@ -22,6 +23,7 @@ export function DegreeAuditView({ audit, row, slot }: { audit: DegreeAudit; row?
   const ready = useMemo(() => transferReadiness(requirements, input), [input]);
   const readyDone = ready.filter((r) => r.status === "done").length;
   const root = useRef<HTMLDivElement>(null);
+  const standing = standingOf(audit.earned);
 
   // Arriving from another page: open that row, then bring the line into view once it has unfolded.
   useEffect(() => {
@@ -41,7 +43,7 @@ export function DegreeAuditView({ audit, row, slot }: { audit: DegreeAudit; row?
     ? { name: picked.name, about: picked.about, color: picked.color, amount: <><b>{formatCredits(picked.credits.done)}</b> of {picked.needed} credits</>,
         body: <>{picked.slots.map((s) => <SlotLine key={s.id} slot={s} found={slot === s.id} />)}{picked.extra > 0.05 && <p className="dg-note">Your plan has {formatCredits(picked.extra)} more credits than you need.</p>}</> }
     : shown === "rules" ? { name: "University requirements", about: `Already part of your ${audit.needed}`, amount: <><b>{met}</b> of {audit.rules.length} met</>, body: rulesLines }
-    : shown === "transfer" ? { name: "Ready to transfer", about: "What Bayview needs from you first", amount: <><b>{readyDone}</b> of {ready.length} done</>, body: transferLines }
+    : shown === "transfer" ? { name: "Finish at Bayview before you transfer", about: "Needed before Fall 2027", amount: <><b>{readyDone}</b> of {ready.length} done</>, body: transferLines }
     : { name: "How your units convert", about: "Quarters at Bayview, semesters at Northgate", body: <UnitLines /> };
 
   return (
@@ -49,6 +51,11 @@ export function DegreeAuditView({ audit, row, slot }: { audit: DegreeAudit; row?
       <img src={sceneRegistration} alt="" aria-hidden="true" className="dg-banner" />
       <div className="dg-sheet">
         <div className="dg-head">
+          <div className="dg-schools" aria-label="Your schools">
+            <span className="dg-school" data-here><SchoolLogo school="bayview" className="size-8" /><span><b>Bayview CC</b><em>You're here</em></span></span>
+            <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <span className="dg-school"><SchoolLogo school="northgate" className="size-8" /><span><b>Northgate State</b><em>From Fall 2027</em></span></span>
+          </div>
           <div className="dg-degree">{audit.degree} · {audit.school}</div>
           <div className="dg-total"><b>{formatCredits(audit.earned)}</b> of {audit.needed} credits</div>
           <div className="dg-bar" role="img" aria-label={`${formatCredits(audit.earned)} credits earned, ${formatCredits(audit.now)} in progress, ${formatCredits(audit.planned)} planned, of ${audit.needed}`}>
@@ -60,6 +67,7 @@ export function DegreeAuditView({ audit, row, slot }: { audit: DegreeAudit; row?
             <span><i data-st="done" />{formatCredits(audit.earned)} earned</span>
             <span><i data-st="now" />{formatCredits(audit.now)} in progress</span>
             <span><i data-st="planned" />{formatCredits(audit.planned)} planned</span>
+            <span className="dg-standing"><GraduationCap className="size-3.5" aria-hidden="true" />{standing.name} standing{standing.next ? ` · ${standing.next.name} at ${standing.next.at} units` : ""}</span>
             <span className="dg-grad">{audit.short > 0 ? `${formatCredits(audit.short)} credits not planned yet` : `Graduating ${audit.gradTerm}`}</span>
           </div>
         </div>
@@ -78,7 +86,7 @@ export function DegreeAuditView({ audit, row, slot }: { audit: DegreeAudit; row?
             </section>
             <section className="dg-row" data-row="transfer" data-open={openId === "transfer" || undefined} data-selected={shown === "transfer" || undefined}>
               <button type="button" className="dg-row-head" aria-expanded={openId === "transfer"} onClick={() => toggle("transfer")}>
-                <span className="dg-row-name"><b>Ready to transfer</b><span>What Bayview needs from you first</span></span>
+                <span className="dg-row-name"><b>Finish at Bayview before you transfer</b><span>Needed before Fall 2027</span></span>
                 <span className="dg-row-marks" aria-hidden="true">{ready.map((r) => <DegreeMark key={r.id} status={r.status} />)}</span>
                 <span className="dg-row-credits"><b>{readyDone}</b> of {ready.length} done</span>
                 <ChevronDown className="dg-chev" aria-hidden="true" />

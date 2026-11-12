@@ -106,7 +106,7 @@ export function PathView({ mode, memory, onShowMap }: { mode: "map" | "list"; me
     },
     open: (item) => {
       if (!item.open) return;
-      if (item.open.to === "/explore") j.openOpportunity(item.open.search.open);
+      if (item.open.to === "/explore" && "open" in item.open.search) j.openOpportunity(item.open.search.open);
       else void navigate({ ...item.open, state: { backTo: "map" } });
     },
     calendar: (item) => {
@@ -176,7 +176,7 @@ export function PathView({ mode, memory, onShowMap }: { mode: "map" | "list"; me
   const followUps = followUpCount(pastNotes, j.event.promises);
   const notesLine = followUps === 0 ? "No one to follow up with" : `${followUps} ${followUps === 1 ? "person" : "people"} to follow up`;
   const openNotes = () => {
-    if (travel.current < 4) void navigate({ to: "/portfolio", search: { tab: "people" }, state: { backTo: "map" } });
+    if (travel.current < 4) void navigate({ to: "/explore", search: { view: "people" }, state: { backTo: "map" } });
   };
 
   const dot = Math.max(16, 22 * cam.s);

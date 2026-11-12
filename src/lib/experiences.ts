@@ -3,7 +3,7 @@ import type { SkillReview } from "@/lib/skills";
 
 /** An event the student can see, with the services it came from and the best proof among them. */
 export type Found = Experience & { proof: AttendanceProof; via: EventPlatform[] };
-/** The student's own answer to "Did you go?". Path Agent never fills this in. */
+/** The student's own answer to "Did you go?". Sprout never fills this in. */
 export type Checks = Record<string, "went" | "missed">;
 export type Attendance = "upcoming" | "checked-in" | "confirmed" | "ask" | "missed";
 

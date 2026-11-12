@@ -7,6 +7,9 @@ const FLY_MS = 480;
 const ZOOM_FOLLOW_MS = 70;
 const ZOOM_COAST_MS = 170;
 const ZOOM_RELEASE_MS = 34;
+// A drag that ends while moving keeps sliding and slows to a stop.
+const PAN_COAST_MS = 325;
+const PAN_MIN_SPEED = 0.05; // px per ms
 
 type Options = {
   minScale: number;
@@ -30,6 +33,8 @@ export function useCanvasCamera(options: Options) {
   const frame = useRef(0);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const travel = useRef(0);
+  const velocity = useRef({ x: 0, y: 0, t: 0 });
+  const panning = useRef(false);
   const [dragging, setDragging] = useState(false);
 
   const move = useCallback((next: Camera) => {
@@ -118,11 +123,23 @@ export function useCanvasCamera(options: Options) {
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     // Two fingers on a trackpad move the canvas; a pinch arrives as a wheel event with ctrl held.
+    // A mouse wheel zooms. Browsers report a trackpad's legacy wheelDelta as exactly -3x its
+    // deltaY, which a mouse wheel never matches; sideways scroll is a trackpad too. Once a
+    // trackpad is seen, its trailing momentum events keep panning for a moment.
+    let trackpadAt = 0;
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const legacy = (e as WheelEvent & { wheelDeltaY?: number }).wheelDeltaY;
+      const pad = e.deltaMode === 0 && (e.deltaX !== 0 || (legacy !== undefined && legacy !== 0 && legacy === -3 * e.deltaY));
+      if (pad) trackpadAt = e.timeStamp;
+      const mouse = !pad && e.timeStamp - trackpadAt > 400;
       if (e.ctrlKey || e.metaKey) {
-        const rect = el.getBoundingClientRect();
         nudgeZoom(-e.deltaY * 0.01, e.clientX - rect.left, e.clientY - rect.top);
+      } else if (mouse) {
+        // Lines or pages (Firefox) count as a full notch; pixel steps scale, so smooth wheels stay smooth.
+        const px = e.deltaMode === 0 ? e.deltaY : Math.sign(e.deltaY) * 100;
+        nudgeZoom(-Math.max(-0.25, Math.min(0.25, px * 0.002)), e.clientX - rect.left, e.clientY - rect.top);
       } else {
         stopMotion();
         const c = camRef.current;
@@ -142,7 +159,7 @@ export function useCanvasCamera(options: Options) {
     if (e.button !== 0 || !e.currentTarget.contains(e.target as Node)) return;
     stopMotion();
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointers.current.size === 1) travel.current = 0;
+    if (pointers.current.size === 1) { travel.current = 0; velocity.current = { x: 0, y: 0, t: e.timeStamp }; }
   };
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const map = pointers.current;
@@ -156,10 +173,15 @@ export function useCanvasCamera(options: Options) {
       travel.current += Math.hypot(dx, dy);
       map.set(e.pointerId, point);
       if (travel.current < 4) return;
-      if (!e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.setPointerCapture(e.pointerId);
+      if (!panning.current) {
+        panning.current = true;
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
         setDragging(true);
       }
+      // Recent motion, smoothed, so the release carries the drag's speed.
+      const dt = Math.max(1, e.timeStamp - velocity.current.t);
+      const k = Math.min(1, dt / 50);
+      velocity.current = { x: velocity.current.x * (1 - k) + (dx / dt) * k, y: velocity.current.y * (1 - k) + (dy / dt) * k, t: e.timeStamp };
       move({ ...c, x: c.x + dx, y: c.y + dy });
       return;
     }
@@ -173,9 +195,29 @@ export function useCanvasCamera(options: Options) {
     const after = Math.hypot(point.x - other.x, point.y - other.y);
     nudgeZoom(Math.log((after || 1) / before), (point.x + other.x) / 2 - rect.left, (point.y + other.y) / 2 - rect.top);
   };
+  const coast = useCallback((vx: number, vy: number) => {
+    const speed = Math.hypot(vx, vy);
+    if (speed > 3) { vx *= 3 / speed; vy *= 3 / speed; }
+    let t0 = performance.now();
+    const step = (t: number) => {
+      const dt = Math.min(48, t - t0);
+      t0 = t;
+      const decay = Math.exp(-dt / PAN_COAST_MS);
+      vx *= decay;
+      vy *= decay;
+      const c = camRef.current;
+      move({ ...c, x: c.x + vx * dt, y: c.y + vy * dt });
+      if (Math.hypot(vx, vy) > 0.01) frame.current = requestAnimationFrame(step);
+    };
+    frame.current = requestAnimationFrame(step);
+  }, [move]);
   const onPointerEnd = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const wasDrag = pointers.current.size === 1 && panning.current;
     pointers.current.delete(e.pointerId);
-    if (!pointers.current.size) setDragging(false);
+    if (!pointers.current.size) { panning.current = false; setDragging(false); }
+    // Only a drag that was still moving when released keeps going.
+    const v = velocity.current;
+    if (wasDrag && e.type === "pointerup" && !calm() && e.timeStamp - v.t < 80 && Math.hypot(v.x, v.y) > PAN_MIN_SPEED) coast(v.x, v.y);
   };
 
   return { view, size, cam, camRef, travel, dragging, move, fly, pointer: { onPointerDown, onPointerMove, onPointerUp: onPointerEnd, onPointerCancel: onPointerEnd } };

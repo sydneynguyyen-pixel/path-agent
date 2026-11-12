@@ -14,10 +14,10 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/permissions")({
   head: () => ({
     meta: [
-      { title: "Controls — Path Agent" },
-      { name: "description", content: "Choose what Path Agent does and what it can read." },
-      { property: "og:title", content: "Controls — Path Agent" },
-      { property: "og:description", content: "Choose what Path Agent does and what it can read." },
+      { title: "Controls — Trellis" },
+      { name: "description", content: "Choose what Sprout does and what it can read." },
+      { property: "og:title", content: "Controls — Trellis" },
+      { property: "og:description", content: "Choose what Sprout does and what it can read." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -55,15 +55,15 @@ export function Controls({ embedded = false }: { embedded?: boolean }) {
   const events = useEvents();
   return (
     <div className="w-full min-w-0">
-      <PageHeader title="Controls" sub="Choose what Path Agent does."
+      <PageHeader title="Controls" sub="Choose what Sprout does."
         right={<Button variant={j.paused ? "default" : "outline"} onClick={() => j.setPaused(!j.paused)}>
-          {j.paused ? <><Play className="size-4" /> Resume</> : <><Pause className="size-4" /> Pause Path Agent</>}
+          {j.paused ? <><Play className="size-4" /> Resume</> : <><Pause className="size-4" /> Pause Sprout</>}
         </Button>}
       />
-      {j.paused && <div role="status" className="mb-6 flex items-center gap-3 rounded-2xl bg-warning-soft p-4 text-sm"><Pause className="size-4" />Path Agent is paused. Nothing is read or drafted until you resume.</div>}
+      {j.paused && <div role="status" className="mb-6 flex items-center gap-3 rounded-2xl bg-warning-soft p-4 text-sm"><Pause className="size-4" />Sprout is paused. Nothing is read or drafted until you resume.</div>}
 
       <section aria-labelledby="helper-heading" className="mb-8">
-        <div className="mb-4 flex items-center justify-between gap-3"><h2 id="helper-heading" className="text-lg font-semibold">What Path Agent does</h2><span className="text-xs text-muted-foreground">{j.paused ? "Paused" : `${HELPERS.filter(h => j.agentOn[h]).length} of 4 on`}</span></div>
+        <div className="mb-4 flex items-center justify-between gap-3"><h2 id="helper-heading" className="text-lg font-semibold">What Sprout does</h2><span className="text-xs text-muted-foreground">{j.paused ? "Paused" : `${HELPERS.filter(h => j.agentOn[h]).length} of 4 on`}</span></div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {HELPERS.map((id, index) => {
             const on = j.agentOn[id] && !j.paused;
@@ -99,7 +99,7 @@ export function Controls({ embedded = false }: { embedded?: boolean }) {
       <section aria-labelledby="decision-heading" className="mb-8">
         <h2 id="decision-heading" className="mb-4 text-lg font-semibold">You stay in charge</h2>
         <div className="grid gap-6 border-y py-5 md:grid-cols-3">
-          <div className="flex gap-3"><Eye className="mt-1 size-6 shrink-0" /><div><h3 className="text-sm font-semibold">Path Agent prepares</h3><p className="mt-1 text-sm text-muted-foreground">Read records · suggest classes · draft emails</p><span className="mt-2 inline-flex items-center gap-1 text-xs"><Check className="size-3.5 text-mark-yes" />Automatic when turned on</span></div></div>
+          <div className="flex gap-3"><Eye className="mt-1 size-6 shrink-0" /><div><h3 className="text-sm font-semibold">Sprout prepares</h3><p className="mt-1 text-sm text-muted-foreground">Read records · suggest classes · draft emails</p><span className="mt-2 inline-flex items-center gap-1 text-xs"><Check className="size-3.5 text-mark-yes" />Automatic when turned on</span></div></div>
           <div className="flex gap-3"><UserRoundCheck className="mt-1 size-6 shrink-0" /><div><h3 className="text-sm font-semibold">You approve</h3><p className="mt-1 text-sm text-muted-foreground">Review and edit before an email leaves</p><span className="mt-2 inline-flex items-center gap-1 text-xs"><Lock className="size-3.5" />Your OK, every time</span></div></div>
           <div className="flex gap-3"><MousePointerClick className="mt-1 size-6 shrink-0" /><div><h3 className="text-sm font-semibold">You register</h3><p className="mt-1 text-sm text-muted-foreground">Add · drop · join a waitlist</p><span className="mt-2 inline-flex items-center gap-1 text-xs"><Lock className="size-3.5" />Only you can make these clicks</span></div></div>
         </div>

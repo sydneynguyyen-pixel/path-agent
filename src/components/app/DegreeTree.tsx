@@ -102,7 +102,7 @@ const Board = memo(function Board({ layout, selectedId, onPick, changed }: { lay
   return (
     <>
       {layout.columns.map((c) => (
-        <div key={c.id} className="dg-col" data-now={c.id === "sp27" || undefined} style={{ left: c.x, width: 168 }}><b>{c.label}</b><span>{c.sub}</span></div>
+        <div key={c.id} className="dg-col" data-now={c.id === "f26" || undefined} style={{ left: c.x, width: 168 }}><b>{c.label}</b><span>{c.sub}</span></div>
       ))}
       {layout.rows.map((r) => (
         <div key={r.id} className="dg-rowlabel" style={{ top: r.y, height: r.h, "--c": r.color } as CSSProperties}><b>{r.name}</b><span>{r.status}</span></div>

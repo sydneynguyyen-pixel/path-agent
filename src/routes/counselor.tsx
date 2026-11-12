@@ -13,9 +13,9 @@ export const Route = createFileRoute("/counselor")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { title: "Counselor's side — Path Agent" },
+      { title: "Counselor's side — Trellis" },
       { name: "description", content: "The counselor's side: review the student's evidence and confirm or decline in one read." },
-      { property: "og:title", content: "Counselor's side — Path Agent" },
+      { property: "og:title", content: "Counselor's side — Trellis" },
       { property: "og:description", content: "Counselor-in-the-loop: one-read decisions with both source readings side by side." },
     ],
   }),

@@ -10,6 +10,7 @@ import {
 } from "@/data/scenario";
 import { symposiumEvent } from "@/data/event";
 import { people } from "@/data/people";
+import { PersonPhoto } from "@/components/app/PersonPhoto";
 import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
 import { allEvents, inNextWeek, monthGrid, overlaps, siteOf, type EventItem } from "@/lib/events";
 import { doableInFreeTime } from "@/lib/opportunities";
@@ -70,7 +71,7 @@ export function EventsBoard({ query = "" }: { query?: string }) {
 
   return (
     <div>
-      <div className="grid items-start gap-8 lg:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_340px]">
+      <div className="grid items-start gap-10 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_360px] 2xl:gap-14">
         <aside aria-label="Calendar and filters" className="space-y-6">
           <MonthCalendar
             items={items}
@@ -143,19 +144,19 @@ export function EventsBoard({ query = "" }: { query?: string }) {
             </button>
           )}
           {days.map((d) => (
-            <div key={d} className="relative grid grid-cols-[88px_minmax(0,1fr)] gap-2 pb-1">
+            <div key={d} className="relative grid grid-cols-[96px_minmax(0,1fr)] gap-3 pb-4">
               <div className="relative pt-2">
                 <span
                   aria-hidden="true"
                   className={cn(
                     "absolute -left-[25px] top-[14px] size-2.5 rounded-full",
-                    selected?.date === d ? "bg-foreground" : "bg-border",
+                    selected?.date === d ? "bg-[var(--ink-b)] shadow-[0_0_0_3px_var(--rim)]" : "bg-border",
                   )}
                 />
                 <div className="text-[15px] font-semibold">{dayLabel(d)}</div>
                 <div className="text-sm text-muted-foreground">{weekday(d)}</div>
               </div>
-              <div className="flex flex-col gap-0.5">
+              <div className="flex flex-col gap-1.5">
                 {shown
                   .filter((e) => e.date === d)
                   .map((e) => (
@@ -224,19 +225,17 @@ function EventRow({
       onClick={onPick}
       aria-pressed={selected}
       className={cn(
-        "-mx-3 flex items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors",
+        "-mx-3 flex items-center gap-3.5 rounded-2xl px-3 py-2.5 text-left transition-colors",
         selected
-          ? "bg-card shadow-[0_1px_2px_rgb(24_39_58/4%),0_10px_24px_-14px_rgb(24_39_58/16%),0_0_0_1.5px_var(--foreground)]"
+          ? "glass-picked"
           : "hover:bg-foreground/[0.03]",
       )}
     >
       <Art e={e} className="w-14" />
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-2">
-          <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{e.time}</span>
-          <span className="truncate font-semibold">{e.title}</span>
-        </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        <div className="text-xs text-muted-foreground tabular-nums">{e.time}</div>
+        <div className="line-clamp-2 font-semibold leading-snug">{e.title}</div>
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             {e.host}
             {site && <PlatformMark platform={site} className="size-3.5 rounded-[3px] border-0" />}
@@ -321,9 +320,9 @@ function Details({ e, planned }: { e: EventItem; planned: boolean }) {
             <div className="text-xs text-muted-foreground">{meet.length} people to meet</div>
             <ul className="mt-1 space-y-2">
               {meet.map((p) => (
-                <li key={p.id} className="text-sm">
-                  <div className="font-medium">{p.name}</div>
-                  <div className="text-xs text-muted-foreground">{p.role}</div>
+                <li key={p.id} className="flex items-center gap-3 text-sm">
+                  <PersonPhoto photo={p.photo} org={p.org} size="sm" />
+                  <span className="min-w-0"><span className="block font-medium">{p.name}</span><span className="block text-xs text-muted-foreground">{p.role}</span></span>
                 </li>
               ))}
             </ul>
@@ -355,7 +354,7 @@ function Details({ e, planned }: { e: EventItem; planned: boolean }) {
           ) : null}
         </div>
         <p className="text-xs text-muted-foreground">
-          You sign up on the event's site. Path Agent never registers for you.
+          You sign up on the event's site. Sprout never registers for you.
         </p>
       </div>
     </aside>
@@ -432,7 +431,7 @@ function MonthCalendar({
               className={cn(
                 "flex h-8 flex-col items-center justify-center gap-px rounded-full text-xs",
                 sel
-                  ? "bg-foreground font-semibold text-background"
+                  ? "glass-active font-semibold"
                   : on.length
                     ? "font-semibold hover:bg-foreground/5"
                     : "text-muted-foreground",

@@ -1,6 +1,7 @@
 import { options as baseOptions, PILEUP_THRESHOLD, rankOptions, REQUIREMENT_LABEL, syllabi, type Option } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
 import type { AgentId } from "@/lib/journey";
+import { startHour } from "@/lib/steer";
 
 /**
  * What the agent can do when a class is full. Tools read data and code decides the facts:
@@ -26,7 +27,24 @@ export type World = {
   seats?: Record<string, number>;
   /** Option ids a counselor has said don't count for this student. */
   declined?: string[];
+  /** Notes the student gave the helpers. Known ones are enforced in code; the rest are passed to the model as she wrote them. */
+  notes?: { id: string; text: string }[];
 };
+
+/** Notes code can check. Anything else is a preference the model reads, never a rule. */
+const RULES: Record<string, (o: Option) => boolean> = {
+  "no-early": (o) => startHour(o.sectionTime) >= 10,
+  "no-friday": (o) => !/fri/i.test(o.sectionTime),
+};
+const PREFERS: Record<string, (o: Option) => boolean> = {
+  sure: (o) => o.verdict === "counts",
+  tuthu: (o) => /tue\/thu/i.test(o.sectionTime),
+};
+
+/** The first note an option breaks, if any. */
+export function brokenNote(world: World, o: Option): { id: string; text: string } | null {
+  return world.notes?.find((n) => RULES[n.id] && !RULES[n.id]!(o)) ?? null;
+}
 
 /** The scenario's options with the current world applied. */
 export function worldOptions(world: World = {}): Option[] {
@@ -43,8 +61,12 @@ const weekLoad = (week: number) => syllabi.reduce((n, s) => n + s.items.filter((
 export const SUBMIT_TOOL = "submit_recommendation";
 
 /** Options a student could actually act on, best first. Ranking is code, never the model. */
-export const actionable = (world: World = {}) =>
-  rankOptions(worldOptions(world)).filter((o) => o.seatsOpen > 0 && o.verdict !== "does_not_count" && !isDeclined(world, o.id));
+export const actionable = (world: World = {}) => {
+  const ok = rankOptions(worldOptions(world)).filter((o) => o.seatsOpen > 0 && o.verdict !== "does_not_count" && !isDeclined(world, o.id) && !brokenNote(world, o));
+  // Preferences she gave reorder the list; they never add or remove an option.
+  const score = (o: Option) => (world.notes ?? []).filter((n) => PREFERS[n.id]?.(o)).length;
+  return ok.map((o, i) => ({ o, i })).sort((a, b) => score(b.o) - score(a.o) || a.i - b.i).map((x) => x.o);
+};
 
 /** The tools, reading the given world. */
 export function buildTools(world: World = {}): AgentTool[] {
@@ -89,7 +111,16 @@ export function buildTools(world: World = {}): AgentTool[] {
       parameters: noArgs,
       run: () => {
         const open = options.filter((o) => o.seatsOpen > 0);
-        return { data: open.map((o) => ({ id: o.id, course: o.course, section: o.section, sectionTime: o.sectionTime, seatsOpen: o.seatsOpen })), summary: `Searched the class list: ${open.length} sections have open seats` };
+        const broken = open.map((o) => ({ o, note: brokenNote(world, o) })).filter((x) => x.note);
+        const data = open.map((o) => {
+          const note = brokenNote(world, o);
+          return { id: o.id, course: o.course, section: o.section, sectionTime: o.sectionTime, seatsOpen: o.seatsOpen, ...(note ? { breaksStudentNote: note.text } : {}) };
+        });
+        const filled = Object.entries(world.seats ?? {}).filter(([, n]) => n === 0).map(([id]) => options.find((o) => o.id === id)).filter((o): o is Option => !!o);
+        const parts = [`${open.length} sections have open seats`];
+        if (filled.length) parts.unshift(`${filled.map((o) => short(o.course)).join(" and ")} ${filled.length === 1 ? "is" : "are"} now full`);
+        if (broken.length) parts.push(`${broken.map((x) => short(x.o.course)).join(" and ")} ${broken.length === 1 ? "doesn't" : "don't"} fit "${broken[0]!.note!.text}"`);
+        return { data, summary: `Searched the class list: ${parts.join("; ")}` };
       },
     },
     {
@@ -135,5 +166,7 @@ export function rejectPick(optionId: unknown, called: string[], world: World = {
   if (o.seatsOpen <= 0) return `${short(o.course)} section ${o.section} has no open seats.`;
   if (o.verdict === "does_not_count") return `${short(o.course)} does not count toward the requirement.`;
   if (isDeclined(world, o.id)) return `The student's counselor said ${short(o.course)} doesn't count for them.`;
+  const note = brokenNote(world, o);
+  if (note) return `${short(o.course)} section ${o.section} breaks the student's note: ${note.text}.`;
   return null;
 }

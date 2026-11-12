@@ -21,10 +21,13 @@ export type AgentStep = { tool: string; helper: AgentId; perm: "read" | "suggest
 /** Work passing from one helper to the next, so the trace can show who handed what to whom. */
 export type Handoff = { from: AgentId; to: AgentId; summary: string; elapsedMs?: number };
 export type AgentEvent =
-  | { type: "start"; mode: "live" | "scripted"; reason: string | null; runId?: string; trigger?: Trigger }
+  /** `reason`: why it ran without AI, if it did. `cause`: what a re-check or re-plan is responding to. */
+  | { type: "start"; mode: "live" | "scripted"; reason: string | null; runId?: string; trigger?: Trigger; cause?: string }
   | ({ type: "step" } & AgentStep)
   | ({ type: "handoff" } & Handoff)
-  | { type: "done"; result: AgentResult };
+  /** A re-check: which facts changed and which tools must run again because of them. */
+  | { type: "stale"; facts: string[]; tools: string[] }
+  | { type: "done"; result: AgentResult; ttvMs?: number | null };
 
 /** What the app remembers about a run, built up one event at a time. */
 export type AgentRun = {
@@ -84,11 +87,16 @@ const parseArgs = (raw: string): Record<string, unknown> => {
   }
 };
 
-export async function runAgent(opts: { model: Model; tools: AgentTool[]; emit: (e: AgentEvent) => void | Promise<void>; maxTurns?: number; world?: World; now?: () => number }): Promise<AgentResult> {
-  const { model, tools, emit, maxTurns = 8, world = {}, now = Date.now } = opts;
+/**
+ * `known`: tools whose results are still good from the last run, so a re-check doesn't redo them.
+ * `userPrompt`: what changed, for a re-check or a note; defaults to the first "my class is full".
+ */
+export async function runAgent(opts: { model: Model; tools: AgentTool[]; emit: (e: AgentEvent) => void | Promise<void>; maxTurns?: number; world?: World; now?: () => number; known?: string[]; userPrompt?: string }): Promise<AgentResult> {
+  const { model, tools, emit, maxTurns = 8, world = {}, now = Date.now, known = [], userPrompt = USER_PROMPT } = opts;
   const defs: ToolDef[] = tools.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.parameters } }));
-  const messages: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT }, { role: "user", content: USER_PROMPT }];
-  const called: string[] = [];
+  const notes = world.notes?.length ? `\nThe student told the helpers: ${world.notes.map((n) => `"${n.text}"`).join(", ")}. Respect these. Options marked breaksStudentNote cannot be recommended.` : "";
+  const messages: ChatMessage[] = [{ role: "system", content: SYSTEM_PROMPT + notes }, { role: "user", content: userPrompt }];
+  const called: string[] = [...known];
   const t0 = now();
   const elapsed = () => now() - t0;
   let modelName: string | null = null;
@@ -136,12 +144,12 @@ export async function runAgent(opts: { model: Model; tools: AgentTool[]; emit: (
   return { optionId: null, why: null, model: modelName, gaveUp: true, ttvMs: null };
 }
 
-/** A stand-in with no AI that reads the given world: it calls the same tools in a fixed order. */
+/** A stand-in with no AI that reads the given world: it calls the same tools in a fixed order, skipping ones still known. */
 export const scriptedModelFor =
-  (world: World = {}): Model =>
+  (world: World = {}, known: string[] = []): Model =>
   async (messages, defs) => {
     const available = defs.map((d) => d.function.name);
-    const done = messages.flatMap((m) => (m.role === "assistant" ? m.tool_calls ?? [] : [])).map((c) => c.function.name);
+    const done = [...known, ...messages.flatMap((m) => (m.role === "assistant" ? m.tool_calls ?? [] : [])).map((c) => c.function.name)];
     const top = actionable(world)[0];
     const plan: [string, Record<string, unknown>][] = [
       ["read_portal_error", {}],

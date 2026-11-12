@@ -29,7 +29,8 @@ export function NoteReply({ note, compact = false }: { note: string; compact?: b
   );
 }
 
-export function Reply({ topic, compact = false }: { topic: WidgetKind | null; compact?: boolean }) {
+/** `answer`: what the live agent wrote. Without it, the scripted preview line for the topic is used. */
+export function Reply({ topic, compact = false, answer }: { topic: WidgetKind | null; compact?: boolean; answer?: string | undefined }) {
   const j = useJourney();
   const due = dueThisWeek(fallWork, SCRIPT_TODAY);
   const goal = chosenGoals(careerRoles, j.interestedRoles)[0];
@@ -42,13 +43,13 @@ export function Reply({ topic, compact = false }: { topic: WidgetKind | null; co
     saved: "Here's what you've saved.",
     match: `Here's who you're going with, or who wants to go with you.`,
   };
-  if (!topic) return <p>I can't answer that one in this preview. Try asking about your week, your path, your deadline or a club.</p>;
+  if (!topic) return <p>{answer ?? "I can't answer that one in this preview. Try asking about your week, your path, your deadline or a club."}</p>;
   const on = j.desk.widgets.some((w) => w.kind === topic);
   const size = WIDGETS[topic].sizes.includes("m") ? "m" : WIDGETS[topic].sizes[0]!;
   // The short answer above the bar shows the same card, so she can act on it right there; pinning waits for the full chat.
   return (
     <>
-      <p>{text[topic]}</p>
+      <p>{answer ?? text[topic]}</p>
       <div className={cn("desk-glass desk-tile desk-answer mt-3", `desk-${size}`)}><WidgetBody w={{ kind: topic, size }} /></div>
       {compact ? null : on ? <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium"><Check className="size-3.5" aria-hidden="true" />On your Home</span>
         : <Button size="sm" variant="outline" className="mt-2 rounded-full" onClick={() => j.setDesk((d) => ({ ...d, widgets: addWidget(d.widgets, topic, size) }))}><Pin className="size-3.5" aria-hidden="true" />Pin to Home</Button>}

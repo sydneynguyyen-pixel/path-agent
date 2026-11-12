@@ -1,8 +1,10 @@
 import { noteFrom } from "./steer";
 import { topicFor, type WidgetKind } from "./desktop";
 
-/** One line in a chat. Agent replies are scripted previews until the live agent is connected. */
-export type ChatMsg = { id: string; from: "you" | "agent"; text: string; topic?: WidgetKind | null; note?: string | undefined };
+/** One line in a chat. Agent replies come from the live agent when it's available, and a scripted preview otherwise. */
+export type ChatMsg = { id: string; from: "you" | "agent"; text: string; topic?: WidgetKind | null; note?: string | undefined; live?: LiveReply | undefined };
+/** An answer the live agent wrote from her plan, with the facts it used. Absent on scripted previews. */
+export type LiveReply = { answer: string; topic: WidgetKind | null; factIds: string[]; model: string | null };
 /** A saved conversation she can come back to. Each question she starts fresh gets its own. */
 export type Thread = { id: string; title: string; at: number; messages: ChatMsg[] };
 
@@ -68,8 +70,9 @@ export function addAsk(threads: Thread[], activeId: string | null, text: string,
 }
 
 /** The agent's answer lands in the same thread, after a short "working" moment. */
-export function addReply(threads: Thread[], id: string, text: string, now: number): Thread[] {
-  return threads.map((x) => (x.id === id ? { ...x, at: now, messages: [...x.messages, { id: `m${now}a`, from: "agent", text, ...replyFor(text) }] } : x));
+export function addReply(threads: Thread[], id: string, text: string, now: number, live?: LiveReply): Thread[] {
+  const body: Pick<ChatMsg, "topic" | "note" | "live"> = live ? { topic: live.topic, live } : replyFor(text);
+  return threads.map((x) => (x.id === id ? { ...x, at: now, messages: [...x.messages, { id: `m${now}a`, from: "agent", text, ...body }] } : x));
 }
 
 /** Most recent first. */

@@ -10,7 +10,7 @@ import type { AgentId } from "@/lib/journey";
 export type Trigger = "error" | "recheck" | "steer";
 
 export type RunEvent =
-  | { type: "start"; mode: "live" | "scripted"; reason: string | null; runId?: string; parentRunId?: string; trigger?: Trigger }
+  | { type: "start"; mode: "live" | "scripted"; reason: string | null; runId?: string; parentRunId?: string; trigger?: Trigger; cause?: string }
   | { type: "step"; tool: string; helper: AgentId; text: string; ok: boolean; perm?: "read" | "suggested"; level?: string; sourceIds?: string[]; ms?: number }
   | { type: "handoff"; from: AgentId; to: AgentId; summary: string }
   | { type: "stale"; facts: string[]; tools: string[] }
@@ -26,6 +26,8 @@ export type TraceRun = {
   status: "running" | "waiting" | "done";
   mode: "live" | "scripted" | null;
   reason: string | null;
+  /** What a re-check or re-plan is responding to. Kept apart from `reason`, which says why it ran without AI. */
+  cause: string | null;
   trigger: Trigger;
   startedAt: Date | null;
   entries: TraceEntry[];
@@ -39,7 +41,7 @@ export type TraceRun = {
   need: { helper: AgentId; question: string; choices: string[] } | null;
 };
 
-export const newTraceRun = (): TraceRun => ({ status: "running", mode: null, reason: null, trigger: "error", startedAt: null, entries: [], steps: [], stale: null, result: null, ttvMs: null, need: null });
+export const newTraceRun = (): TraceRun => ({ status: "running", mode: null, reason: null, cause: null, trigger: "error", startedAt: null, entries: [], steps: [], stale: null, result: null, ttvMs: null, need: null });
 
 /** Which helper owns each tool, so a re-check can say who is redoing work. */
 const TOOL_HELPER: Record<string, AgentId> = {
@@ -55,7 +57,7 @@ export function applyRunEvent(run: TraceRun | null, event: RunEvent | AgentEvent
   const e = event as RunEvent;
   switch (e.type) {
     case "start":
-      return { ...newTraceRun(), mode: e.mode, reason: e.reason, trigger: e.trigger ?? (e.parentRunId ? "recheck" : "error"), startedAt: at, stale: r.stale };
+      return { ...newTraceRun(), mode: e.mode, reason: e.reason, cause: e.cause ?? null, trigger: e.trigger ?? (e.parentRunId ? "recheck" : "error"), startedAt: at, stale: r.stale };
     case "step": {
       const step: TraceStep = { kind: "step", helper: e.helper, text: e.text, ok: e.ok, sourceIds: e.sourceIds ?? [], at };
       return { ...r, entries: [...r.entries, step], steps: [...r.steps, { ...step, tool: e.tool, perm: e.perm ?? (e.level === "drafts" ? "suggested" : "read") }] };
@@ -116,7 +118,7 @@ const FACT_TEXT: Record<string, string> = {
   "counselor.bus21": "Your counselor declined BUS 21",
 };
 export function recheckLine(facts: string[], done = false) {
-  const said = facts.map((f) => FACT_TEXT[f]).filter(Boolean);
+  const said = facts.map((f) => FACT_TEXT[f] ?? (f.startsWith("note.") ? "You gave the helpers a new note" : undefined)).filter(Boolean);
   const tail = done ? "I re-checked your options." : "Re-checking your options.";
   return said.length ? `${said.join(". ")}. ${tail}` : `Something changed. ${tail}`;
 }
@@ -131,8 +133,12 @@ export const OFF_LINE: Record<AgentId, string> = {
 
 /** The run header: live, without AI, or re-checking, with the reason when there is one. */
 export function runHeadline(run: TraceRun) {
-  if (run.trigger === "steer") return run.reason ? `Re-planning because you said: ${run.reason}` : "Re-planning";
-  if (run.trigger === "recheck") return run.reason ? `Re-checking because ${run.reason}` : "Re-checking";
+  // The agent sends what a re-run responds to as `cause` and keeps `reason` for why it ran without AI.
+  // Older streams (live mode, no cause) carried the cause in `reason`.
+  const cause = run.cause ?? (run.mode === "live" ? run.reason : null);
+  const noAi = run.mode === "scripted" && run.reason ? ` Ran without AI: ${run.reason}` : "";
+  if (run.trigger === "steer") return `${cause ? `Re-planning because you said: ${cause}` : "Re-planning"}${noAi ? `.${noAi}` : ""}`;
+  if (run.trigger === "recheck") return `${cause ? `Re-checking because ${cause}` : "Re-checking"}${noAi ? `.${noAi}` : ""}`;
   if (run.mode === "scripted") return run.reason ? `Ran without AI. ${run.reason}` : "Ran without AI";
   if (run.mode === "live") return "Live run";
   return "Connecting";

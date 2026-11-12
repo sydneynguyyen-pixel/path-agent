@@ -1,11 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { EventPlatform, UploadKey } from "@/data/scenario";
 import type { Checks } from "@/lib/experiences";
-import { recover } from "@/lib/agent/client";
+import { askLive, recover } from "@/lib/agent/client";
+import type { World } from "@/lib/agent/tools";
 import type { AgentEvent } from "@/lib/agent/loop";
 import { applyRunEvent, newTraceRun, type RunEvent, type TraceRun } from "@/lib/run";
-import { FILLED_BY, NEEDS_NOTE, SEAT_FILLS } from "@/data/edge-runs";
-import { constraintFrom, forget, noteFrom, remember, steerEvents, type Constraint } from "@/lib/steer";
+import { FILLED_BY, NEEDS_NOTE } from "@/data/edge-runs";
+import { constraintFrom, forget, noteFrom, remember, type Constraint } from "@/lib/steer";
 import { addAsk, addReply, type Thread } from "@/lib/chat";
 import { goTogetherEvent, options, student, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
@@ -345,6 +346,16 @@ let clockRef = { startedAt: 0 };
 const scriptNow = () => SCRIPT_START + (clockRef.startedAt ? Date.now() - clockRef.startedAt : 0);
 const log = (what: string, evidence: string[], suggested?: string, next?: string): Decision => ({ id: crypto.randomUUID(), who: student.name, what, when: new Date(scriptNow()), evidence, suggested, next });
 
+/** The facts the agent should work from right now: seats seen filling and the notes she gave the helpers. */
+function worldOf(p: Pick<State, "justFilled" | "notes" | "counselor" | "chosenId">, filled: string[] = []): World {
+  const full = [...new Set([...p.justFilled, ...filled])];
+  return {
+    ...(full.length ? { seats: Object.fromEntries(full.map((id) => [id, 0])) } : {}),
+    ...(p.counselor === "declined" && p.chosenId ? { declined: [p.chosenId] } : {}),
+    ...(p.notes.length ? { notes: p.notes.map((n) => ({ id: n.id, text: n.text })) } : {}),
+  };
+}
+
 export function JourneyProvider({ children }: { children: ReactNode }) {
   const [s, set] = useState<State>(initial);
   useEffect(() => {
@@ -402,7 +413,8 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       const apply = (e: AgentEvent) => {
         if (!control.signal.aborted) set((p) => ({ ...p, agentRun: applyRunEvent(p.agentRun, e, new Date(scriptNow())) }));
       };
-      void recover(agentOn, apply, control.signal);
+      // A fresh run: no seats seen filling yet, but the notes she gave the helpers still apply.
+      void recover(agentOn, apply, control.signal, { world: worldOf({ ...latest.current, justFilled: [] }) });
     }
     set((p) => ({
       ...p,
@@ -430,6 +442,26 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  /**
+   * Re-runs the real agent after something changed, through the same reducer as the scripted
+   * streams. Only the work that depended on the change runs again; the server says which.
+   */
+  const rerun = useCallback((trigger: "recheck" | "steer", changes: string[], world: World) => {
+    runControl.current?.abort();
+    const control = new AbortController();
+    runControl.current = control;
+    const apply = (event: AgentEvent) => {
+      if (control.signal.aborted) return;
+      set((p) => ({
+        ...p,
+        agentRun: applyRunEvent(p.agentRun, event, new Date(scriptNow())),
+        awayRun: event.type === "done" ? !p.panelOpen : p.awayRun,
+        justFilled: event.type === "stale" ? [...new Set([...p.justFilled, ...event.facts.map((f) => FILLED_BY[f]).filter((x): x is string => !!x)])] : p.justFilled,
+      }));
+    };
+    void recover(latest.current.agentOn, apply, control.signal, { trigger, changes, world });
+  }, []);
+
   const trySeatFills = useCallback((away = false) => {
     // From the start of the demo, the class has to come back full first; the re-check follows once that run finishes.
     if (latest.current.stage !== "failed") failAdd(!away);
@@ -438,14 +470,11 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     const go = () => {
       const run = latest.current.agentRun;
       if (run && run.status !== "done" && Date.now() - started < 30000) return void window.setTimeout(go, 300);
-      runControl.current?.abort();
-      const control = new AbortController();
-      runControl.current = control;
-      // A moment on the first answer, so the change reads as a change.
-      window.setTimeout(() => replay(SEAT_FILLS, control), run ? 1200 : 0);
+      // A moment on the first answer, so the change reads as a change. Then the real agent re-checks with MATH 13 full.
+      window.setTimeout(() => rerun("recheck", ["seats.math13"], worldOf(latest.current, ["math13"])), run ? 1200 : 0);
     };
     go();
-  }, [failAdd, replay]);
+  }, [failAdd, rerun]);
 
   const tryNeedsNote = useCallback(() => {
     runControl.current?.abort();
@@ -464,12 +493,9 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     set((p) => ({ ...p, notes, decisions: [...p.decisions, log(`Told the helpers: ${note.text}`, [])] }));
     // Only re-plan while she's choosing a backup; otherwise the note waits for the next run.
     if (p0.stage !== "failed") return;
-    const open = options.filter((o) => ["math13", "psyc5", "bus21"].includes(o.id) && o.seatsOpen > 0 && o.verdict !== "does_not_count" && !p0.justFilled.includes(o.id));
-    runControl.current?.abort();
-    const control = new AbortController();
-    runControl.current = control;
-    replay(steerEvents(note, open, notes, p0.agentRun?.result?.optionId ?? null), control);
-  }, [replay]);
+    // The real agent re-plans with the note as a rule it has to follow; only the seat search and the pick run again.
+    rerun("steer", [`note.${note.id}`], worldOf({ ...p0, notes }));
+  }, [rerun]);
 
   const ask = useCallback((text: string) => {
     const t = text.trim();
@@ -478,9 +504,17 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     const { threads, id } = addAsk(p0.chats, p0.activeChat, t, now);
     // Asking from the options run starts a chat of its own, so the run's thread stays about the run.
     set((p) => ({ ...p, chats: threads, activeChat: id, typingIn: id, chatOpen: p.chatOpen || p.panelOpen, panelOpen: false }));
-    if (noteFrom(t)) steer(t);
-    // A short "working" moment, then the scripted answer lands in the same chat.
-    window.setTimeout(() => set((p) => ({ ...p, chats: addReply(p.chats, id, t, Date.now()), typingIn: p.typingIn === id ? null : p.typingIn })), 2600);
+    const note = noteFrom(t);
+    if (note) steer(t);
+    const land = (live: Parameters<typeof addReply>[4]) => set((p) => ({ ...p, chats: addReply(p.chats, id, t, Date.now(), live), typingIn: p.typingIn === id ? null : p.typingIn }));
+    // A note is answered by the re-plan itself. A question goes to the live agent; if it can't answer, the scripted preview lands instead.
+    if (note) window.setTimeout(() => land(undefined), 1200);
+    else {
+      const started = Date.now();
+      void askLive(t, { today: SCRIPT_TODAY, notes: latest.current.notes.map((n) => n.text) }).then((live) => {
+        window.setTimeout(() => land(live ?? undefined), live ? 0 : Math.max(0, 1600 - (Date.now() - started)));
+      });
+    }
     return id;
   }, [steer]);
 

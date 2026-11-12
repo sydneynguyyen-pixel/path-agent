@@ -4,7 +4,7 @@ import type { Checks } from "@/lib/experiences";
 import { askLive, recover } from "@/lib/agent/client";
 import type { World } from "@/lib/agent/tools";
 import type { AgentEvent } from "@/lib/agent/loop";
-import { applyRunEvent, newTraceRun, type RunEvent, type TraceRun } from "@/lib/run";
+import { applyRunEvent, newTraceRun, recordRun, type RunEvent, type TraceRun } from "@/lib/run";
 import { FILLED_BY, NEEDS_NOTE } from "@/data/edge-runs";
 import { constraintFrom, forget, noteFrom, remember, type Constraint } from "@/lib/steer";
 import { addAsk, addReply, type Thread } from "@/lib/chat";
@@ -103,6 +103,8 @@ type State = {
   watchingRegistration: boolean;
   agentTimes: Record<string, Date>;
   agentRun: TraceRun | null;
+  /** Finished runs, newest last (at most 20). A re-check links to the run it changed through parentRunId. Reset demo clears them. */
+  runs: TraceRun[];
   /** Sections a re-check found filled while she was deciding. */
   justFilled: string[];
   /** Notes she gave the helpers ("No classes before 10 am"). They keep using them until she removes one. */
@@ -175,6 +177,7 @@ const initial: State = {
   watchingRegistration: false,
   agentTimes: {},
   agentRun: null,
+  runs: [],
   justFilled: [],
   notes: [],
   awayRun: false,
@@ -344,6 +347,13 @@ ${draftSignoff()}`;
 
 let clockRef = { startedAt: 0 };
 const scriptNow = () => SCRIPT_START + (clockRef.startedAt ? Date.now() - clockRef.startedAt : 0);
+/** Applies a run event to the latest run, and keeps the run in the history once it finishes. */
+function advanceRun(p: Pick<State, "agentRun" | "runs">, e: RunEvent | AgentEvent, at: Date, parentRunId?: string | null): Pick<State, "agentRun" | "runs"> {
+  const event = (e.type === "start" ? { ...e, runId: e.runId ?? `run_${at.getTime()}`, ...(parentRunId ? { parentRunId } : {}) } : e) as RunEvent;
+  const agentRun = applyRunEvent(p.agentRun, event, at);
+  return { agentRun, runs: event.type === "done" ? recordRun(p.runs, agentRun) : p.runs };
+}
+
 const log = (what: string, evidence: string[], suggested?: string, next?: string): Decision => ({ id: crypto.randomUUID(), who: student.name, what, when: new Date(scriptNow()), evidence, suggested, next });
 
 /** The facts the agent should work from right now: seats seen filling and the notes she gave the helpers. */
@@ -411,7 +421,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       const control = new AbortController();
       runControl.current = control;
       const apply = (e: AgentEvent) => {
-        if (!control.signal.aborted) set((p) => ({ ...p, agentRun: applyRunEvent(p.agentRun, e, new Date(scriptNow())) }));
+        if (!control.signal.aborted) set((p) => ({ ...p, ...advanceRun(p, e, new Date(scriptNow())) }));
       };
       // A fresh run: no seats seen filling yet, but the notes she gave the helpers still apply.
       void recover(agentOn, apply, control.signal, { world: worldOf({ ...latest.current, justFilled: [] }) });
@@ -434,7 +444,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
         const event = e as RunEvent;
         set((p) => ({
           ...p,
-          agentRun: applyRunEvent(p.agentRun, event, new Date(scriptNow())),
+          ...advanceRun(p, event, new Date(scriptNow())),
           awayRun: event.type === "done" ? !p.panelOpen : p.awayRun,
           justFilled: event.type === "stale" ? [...new Set([...p.justFilled, ...event.facts.map((f) => FILLED_BY[f]).filter((x): x is string => !!x)])] : p.justFilled,
         }));
@@ -450,11 +460,13 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     runControl.current?.abort();
     const control = new AbortController();
     runControl.current = control;
+    // The run this one re-checks, so the history can nest it under that run.
+    const parent = latest.current.agentRun?.runId ?? latest.current.runs.at(-1)?.runId ?? null;
     const apply = (event: AgentEvent) => {
       if (control.signal.aborted) return;
       set((p) => ({
         ...p,
-        agentRun: applyRunEvent(p.agentRun, event, new Date(scriptNow())),
+        ...advanceRun(p, event, new Date(scriptNow()), parent),
         awayRun: event.type === "done" ? !p.panelOpen : p.awayRun,
         justFilled: event.type === "stale" ? [...new Set([...p.justFilled, ...event.facts.map((f) => FILLED_BY[f]).filter((x): x is string => !!x)])] : p.justFilled,
       }));
@@ -469,7 +481,9 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     const started = Date.now();
     const go = () => {
       const run = latest.current.agentRun;
-      if (run && run.status !== "done" && Date.now() - started < 30000) return void window.setTimeout(go, 300);
+      // Wait for the first run's state to land (stage turns "failed") and for that run to finish, so the re-check has a run to nest under.
+      const pending = latest.current.stage !== "failed" || (run && run.status !== "done");
+      if (pending && Date.now() - started < 30000) return void window.setTimeout(go, 300);
       // A moment on the first answer, so the change reads as a change. Then the real agent re-checks with MATH 13 full.
       window.setTimeout(() => rerun("recheck", ["seats.math13"], worldOf(latest.current, ["math13"])), run ? 1200 : 0);
     };

@@ -23,6 +23,10 @@ export type TraceStep = { kind: "step"; helper: AgentId; text: string; ok: boole
 export type TraceEntry = TraceStep | { kind: "handoff"; from: AgentId; to: AgentId; summary: string; at: Date } | { kind: "blocked"; tool: string; rule: string; at: Date };
 
 export type TraceRun = {
+  /** From the start event. Null only for streams that never sent one. */
+  runId: string | null;
+  /** For a re-check or re-plan: the run whose result it changed. */
+  parentRunId: string | null;
   status: "running" | "waiting" | "done";
   mode: "live" | "scripted" | null;
   reason: string | null;
@@ -41,7 +45,7 @@ export type TraceRun = {
   need: { helper: AgentId; question: string; choices: string[] } | null;
 };
 
-export const newTraceRun = (): TraceRun => ({ status: "running", mode: null, reason: null, cause: null, trigger: "error", startedAt: null, entries: [], steps: [], stale: null, result: null, ttvMs: null, need: null });
+export const newTraceRun = (): TraceRun => ({ runId: null, parentRunId: null, status: "running", mode: null, reason: null, cause: null, trigger: "error", startedAt: null, entries: [], steps: [], stale: null, result: null, ttvMs: null, need: null });
 
 /** Which helper owns each tool, so a re-check can say who is redoing work. */
 const TOOL_HELPER: Record<string, AgentId> = {
@@ -57,7 +61,7 @@ export function applyRunEvent(run: TraceRun | null, event: RunEvent | AgentEvent
   const e = event as RunEvent;
   switch (e.type) {
     case "start":
-      return { ...newTraceRun(), mode: e.mode, reason: e.reason, cause: e.cause ?? null, trigger: e.trigger ?? (e.parentRunId ? "recheck" : "error"), startedAt: at, stale: r.stale };
+      return { ...newTraceRun(), runId: e.runId ?? null, parentRunId: e.parentRunId ?? null, mode: e.mode, reason: e.reason, cause: e.cause ?? null, trigger: e.trigger ?? (e.parentRunId ? "recheck" : "error"), startedAt: at, stale: r.stale };
     case "step": {
       const step: TraceStep = { kind: "step", helper: e.helper, text: e.text, ok: e.ok, sourceIds: e.sourceIds ?? [], at };
       return { ...r, entries: [...r.entries, step], steps: [...r.steps, { ...step, tool: e.tool, perm: e.perm ?? (e.level === "drafts" ? "suggested" : "read") }] };
@@ -151,4 +155,147 @@ export function awaySummary(run: TraceRun, pickName: string | null): { title: st
   const who = helpers.length ? `${helpers.join(" and ")} redid ${run.steps.length} ${run.steps.length === 1 ? "step" : "steps"}` : "Nothing needed redoing";
   const title = run.stale ? recheckLine(run.stale.facts, true).replace(". I re-checked your options.", "") : "I re-checked your options";
   return { title: `While you were away: ${title}`, body: pickName ? `${who}. My pick is now ${pickName}.` : `${who}. Nothing open fits yet.` };
+}
+
+// ---------- Run history: every finished run, with re-checks linked to the run they changed ----------
+
+export const RUN_HISTORY_CAP = 20;
+
+/** Keeps a finished run, newest last. A run seen again (same id) replaces its earlier copy. */
+export function recordRun(runs: TraceRun[], run: TraceRun): TraceRun[] {
+  if (run.status !== "done" || !run.runId) return runs;
+  return [...runs.filter((r) => r.runId !== run.runId), run].slice(-RUN_HISTORY_CAP);
+}
+
+/** A first run and every re-check that followed from it, oldest re-check first. */
+export type RunGroup = { root: TraceRun; rechecks: TraceRun[] };
+
+/** Groups runs by the run they started from, newest group first. A re-check of a re-check joins the same group. */
+export function runGroups(runs: TraceRun[]): RunGroup[] {
+  const byId = new Map(runs.filter((r) => r.runId).map((r) => [r.runId!, r]));
+  const rootOf = (r: TraceRun): TraceRun => {
+    const seen = new Set<string>();
+    let cur = r;
+    while (cur.parentRunId && byId.has(cur.parentRunId) && !seen.has(cur.parentRunId)) {
+      seen.add(cur.parentRunId);
+      cur = byId.get(cur.parentRunId)!;
+    }
+    return cur;
+  };
+  const groups: RunGroup[] = [];
+  for (const r of runs) {
+    const root = rootOf(r);
+    let g = groups.find((x) => x.root === root);
+    if (!g) groups.push((g = { root, rechecks: [] }));
+    if (r !== root) g.rechecks.push(r);
+  }
+  return groups.reverse();
+}
+
+const ORDER: AgentId[] = ["reader", "planner", "backup", "drafter"];
+
+/** A run's title, from what started it. The class comes from what Reader saw, never a guess. */
+export function runTitle(run: TraceRun) {
+  if (run.trigger === "steer") return run.cause ? `Re-planned because you said: ${run.cause}` : "Re-planned from your note";
+  if (run.trigger === "recheck") return run.stale ? recheckLine(run.stale.facts, true).replace(". I re-checked your options.", "") : "Re-checked your options";
+  const read = run.steps.find((s) => s.helper === "reader")?.text ?? "";
+  const course = read.match(/\b([A-Z]{2,5}\s?\d+[A-Z]?)\b[^.]*\b(?:full|closed)\b/i)?.[1];
+  return course ? `${course} was full` : "A class you tried to add was full";
+}
+
+export type StoryLine = { helper: AgentId; used: boolean; text: string; sourceIds: string[] };
+
+/**
+ * One plain line per helper, built only from that helper's own steps. A helper that did nothing
+ * says why: it's off, it kept an earlier result, or it wasn't needed.
+ */
+export function storyLines(run: TraceRun, agentOn: Record<AgentId, boolean>, earlier: TraceRun[] = []): StoryLine[] {
+  return ORDER.map((helper) => {
+    const steps = run.steps.filter((s) => s.helper === helper);
+    if (steps.length) {
+      const last = [...steps].reverse().find((s) => s.ok) ?? steps.at(-1)!;
+      return { helper, used: true, text: last.text, sourceIds: [...new Set(steps.flatMap((s) => s.sourceIds))] };
+    }
+    if (!agentOn[helper]) return { helper, used: false, text: OFF_LINE[helper], sourceIds: [] };
+    if (earlier.some((r) => r.steps.some((s) => s.helper === helper))) return { helper, used: false, text: `${HELPER_NAME[helper]}'s earlier result was still valid, so it didn't run again.`, sourceIds: [] };
+    if (helper === "drafter") return { helper, used: false, text: "Drafter is waiting. It only writes your counselor if your pick needs a yes.", sourceIds: [] };
+    return { helper, used: false, text: `${HELPER_NAME[helper]} wasn't needed this time.`, sourceIds: [] };
+  });
+}
+
+const list = (names: string[]) => (names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`);
+
+/** Who redid work in a re-check and who kept an earlier result: "Backup finder and Planner redid their work. Reader was still valid, so it didn't re-run." */
+export function recheckSummary(recheck: TraceRun, earlier: TraceRun[]) {
+  const redid = ORDER.filter((h) => recheck.steps.some((s) => s.helper === h));
+  const kept = ORDER.filter((h) => !redid.includes(h) && earlier.some((r) => r.steps.some((s) => s.helper === h)));
+  const a = redid.length ? `${list(redid.map((h) => HELPER_NAME[h]))} redid ${redid.length === 1 ? "its" : "their"} work.` : "No helper needed to redo work.";
+  const b = kept.length ? ` ${list(kept.map((h) => HELPER_NAME[h]))} ${kept.length === 1 ? "was" : "were"} still valid, so ${kept.length === 1 ? "it" : "they"} didn't re-run.` : "";
+  return { redid, kept, line: a + b };
+}
+
+/** "filled 2 min later", from the first run's start to the re-check's start. */
+export function laterLine(fromMs: number, toMs: number) {
+  const s = Math.max(0, Math.round((toMs - fromMs) / 1000));
+  return s < 60 ? `${s}s later` : `${Math.round(s / 60)} min later`;
+}
+
+// ---------- Helper lanes: positions for the "How it ran" chart ----------
+
+export type LaneDot = { id: string; helper: AgentId; ms: number; x: number; y: number; text: string; sourceIds: string[]; at: Date; pick: boolean; kept: boolean; optionId?: string | null };
+export type LaneLink = { from: { x: number; y: number }; to: { x: number; y: number }; summary: string };
+export type LaneChange = { x: number; label: string };
+export type LaneLayout = { width: number; height: number; laneY: Record<AgentId, number>; dots: LaneDot[]; links: LaneLink[]; changes: LaneChange[]; ticks: { x: number; label: string }[] };
+
+export const LANE = { left: 120, right: 40, top: 34, gap: 46, minWidth: 640, pxPerSecond: 70 };
+
+/**
+ * Lays out a run and its re-checks on one time axis: one lane per helper, x = time since the first
+ * run started. Gaps between runs are shortened so a long wait doesn't push the re-check off screen.
+ */
+export function laneLayout(root: TraceRun, rechecks: TraceRun[] = []): LaneLayout {
+  const laneY = Object.fromEntries(ORDER.map((h, i) => [h, LANE.top + i * LANE.gap])) as Record<AgentId, number>;
+  const runs = [root, ...rechecks];
+  // Each run gets its own stretch of the axis; a re-check starts a short gap after the previous run ends.
+  const GAP_MS = 1500;
+  let offset = 0;
+  const spans = runs.map((r, i) => {
+    const t0 = r.startedAt?.getTime() ?? r.steps[0]?.at.getTime() ?? 0;
+    const last = Math.max(t0, ...r.entries.map((e) => e.at.getTime()));
+    const start = i === 0 ? 0 : offset + GAP_MS;
+    offset = start + (last - t0);
+    return { r, t0, start, end: offset };
+  });
+  const totalMs = Math.max(1000, offset);
+  const width = Math.max(LANE.minWidth, LANE.left + LANE.right + (totalMs / 1000) * LANE.pxPerSecond);
+  const xOf = (ms: number) => LANE.left + (ms / totalMs) * (width - LANE.left - LANE.right);
+  const dots: LaneDot[] = [];
+  const links: LaneLink[] = [];
+  const changes: LaneChange[] = [];
+  const ticks: { x: number; label: string }[] = [{ x: xOf(0), label: "0s" }];
+  spans.forEach(({ r, t0, start }, i) => {
+    const runDots: LaneDot[] = r.steps.map((s, k) => {
+      const ms = start + (s.at.getTime() - t0);
+      return { id: `${r.runId ?? i}-${k}`, helper: s.helper, ms, x: xOf(ms), y: laneY[s.helper], text: s.text, sourceIds: s.sourceIds, at: s.at, pick: s.tool === "submit_recommendation", kept: false, optionId: s.tool === "submit_recommendation" ? r.result?.optionId ?? null : null };
+    });
+    if (i > 0) {
+      changes.push({ x: xOf(start - GAP_MS / 2), label: r.trigger === "steer" ? (r.cause ? `You said: ${r.cause}` : "Your note") : runTitle(r) });
+      const earlier = runs.slice(0, i);
+      for (const h of ORDER) {
+        if (r.steps.some((s) => s.helper === h)) continue;
+        const prev = [...earlier].reverse().flatMap((e) => e.steps).find((s) => s.helper === h);
+        if (prev) dots.push({ id: `${r.runId ?? i}-kept-${h}`, helper: h, ms: start, x: xOf(start), y: laneY[h], text: `${HELPER_NAME[h]} kept its earlier result: ${prev.text}`, sourceIds: prev.sourceIds, at: prev.at, pick: false, kept: true });
+      }
+    }
+    for (const e of r.entries) {
+      if (e.kind !== "handoff") continue;
+      const ms = start + (e.at.getTime() - t0);
+      const from = [...runDots].reverse().find((d) => d.helper === e.from && d.ms <= ms);
+      const to = runDots.find((d) => d.helper === e.to && d.ms >= ms);
+      if (from && to) links.push({ from: { x: from.x, y: from.y }, to: { x: to.x, y: to.y }, summary: e.summary });
+    }
+    dots.push(...runDots);
+    if (r.ttvMs !== null) ticks.push({ x: xOf(start + r.ttvMs), label: i === 0 ? `${Math.round(r.ttvMs / 1000)}s · usable` : `+${Math.round(r.ttvMs / 1000)}s` });
+  });
+  return { width, height: LANE.top + ORDER.length * LANE.gap, laneY, dots, links, changes, ticks };
 }

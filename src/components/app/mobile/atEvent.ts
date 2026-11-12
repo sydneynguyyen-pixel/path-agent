@@ -10,7 +10,7 @@ const TZ = "America/Los_Angeles";
 const BEFORE_MIN = 60;
 const AFTER_MIN = 180;
 
-export type AtEvent = { id: string; name: string; when: string; date: string; minutes: number };
+export type AtEvent = { id: string; name: string; when: string; date: string; minutes: number; host: string; photo: string };
 
 /** The card link the QR code opens. An .example domain: nothing real is behind it. */
 export const cardLink = (studentId: string) => `https://trellis.example/c/${encodeURIComponent(studentId)}`;
@@ -42,7 +42,7 @@ export function toAtEvent(o: Opportunity): AtEvent | null {
   const minutes = startMinutes(o.when);
   if (minutes === null) return null;
   const day = WEEKDAY[new Date(`${o.startsOn}T12:00:00Z`).getUTCDay()]!;
-  return { id: o.id, name: eventName(o), when: `${day} ${clock(minutes)}`, date: o.startsOn, minutes };
+  return { id: o.id, name: eventName(o), when: `${day} ${clock(minutes)}`, date: o.startsOn, minutes, host: o.host, photo: o.photo };
 }
 
 /** The date (YYYY-MM-DD) and minutes after midnight in the school's time zone. */

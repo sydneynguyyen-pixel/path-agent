@@ -320,7 +320,7 @@ function Explore() {
         <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5 pt-4 pb-2">
           <div className="min-w-0">
             <h1 className="text-3xl font-semibold md:text-[2rem]">{people ? "People" : local.kind === "all" ? "What do you want to try next?" : KIND[local.kind].heading}</h1>
-            <p className="mt-2 text-muted-foreground">{people ? "Classmates who want to go with you, and people you've met." : local.kind === "event" ? "Picked for your goal, on the days you're free." : local.kind === "all" ? "Classes, clubs, events and internships picked for you." : "Picked for your goal."}</p>
+            {!people && <p className="mt-2 text-muted-foreground">{local.kind === "event" ? "Picked for your goal, on the days you're free." : local.kind === "all" ? "Classes, clubs, events and internships picked for you." : "Picked for your goal."}</p>}
             {!goal && <div className="mt-6"><NoGoal /></div>}
           </div>
           <div className={cn("relative w-full max-w-sm", people && "hidden")}>

@@ -161,7 +161,7 @@ function Request({ peer: p, tie, open, onToggle }: { peer: EventPeer; tie: Tie |
 }
 
 /** Who someone is at a glance: name, year and major, school. How you know them sits under it when you do. */
-function PeerSummary({ peer: p, tie }: { peer: EventPeer; tie: Tie | null }) {
+export function PeerSummary({ peer: p, tie }: { peer: EventPeer; tie: Tie | null }) {
   return (
     <span className="min-w-0 flex-1">
       <span className="block truncate text-sm font-semibold">{p.name}</span>

@@ -2,8 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Check, Copy, IdCard, Mail, Pencil, UserPlus, Users } from "lucide-react";
-import { FriendButton, useKnown } from "@/components/app/WhoGoing";
-import { tieWith } from "@/lib/going";
+import { FriendButton } from "@/components/app/WhoGoing";
 import { goTogetherEvent, opportunities, student, type EventPeer } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { cn } from "@/lib/utils";
@@ -32,8 +31,7 @@ export function PeopleMet() {
       <FriendRequests />
       <MatchCard />
       <div>
-        <h2 className="text-xl font-semibold">People you've met</h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Notes you wrote after talking to someone, and anything you said you'd do. Only you see these. They come back before you see that person again.</p>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"><h2 className="text-xl font-semibold">People you've met</h2><span className="text-xs text-muted-foreground">Only you see your notes</span></div>
         <ul className="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {mergeMet(metStudents, j.metAt, metEventName).map((m) => <MetStudentItem key={m.peerId} met={m} />)}
           {met.map((p) => (
@@ -141,7 +139,6 @@ function NoteItem({ personName, personId, note: n }: { personName: string; perso
 /** Friend requests she got (accept or not now), the ones she sent (still waiting), and her friends. Friends need both people to say yes. */
 function FriendRequests() {
   const j = useJourney();
-  const known = useKnown();
   const [card, setCard] = useState<EventPeer | null>(null);
   const everyone = goTogetherEvent.visiblePeers;
   const find = (ids: string[]) => ids.map((id) => everyone.find((p) => p.id === id)).filter((p): p is EventPeer => !!p);
@@ -151,20 +148,16 @@ function FriendRequests() {
   if (!incoming.length && !sent.length && !friends.length) return null;
   return (
     <section aria-labelledby="friends-title">
-      <h2 id="friends-title" className="text-xl font-semibold">Friends</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Friends show first when you look at who's going. You're friends once you both say yes.</p>
+      <h2 id="friends-title" className="text-xl font-semibold">{incoming.length ? `Friend requests · ${incoming.length}` : "Friends"}</h2>
       {incoming.length > 0 && (
         <>
-          <h3 className="mt-5 text-sm font-semibold">Friend requests · {incoming.length}</h3>
-          <ul className="surface mt-2 divide-y overflow-hidden">
+          <ul className="surface mt-4 divide-y overflow-hidden">
             {incoming.map((p) => {
-              const tie = tieWith(p, known, everyone);
               return (
                 <li key={p.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-3.5">
                   <button type="button" onClick={() => setCard(p)} aria-label={`See ${callName(p.name)}'s card`} className="shrink-0 rounded-full"><PersonPhoto photo={p.photo} org={p.org} size="md" /></button>
                   <div className="min-w-0 flex-1 basis-56">
                     <div className="flex flex-wrap items-baseline gap-x-2"><span className="font-semibold">{p.name}</span><span className="text-sm text-muted-foreground">{p.standing} · {p.major}</span></div>
-                    <p className="text-xs text-muted-foreground">Wants to be friends{tie ? ` · ${tie.text}` : ""}</p>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
                     <Button size="sm" variant="ghost" onClick={() => setCard(p)}><IdCard className="size-4" aria-hidden="true" />See card</Button>
@@ -211,9 +204,9 @@ function MatchCard() {
   const shown = goTogetherEvent.visiblePeers.filter((p) => state(p) === "asked-you" || state(p) === "matched");
   if (shown.length === 0) {
     return (
-      <section aria-labelledby="match-title" className="surface flex flex-wrap items-center gap-4 p-5">
-        <span className="grid size-9 place-items-center rounded-xl aqua-chip"><Users className="size-4" aria-hidden="true" /></span>
-        <div className="min-w-0 flex-1 basis-60"><h2 id="match-title" className="font-semibold">Going together</h2><p className="text-xs text-muted-foreground">Say you're going to an event to see who else is going and pick who to go with.</p></div>
+      <section aria-labelledby="match-title" className="notice flex flex-wrap items-center gap-x-3 gap-y-2 py-2 pr-2 pl-3">
+        <span className="grid size-7 shrink-0 place-items-center rounded-full aqua-chip"><Users className="size-3.5" aria-hidden="true" /></span>
+        <h2 id="match-title" className="min-w-0 flex-1 text-sm font-semibold">Going together</h2>
         <Button asChild size="sm" variant="outline"><Link to="/explore" search={{ open: goTogetherEvent.id }}>See who's going to {goTogetherEvent.name}</Link></Button>
       </section>
     );

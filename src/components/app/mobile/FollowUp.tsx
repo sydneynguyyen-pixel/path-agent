@@ -8,6 +8,8 @@ import { usePortfolioSkills } from "@/hooks/use-portfolio-skills";
 import { useFound } from "@/components/app/EventBits";
 import { SproutSays } from "@/components/app/Brand";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { eventName } from "./atEvent";
 
 /** Skills on her card, the same list Your card offers (verified, not hidden). */
@@ -63,16 +65,16 @@ export function FollowUpComposer({ peer, eventId, onDone }: { peer: EventPeer; e
       {drafter && <SproutSays label="Drafter">From your note and both cards. Edit anything.</SproutSays>}
       <div role="radiogroup" aria-label="What to ask" className="flex flex-wrap gap-2">
         {FOLLOW_UP_ASKS.map((a) => (
-          <button key={a.id} type="button" role="radio" aria-checked={ask === a.id} onClick={() => pickAsk(a.id)} className={`share-chip ${ask === a.id ? "glass-active font-medium" : ""}`}>{a.label}</button>
+          <button key={a.id} type="button" role="radio" aria-checked={ask === a.id} onClick={() => pickAsk(a.id)} className={cn("inline-flex min-h-11 items-center rounded-full px-4 py-2 text-sm whitespace-nowrap transition-colors", ask === a.id ? "glass-active font-medium" : "text-muted-foreground hover:bg-secondary hover:text-foreground")}>{a.label}</button>
         ))}
       </div>
-      <textarea className="share-input min-h-44" value={body} onChange={(e) => setBody(e.target.value)} aria-label={`Follow-up to ${name}`} placeholder={`Write to ${name}`} />
+      <Textarea rows={8} className="bg-card" value={body} onChange={(e) => setBody(e.target.value)} aria-label={`Follow-up to ${name}`} placeholder={`Write to ${name}`} />
       <div className="grid gap-2">
-        <Button className="h-12 w-full text-base" disabled={!body.trim()} onClick={send}><Send className="size-4" aria-hidden="true" />Send in Trellis</Button>
+        <Button className="h-11 w-full" disabled={!body.trim()} onClick={send}><Send className="size-4" aria-hidden="true" />Send in Trellis</Button>
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" className={canEmail ? "h-12" : "col-span-2 h-12"} disabled={!body.trim()} onClick={() => void copy()}><Copy className="size-4" aria-hidden="true" />Copy</Button>
+          <Button variant="outline" className={canEmail ? "h-11" : "col-span-2 h-11"} disabled={!body.trim()} onClick={() => void copy()}><Copy className="size-4" aria-hidden="true" />Copy</Button>
           {canEmail && (
-            <Button asChild variant="outline" className="h-12">
+            <Button asChild variant="outline" className="h-11">
               <a href={`mailto:${peer.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`} onClick={() => { j.followUpMeet(peer.id, eventId, "email"); onDone?.(); }}><Mail className="size-4" aria-hidden="true" />Email</a>
             </Button>
           )}

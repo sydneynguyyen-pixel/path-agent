@@ -1,7 +1,7 @@
 import { Wallpaper } from "@/components/app/Desktop";
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
-import { ArrowLeft, RotateCcw, Shuffle, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, ChevronRight, ChevronDown, UserCheck, UserRound, IdCard, Settings, Compass, Sprout, Target, Waypoints, GraduationCap, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ArrowLeft, RotateCcw, Shuffle, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, ChevronRight, ChevronDown, UserCheck, UserRound, IdCard, Settings, Compass, Sprout, Target, Waypoints, GraduationCap, PanelLeftClose, PanelLeftOpen, Menu, Monitor } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { sources, student } from "@/data/scenario";
@@ -66,28 +66,52 @@ const sectionFor = (path: string): string => {
   return path;
 };
 const groupOf = (navPath: string) => groups.find((g) => g.links.some((l) => l.to === navPath)) ?? groups[0];
-const tabs = [
-  { label: "Overview", to: "/", icon: Home, group: "Overview" },
-  { label: "School", to: "/degree", icon: GraduationCap, group: "School" },
-  { label: "Growth", to: "/career", icon: Sprout, group: "Growth" },
-  { label: "Agents", to: "/agents", icon: Bot, group: "" },
-] as const;
+/** Pages built for a bigger screen. On a phone they still open, with one line saying so. */
+const DESKTOP_FIRST = ["/semester", "/portal"];
+export const desktopFirst = (path: string, search: Record<string, unknown>) =>
+  DESKTOP_FIRST.includes(path) || (path === "/career" && (search["tab"] === "resume" || search["resume"] === true || "plan" in search));
 
-/** Phone only: the four areas as a bottom tab bar, within thumb reach. */
-function BottomTabs({ navPath }: { navPath: string }) {
+/**
+ * Phone only: what she needs on the go. Home, Events, Sprout (the chat, with what's waiting on her)
+ * and More for everything else, which is built for a bigger screen.
+ */
+function BottomTabs({ path }: { path: string }) {
+  const j = useJourney();
   const waiting = waitingCount(useEvents());
-  const active = groupOf(navPath).label;
+  const [more, setMore] = useState(false);
+  const onEvents = path === "/explore" || path === "/event";
+  const chatting = j.chatOpen || j.panelOpen;
+  const tab = (on: boolean) => cn("relative flex flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] text-muted-foreground", on && "glass-active font-medium text-foreground");
+  const openSprout = () => (j.stage === "failed" && !j.chosenId ? j.setPanelOpen(true) : j.openChat(j.activeChat));
+  const rest = allLinks.filter((l) => l.to !== "/" && l.to !== "/explore");
   return (
     <nav aria-label="Main" className="bottom-tabs fixed inset-x-3 bottom-3 z-40 md:hidden">
       <GlassBar className="grid w-full grid-cols-4 gap-1 p-1.5">
-        {tabs.map((t) => (
-          <Link key={t.to} to={t.to} aria-current={active === t.group ? "page" : undefined} className={cn("relative flex flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] text-muted-foreground", active === t.group && "glass-active font-medium text-foreground")}>
-            <t.icon className="size-5" aria-hidden="true" />
-            {t.label}
-            {t.to === "/agents" && waiting > 0 && <span aria-label={`${waiting} waiting for you`} className="absolute right-[28%] top-0.5 grid size-4 place-items-center rounded-full count-badge text-[9px]">{waiting}</span>}
-          </Link>
-        ))}
+        <Link to="/" aria-current={path === "/" && !chatting ? "page" : undefined} className={tab(path === "/" && !chatting)}><Home className="size-5" aria-hidden="true" />Home</Link>
+        <Link to="/explore" search={{ calendar: true }} aria-current={onEvents && !chatting ? "page" : undefined} className={tab(onEvents && !chatting)}><CalendarDays className="size-5" aria-hidden="true" />Events</Link>
+        <button type="button" onClick={openSprout} aria-pressed={chatting} className={tab(chatting)}>
+          <Sprout className="size-5" aria-hidden="true" />Sprout
+          {waiting > 0 && <span aria-label={`${waiting} waiting for you`} className="absolute right-[24%] top-0.5 grid size-4 place-items-center rounded-full count-badge text-[9px]">{waiting}</span>}
+        </button>
+        <button type="button" onClick={() => setMore(true)} aria-haspopup="dialog" className={tab(!onEvents && path !== "/" && !chatting)}><Menu className="size-5" aria-hidden="true" />More</button>
       </GlassBar>
+      <Sheet open={more} onOpenChange={setMore}>
+        <SheetContent side="bottom" className="brand-app rounded-t-[24px] pb-8">
+          <SheetHeader>
+            <SheetTitle>More</SheetTitle>
+            <SheetDescription>Best on a bigger screen.</SheetDescription>
+          </SheetHeader>
+          <ul className="grid grid-cols-3 gap-2 px-4">
+            {rest.map((l) => (
+              <li key={l.to}>
+                <Link to={l.to} onClick={() => setMore(false)} className={cn("flex flex-col items-center gap-1.5 rounded-[14px] bg-card px-2 py-3 text-xs shadow-soft", sectionFor(path) === l.to && "glass-active font-medium")}>
+                  <l.icon className="size-5" aria-hidden="true" />{l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </SheetContent>
+      </Sheet>
     </nav>
   );
 }
@@ -241,6 +265,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const router = useRouter();
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const search = useRouterState({ select: (s) => s.location.search as Record<string, unknown> });
   const backTo = useRouterState({ select: (s) => s.location.state.backTo });
   const onPortal = path === "/portal";
   const blankPage = blankPages[path];
@@ -352,6 +377,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {/* Keyed by route so each page opens at the top of this scroll area. */}
           <div key={path} className={`app-scroll flex min-h-0 flex-1 flex-col md:overflow-y-auto ${onPortal || onDesk ? "" : "app-canvas"}`}>
             <main className={`app-page relative z-10 flex-1 px-6 py-8 md:px-10 ${onPortal ? "" : "page-stagger"}`}>
+              {desktopFirst(path, search) && (
+                <p className="notice mb-5 flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground md:hidden"><Monitor className="size-4 shrink-0" aria-hidden="true" />Made for a bigger screen. Look around here; edit on your laptop.</p>
+              )}
               {/* Until hydration we can't tell a new student from a returning one, so show neither. */}
               {j.pathBuilt === null && (blankPage || path === "/") ? null : j.pathBuilt === false && blankPage ? <BlankPage {...blankPage} /> : children}
             </main>
@@ -361,7 +389,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <BottomTabs navPath={navPath} />
+      <BottomTabs path={path} />
       {!onPortal && <AgentChat />}
       <ClassDetails />
       <OpportunityDetails />

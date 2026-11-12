@@ -24,9 +24,9 @@ export const Route = createFileRoute("/degree")({
   }),
   head: () => ({
     meta: [
-      { title: "Degree — Path Agent" },
+      { title: "Degree — Trellis" },
       { name: "description", content: "What you've finished, what's left, and every way to graduation." },
-      { property: "og:title", content: "Degree — Path Agent" },
+      { property: "og:title", content: "Degree — Trellis" },
       { property: "og:description", content: "What you've finished, what's left, and every way to graduation." },
     ],
   }),

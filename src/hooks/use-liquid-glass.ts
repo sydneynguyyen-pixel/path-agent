@@ -25,7 +25,11 @@ function mapFor(w: number, h: number, radius: number, bezel: number) {
 }
 
 /** Bends whatever passes behind the element at its edges, like the rim of a glass lens. */
-export function useLiquidGlass<T extends HTMLElement>(ref: RefObject<T | null>, { bezel = 12, scale = 34, blur = 0.4, saturate = 1.5 } = {}) {
+/**
+ * `aberration` splits the bend per color channel (red bends a little more, blue a little less),
+ * which gives the thin rainbow fringe real glass has at its edge. 0 keeps one plain bend.
+ */
+export function useLiquidGlass<T extends HTMLElement>(ref: RefObject<T | null>, { bezel = 12, scale = 34, blur = 0.4, saturate = 1.5, aberration = 0 } = {}) {
   useEffect(() => {
     const el = ref.current;
     if (!el || !canRefract()) return;
@@ -41,12 +45,41 @@ export function useLiquidGlass<T extends HTMLElement>(ref: RefObject<T | null>, 
     image.setAttribute("y", "0");
     image.setAttribute("preserveAspectRatio", "none");
     image.setAttribute("result", "map");
-    const bend = document.createElementNS(NS, "feDisplacementMap");
-    bend.setAttribute("in", "SourceGraphic");
-    bend.setAttribute("in2", "map");
-    bend.setAttribute("xChannelSelector", "R");
-    bend.setAttribute("yChannelSelector", "G");
-    bend.setAttribute("result", "bent");
+    const nodes: SVGElement[] = [image];
+    const bends: { node: SVGElement; k: number }[] = [];
+    const displace = (k: number, result: string) => {
+      const node = document.createElementNS(NS, "feDisplacementMap");
+      node.setAttribute("in", "SourceGraphic");
+      node.setAttribute("in2", "map");
+      node.setAttribute("xChannelSelector", "R");
+      node.setAttribute("yChannelSelector", "G");
+      node.setAttribute("result", result);
+      bends.push({ node, k });
+      nodes.push(node);
+    };
+    if (aberration > 0) {
+      // Bend each channel by a slightly different amount, keep only that channel, then add them back up.
+      const channels: [string, number, string][] = [["r", 1 + aberration, "1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"], ["g", 1, "0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0"], ["b", 1 - aberration, "0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"]];
+      for (const [c, k, matrix] of channels) {
+        displace(k, `d${c}`);
+        const keep = document.createElementNS(NS, "feColorMatrix");
+        keep.setAttribute("in", `d${c}`);
+        keep.setAttribute("type", "matrix");
+        keep.setAttribute("values", matrix);
+        keep.setAttribute("result", c);
+        nodes.push(keep);
+      }
+      const add = (a: string, b: string, result: string) => {
+        const node = document.createElementNS(NS, "feBlend");
+        node.setAttribute("in", a);
+        node.setAttribute("in2", b);
+        node.setAttribute("mode", "screen");
+        node.setAttribute("result", result);
+        nodes.push(node);
+      };
+      add("r", "g", "rg");
+      add("rg", "b", "bent");
+    } else displace(1, "bent");
     // If a sample ever lands outside the backdrop, show the untouched page there instead of a black pixel.
     const merge = document.createElementNS(NS, "feMerge");
     for (const input of ["SourceGraphic", "bent"]) {
@@ -54,7 +87,8 @@ export function useLiquidGlass<T extends HTMLElement>(ref: RefObject<T | null>, 
       node.setAttribute("in", input);
       merge.append(node);
     }
-    filter.append(image, bend, merge);
+    nodes.push(merge);
+    filter.append(...nodes);
     svgDefs().append(filter);
 
     const apply = () => {
@@ -64,7 +98,8 @@ export function useLiquidGlass<T extends HTMLElement>(ref: RefObject<T | null>, 
       const radius = Math.min(parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0, w / 2, h / 2);
       // Short pills get a thinner, gentler rim so the label sitting under them stays readable.
       image.setAttribute("href", mapFor(w, h, radius, Math.round(Math.min(bezel, h * 0.22))));
-      bend.setAttribute("scale", String(scale * Math.min(1, (h / 46) ** 2)));
+      const amount = scale * Math.min(1, (h / 46) ** 2);
+      for (const b of bends) b.node.setAttribute("scale", String(amount * b.k));
       for (const node of [filter, image]) {
         node.setAttribute("width", String(w));
         node.setAttribute("height", String(h));
@@ -77,6 +112,8 @@ export function useLiquidGlass<T extends HTMLElement>(ref: RefObject<T | null>, 
     let timer: ReturnType<typeof setTimeout>;
     const resizes = new ResizeObserver(() => {
       clearTimeout(timer);
+      // While it's changing shape the old lens would be the wrong size, so use plain frost until it settles.
+      el.style.backdropFilter = `blur(${blur}px) saturate(${saturate})`;
       timer = setTimeout(apply, 90);
     });
     resizes.observe(el);
@@ -86,5 +123,5 @@ export function useLiquidGlass<T extends HTMLElement>(ref: RefObject<T | null>, 
       filter.remove();
       el.style.backdropFilter = "";
     };
-  }, [ref, bezel, scale, blur, saturate]);
+  }, [ref, bezel, scale, blur, saturate, aberration]);
 }

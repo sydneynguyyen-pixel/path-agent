@@ -1,18 +1,20 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { AlertTriangle, CalendarDays, CheckCircle2, Send, Scale, Info, Star, Zap, Clock, Users, ListPlus, LogOut, Search } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, CalendarDays, CheckCircle2, PencilLine, Send, Scale, Info, Star, Zap, Clock, Users, ListPlus, LogOut, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { options, rankOptions, student, syllabi, terms, PILEUP_THRESHOLD, DROP_DEADLINE, REQUIREMENT_LABEL, waitlist, type Option } from "@/data/scenario";
 import { recoveryPath } from "@/lib/confidence";
-import { useJourney, fmtStamp } from "@/lib/journey";
+import { buildDraft, draftGreeting, draftLines, draftSignoff, useJourney, fmtStamp } from "@/lib/journey";
 import { CheckBadge, SourceChip } from "./bits";
 import { AgentAvatar, SubjectIcon } from "./Brand";
 import { Spot } from "./Illustrations";
 import { cn } from "@/lib/utils";
 import { AddsSkills } from "./SkillsBits";
 import { Ink } from "./Ink";
+import { NoteBox, RecheckBanner, RememberedNotes, RunTrace } from "./RunTrace";
 
 const verdictLabel = {
   counts: "Counts toward QR-1",
@@ -26,11 +28,11 @@ const planTerm = terms.find((t) => t.status === "registering")?.name ?? "term";
 
 const weekLoad = (week: number) => syllabi.reduce((n, s) => n + s.items.filter((i) => i.week === week).length, 0);
 
-function Availability({ o }: { o: Option }) {
+function Availability({ o, justFilled = false }: { o: Option; justFilled?: boolean }) {
   return (
     <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
       <span className={cn("inline-flex items-center gap-1 font-medium", o.seatsOpen > 0 ? "text-success" : "text-muted-foreground")}>
-        <Users className="size-3.5" /> {o.seatsOpen > 0 ? `${o.seatsOpen} seats open` : "Full · 0 seats"}
+        <Users className="size-3.5" /> {justFilled ? "Just filled · 0 seats" : o.seatsOpen > 0 ? `${o.seatsOpen} seats open` : "Full · 0 seats"}
       </span>
       <span className="inline-flex items-center gap-1 text-muted-foreground">
         <Clock className="size-3.5" /> Section {o.section} · {o.sectionTime}
@@ -102,43 +104,42 @@ function SelfRegisterSteps({ o }: { o: Option }) {
   );
 }
 
-type Run = NonNullable<ReturnType<typeof useJourney>["agentRun"]>;
-
-/** One action at a time while the agent works, then the whole list folds away until she opens it. */
-function ActionsTaken({ run, skipped, picked }: { run: Run; skipped: ("reader" | "planner" | "backup")[]; picked: Option | undefined }) {
-  if (run.status === "running") {
-    const latest = run.steps.at(-1);
+/** The counselor draft as a card: one claim per line with its source, until she edits it into her own words. */
+function DraftCard({ id }: { id: string }) {
+  const j = useJourney();
+  const [editing, setEditing] = useState(false);
+  const edited = j.draft !== buildDraft(id);
+  if (editing || edited) {
     return (
-      <div aria-live="polite" className="flex min-h-11 items-center gap-2 text-sm">
-        <Ink />
-        {latest ? <span key={run.steps.length} className="step-in flex items-center gap-2"><AgentAvatar agent={latest.helper} /><span>{latest.text}</span></span> : <span className="text-muted-foreground">Getting started…</span>}
+      <div className="space-y-2">
+        <Textarea value={j.draft} onChange={(e) => j.setDraft(e.target.value)} rows={12} className="text-sm" aria-label="Email to your counselor" autoFocus={editing} />
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span>{edited ? "Your words now. These sources stay attached:" : "Sources attached:"}</span>
+          {[...new Set(draftLines(id).flatMap((l) => l.sourceIds))].map((s) => <SourceChip key={s} id={s} />)}
+        </div>
+        {edited && <Button variant="ghost" size="sm" onClick={() => { j.setDraft(buildDraft(id)); setEditing(false); }}>Undo my edits</Button>}
       </div>
     );
   }
   return (
-    <details aria-label="What Path Agent did" className="rounded-xl border bg-card/60 px-4 py-3 text-sm">
-      <summary className="cursor-pointer font-medium">Actions taken · {run.steps.length}</summary>
-      <div className="mt-3 space-y-2">
-        <span className="inline-block rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">{run.mode === "live" ? `Live AI${run.result?.model ? ` · ${run.result.model}` : ""}` : run.mode === "scripted" ? "Scripted run" : "Connecting"}</span>
-        {run.mode === "scripted" && run.reason && <p className="text-xs text-muted-foreground">{run.reason} These are the same checks in a fixed order, with no AI choosing them.</p>}
-        <ol className="space-y-2">
-          {run.steps.map((s, i) => (
-            <li key={i} className="flex items-center gap-2">
-              {s.ok ? <CheckCircle2 className="size-4 shrink-0 text-mark-yes" /> : <Info className="size-4 shrink-0 text-warning" />}
-              <AgentAvatar agent={s.helper} /><span>{s.text}</span>
-            </li>
-          ))}
-          {skipped.map((h) => (
-            <li key={h} className="flex items-center gap-2 text-muted-foreground"><span className="w-4 shrink-0 text-xs">Off</span><AgentAvatar agent={h} /><span>This task is off, so it was skipped.</span></li>
-          ))}
-        </ol>
-        {picked && run.result?.why && <p><span className="font-medium">Why I picked {picked.course.replace("BCC ", "")}:</span> {run.result.why}</p>}
-      </div>
-    </details>
+    <div className="draft-card space-y-3 rounded-2xl bg-card p-4 text-sm shadow-soft">
+      <p>{draftGreeting()}</p>
+      <ol className="space-y-2.5">
+        {draftLines(id).map((l) => (
+          <li key={l.text} className="draft-line">
+            <span>{l.text}</span>
+            {l.sourceIds.map((s) => <SourceChip key={s} id={s} />)}
+          </li>
+        ))}
+      </ol>
+      <p className="whitespace-pre-line">{draftSignoff()}</p>
+      <Button variant="outline" size="sm" onClick={() => setEditing(true)}><PencilLine className="size-4" aria-hidden="true" />Edit in my words</Button>
+    </div>
   );
 }
 
-export function AgentPanel({ docked = false }: { docked?: boolean }) {
+/** The options run. In the chat it shows without its own header, and the chat's reply box replaces the note box. */
+export function AgentPanel({ docked = false, inChat = false }: { docked?: boolean; inChat?: boolean }) {
   const j = useJourney();
   const run = j.agentRun;
   const scanning = run?.status === "running";
@@ -146,14 +147,17 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
   const helpersOff = (["reader", "planner", "backup"] as const).filter((h) => !j.agentOn[h]);
   const chosen = options.find((o) => o.id === j.chosenId);
   const path = chosen ? recoveryPath(chosen) : null;
-  const ranked = rankOptions(options).filter((o) => ["math13", "psyc5", "bus21"].includes(o.id));
+  // A section a re-check found filled drops to the bottom, like any full section.
+  const ranked = rankOptions(options.map((o) => (j.justFilled.includes(o.id) ? { ...o, seatsOpen: 0 } : o))).filter((o) => ["math13", "psyc5", "bus21"].includes(o.id))
+    // The helpers' pick leads, so the card that says "My pick" is the first one she reads.
+    .sort((a, b) => Number(b.id === pick?.id) - Number(a.id === pick?.id));
   const ruledOut = options.filter((o) => ["math10", "stat2-02"].includes(o.id));
   const plannerOff = !j.agentOn.reader || !j.agentOn.planner;
   const drafterOff = !j.agentOn.drafter;
 
   const header = (
     <div className="agent-panel px-4 pt-4 pb-2">
-      <p className="text-sm text-muted-foreground">Path Agent</p>
+      <p className="text-sm text-muted-foreground">Sprout</p>
       <h2 className="font-serif text-2xl">Seats go fast. Here's what to do now.</h2>
     </div>
   );
@@ -164,7 +168,14 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
             <SourceChip id="portal-full" />
           </div>
 
-          {run && <ActionsTaken run={run} skipped={helpersOff} picked={pick} />}
+          {run && <RecheckBanner run={run} />}
+          {run && <RunTrace run={run} waitingOn={!scanning && pick && j.stage === "failed" ? "planner" : null} pickedName={pick?.course.replace("BCC ", "")} />}
+          {!inChat && run?.status === "done" && j.stage === "failed" && !plannerOff && (
+            <div className="space-y-2">
+              <NoteBox />
+              <RememberedNotes />
+            </div>
+          )}
 
           {plannerOff && j.stage === "failed" && (
             <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
@@ -193,7 +204,7 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
                         <div className="text-sm text-muted-foreground">{o.title}</div>
                       </div>
                     </div>
-                    <Availability o={o} />
+                    <Availability o={o} justFilled={j.justFilled.includes(o.id)} />
 
                     <div className="agent-note mt-4 space-y-3 border-t pt-4 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
@@ -278,12 +289,8 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
                   <div className="flex items-center gap-3"><Spot name="envelope" className="w-16" /><p className="text-sm"><CheckCircle2 className="mr-1 inline size-4 text-mark-yes" />Approved by {student.name} at {fmtStamp(j.decisions.at(-1)!.when)}. Demo only: no email was sent.</p></div>
                 ) : (
                   <>
-                    <p className="text-sm text-muted-foreground">Doesn't block your seat. Draft to {student.counselor} ({student.counselorEmail}). Edit it before you send.</p>
-                    <Textarea value={j.draft} onChange={(e) => j.setDraft(e.target.value)} rows={12} className="font-mono text-xs" />
-                    <div>
-                      <div className="text-xs font-medium text-muted-foreground">Evidence attached</div>
-                      <div className="mt-1 flex flex-wrap gap-1.5">{[...chosen.sourceIds, "bcc-drop"].map((s) => <SourceChip key={s} id={s} />)}</div>
-                    </div>
+                    <p className="text-sm text-muted-foreground">Doesn't block your seat. Draft to {student.counselor} ({student.counselorEmail}). Each line shows where it comes from.</p>
+                    <DraftCard id={chosen.id} />
                     <Button onClick={() => { j.approve(); toast("Demo only: no email was sent.", { description: "Your approval was recorded in the decision log." }); }}>
                       <Send className="size-4" /> Approve and send as {student.name}
                     </Button>
@@ -313,12 +320,13 @@ export function AgentPanel({ docked = false }: { docked?: boolean }) {
           {chosen && j.seatHeld && <WaitlistAction />}
         </div>
   );
+  if (inChat) return content;
   if (docked) return <div>{header}{content}</div>;
   return (
     <Sheet open={j.panelOpen} onOpenChange={j.setPanelOpen}>
       <SheetContent side="right" className="brand-app agent-panel w-full overflow-y-auto sm:max-w-xl">
         <SheetHeader>
-          <SheetDescription>Path Agent</SheetDescription>
+          <SheetDescription>Sprout</SheetDescription>
           <SheetTitle className="font-serif text-2xl">Seats go fast. Here's what to do now.</SheetTitle>
         </SheetHeader>
         {content}

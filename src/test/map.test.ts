@@ -112,7 +112,7 @@ describe("layoutMap", () => {
     const { nodes } = at();
     expect(byId(nodes, "f25")?.status).toBe("done");
     expect(byId(nodes, "f26")?.status).toBe("now");
-    expect(byId(nodes, "w27")?.status).toBe("confirmed");
+    expect(byId(nodes, "w27")?.status).toBe("planned");
     expect(byId(nodes, "sp27")?.status).toBe("planned");
     expect(byId(nodes, "civic-data-up")?.status).toBe("confirmed");
     expect(byId(nodes, "ux-night")?.status).toBe("planned");

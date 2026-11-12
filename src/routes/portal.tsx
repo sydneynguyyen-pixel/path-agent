@@ -6,7 +6,7 @@ import { AgentPanel } from "@/components/app/AgentPanel";
 import { useJourney } from "@/lib/journey";
 import { options } from "@/data/scenario";
 import { SchoolLogo } from "@/components/app/SchoolLogo";
-import { BrandLogo, AgentAvatar } from "@/components/app/Brand";
+import { AgentFace, AgentAvatar } from "@/components/app/Brand";
 import { cn } from "@/lib/utils";
 import { PathLoader } from "@/components/app/Illustrations";
 import { Ink } from "@/components/app/Ink";
@@ -16,10 +16,10 @@ export const Route = createFileRoute("/portal")({
   validateSearch: (s: Record<string, unknown>): { start?: true } => (s["start"] ? { start: true } : {}),
   head: () => ({
     meta: [
-      { title: "Registration — Path Agent" },
-      { name: "description", content: "A simulated Bayview class search and schedule with the path agent guiding alongside." },
-      { property: "og:title", content: "Registration — Path Agent" },
-      { property: "og:description", content: "Search, pick a section, check your week and register — with Path Agent pointing the way." },
+      { title: "Registration — Trellis" },
+      { name: "description", content: "A simulated Bayview class search and schedule with Sprout guiding alongside." },
+      { property: "og:title", content: "Registration — Trellis" },
+      { property: "og:description", content: "Search, pick a section, check your week and register — with Sprout pointing the way." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -184,7 +184,7 @@ function PortalPage() {
       <div className="register-scene">
       <img src={sceneRegistration} alt="" className="register-art" width={1376} height={768} />
       <div className="w-full max-w-lg rounded-2xl border bg-card p-8 text-center shadow-frame">
-        <h1 className="font-serif text-2xl">Register with Path Agent</h1>
+        <h1 className="font-serif text-2xl">Register with Sprout</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Search classes and check out as usual. If something goes wrong, I'll help.
         </p>
@@ -208,7 +208,7 @@ function PortalPage() {
       <div className="flex w-full max-w-lg flex-col items-center rounded-2xl border bg-card p-10 text-center shadow-frame">
         <PathLoader />
         <p className="mt-4 font-medium">Opening Bayview Student Self-Service…</p>
-        <p className="mt-1 text-sm text-muted-foreground">Connecting Path Agent…</p>
+        <p className="mt-1 text-sm text-muted-foreground">Connecting Sprout…</p>
       </div>
       </div>
     );
@@ -233,7 +233,7 @@ function PortalPage() {
               <Lock className="size-3 shrink-0" /> ssb.bayview.example.edu/StudentRegistrationSsb/ssb/classRegistration
             </div>
             <span className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]", watching ? "aqua-chip" : "bg-card text-muted-foreground")}>
-              <Eye className="size-3" /> {watching ? "Path Agent watching" : "Path Agent not watching"}
+              <Eye className="size-3" /> {watching ? "Sprout watching" : "Sprout not watching"}
             </span>
           </div>
 
@@ -258,7 +258,7 @@ function PortalPage() {
                 <span className="px-3 py-1.5 text-muted-foreground">Plans</span>
               </div>
               <form className="flex flex-wrap items-end gap-3 border-b bg-portal-bg/50 px-3 py-2" onSubmit={(e) => { e.preventDefault(); setQuery({ subj, num }); }}>
-                <label className="flex flex-col gap-0.5">Term<span className="rounded border bg-card px-2 py-1">Summer Quarter 2027</span></label>
+                <label className="flex flex-col gap-0.5">Term<span className="rounded border bg-card px-2 py-1">Winter Quarter 2027</span></label>
                 <label className="flex flex-col gap-0.5">Subject
                   <input value={subj} onChange={(e) => setSubj(e.target.value.toUpperCase())} className={cn("w-24 rounded border bg-card px-2 py-1", typing && "ring-2 ring-primary")} />
                 </label>
@@ -266,7 +266,7 @@ function PortalPage() {
                   <input value={num} onChange={(e) => setNum(e.target.value)} className={cn("w-20 rounded border bg-card px-2 py-1", typing && "ring-2 ring-primary")} />
                 </label>
                 <button className="rounded bg-success px-3 py-1 text-success-foreground">Search</button>
-                {typing && <span className="flex items-center gap-1 text-primary"><Sparkles className="size-3" /> Path Agent is filling in the search…</span>}
+                {typing && <span className="flex items-center gap-1 text-primary"><Sparkles className="size-3" /> Sprout is filling in the search…</span>}
               </form>
               <div className="px-3 py-1.5"><b>Search Results</b> — {results.length} Classes · Subject: {query.subj} · Course Number: {query.num}</div>
               <div className="overflow-x-auto">
@@ -320,7 +320,7 @@ function PortalPage() {
                             <td colSpan={10} className="px-2 pb-1.5 pt-0 text-[11px]">
                               <span className="inline-flex items-center gap-1 rounded bg-card px-1.5 py-0.5 font-[system-ui] shadow-soft">
                                 <GraduationCap className="size-3 text-primary" />
-                                <b className="text-primary">Path Agent: here it is. Click Join waitlist when you're ready.</b>
+                                <b className="text-primary">Sprout: here it is. Click Join waitlist when you're ready.</b>
                               </span>
                             </td>
                           </tr>
@@ -330,7 +330,7 @@ function PortalPage() {
                             <td colSpan={10} className="px-2 pb-1.5 pt-0 text-[11px]">
                               <span className="inline-flex items-center gap-1 rounded bg-card px-1.5 py-0.5 font-[system-ui] shadow-soft">
                                 <GraduationCap className="size-3 text-primary" />
-                                {isTarget ? <b className="text-primary">Path Agent: pick this one — open seats, fits your week, counts toward QR-1.</b>
+                                {isTarget ? <b className="text-primary">Sprout: pick this one — open seats, fits your week, counts toward QR-1.</b>
                                   : full ? "Full — skip." : conf ? `Clashes with your ${conf.subj} ${conf.num} (${conf.days.join("")} ${fmt(conf.start)}).` : "Open, but not the section I recommended."}
                               </span>
                             </td>
@@ -347,7 +347,7 @@ function PortalPage() {
             {/* Schedule + Summary */}
             <div className="m-3 mt-0 grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
               <div className="border bg-card">
-                <div className="flex items-center gap-1.5 border-b bg-secondary px-3 py-1.5 font-semibold"><CalendarDays className="size-3.5" /> Class Schedule for Summer Quarter 2027</div>
+                <div className="flex items-center gap-1.5 border-b bg-secondary px-3 py-1.5 font-semibold"><CalendarDays className="size-3.5" /> Class Schedule for Winter Quarter 2027</div>
                 <WeekGrid registered={regSections} pending={cartSections.map((c) => ({ s: c.s, error: c.status === "error" }))} preview={preview} />
               </div>
               <div className="flex flex-col border bg-card">
@@ -375,8 +375,8 @@ function PortalPage() {
                     <b>Registration Add Errors:</b> STAT 2 01 (CRN 40112) — Closed Section. Waitlist available (6/10).
                   </div>
                 )}
-                {detecting && <div className="mx-2 mb-2 flex items-center gap-1 font-[system-ui] text-[11px] text-primary"><Ink className="size-3" /> Path Agent: checking what else counts…</div>}
-                {pendingTarget && <div className="mx-2 mb-2 flex items-center gap-1 font-[system-ui] text-[11px] text-primary"><GraduationCap className="size-3" /> Path Agent: looks good — no time conflicts. Click Submit when you're ready.</div>}
+                {detecting && <div className="mx-2 mb-2 flex items-center gap-1 font-[system-ui] text-[11px] text-primary"><Ink className="size-3" /> Sprout: checking what else counts…</div>}
+                {pendingTarget && <div className="mx-2 mb-2 flex items-center gap-1 font-[system-ui] text-[11px] text-primary"><GraduationCap className="size-3" /> Sprout: looks good — no time conflicts. Click Submit when you're ready.</div>}
                 <div className="relative mt-auto flex items-center justify-end gap-3 border-t px-2 py-2">
                   {submitCue && <span className="absolute bottom-full right-2 mb-1 inline-flex items-center gap-1 rounded bg-primary px-2 py-0.5 font-[system-ui] text-[11px] font-medium text-primary-foreground"><ArrowDown className="size-3" /> Now click Submit.</span>}
                   <span className="text-muted-foreground">Total hours: {regSections.length * 4}</span>
@@ -393,19 +393,19 @@ function PortalPage() {
             </div>
           </div>
         </div>
-        {errorAt && !watching && <p className="mt-3 text-sm text-muted-foreground">Path Agent is paused, so it can't help here.</p>}
+        {errorAt && !watching && <p className="mt-3 text-sm text-muted-foreground">Sprout is paused, so it can't help here.</p>}
         {j.stage !== "idle" && watching && !showDock && (
-          <button onClick={() => setDockOpen(true)} className="mt-3 inline-flex items-center gap-2 text-sm text-primary underline"><GraduationCap className="size-4" /> Show Path Agent</button>
+          <button onClick={() => setDockOpen(true)} className="mt-3 inline-flex items-center gap-2 text-sm text-primary underline"><GraduationCap className="size-4" /> Show Sprout</button>
         )}
-        {doneAt && <p className="mt-3 flex items-center gap-1.5 text-sm text-success"><CheckCircle2 className="size-4 text-mark-yes" /> You're registered. <Link to="/activity" className="text-primary underline">See what Path Agent did</Link></p>}
+        {doneAt && <p className="mt-3 flex items-center gap-1.5 text-sm text-success"><CheckCircle2 className="size-4 text-mark-yes" /> You're registered. <Link to="/activity" className="text-primary underline">See what Sprout did</Link></p>}
       </div>
 
       {showDock && (
         <aside ref={dockRef} className="dock-enter h-fit scroll-mt-4 overflow-hidden rounded-xl border bg-card shadow-soft 2xl:sticky 2xl:top-[68px] 2xl:max-h-[calc(100vh-96px)] 2xl:overflow-y-auto">
           <div className="flex items-center gap-2 border-b px-4 py-2.5 text-sm">
-            <BrandLogo className="size-7" />
-            <b>Path Agent</b>
-            {!detecting && <button aria-label="Hide Path Agent" className="ml-auto text-muted-foreground" onClick={() => setDockOpen(false)}><X className="size-4" /></button>}
+            <AgentFace className="size-7" />
+            <b>Sprout</b>
+            {!detecting && <button aria-label="Hide Sprout" className="ml-auto text-muted-foreground" onClick={() => setDockOpen(false)}><X className="size-4" /></button>}
           </div>
           {detecting ? (
             <div className="flex flex-col items-center px-6 py-12 text-center">

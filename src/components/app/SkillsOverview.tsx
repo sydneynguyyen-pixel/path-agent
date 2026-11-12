@@ -190,8 +190,8 @@ export function GoalFit({
         <b className="font-semibold text-foreground">{missing.length}</b> to build
       </p>
       <Link
-        to="/explore"
-        search={{ view: "plan", role: goalId }}
+        to="/career"
+        search={{ plan: goalId }}
         className="mt-auto inline-flex items-center gap-1 pt-4 text-sm font-medium underline-offset-4 hover:underline"
       >
         See your plan toward it <ArrowRight className="size-3.5" aria-hidden="true" />

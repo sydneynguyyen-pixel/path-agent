@@ -27,7 +27,7 @@ export const mapSchools = [
 ] as const;
 
 /** Already registered, RSVP'd or admitted, so these are set rather than planned. */
-export const mapConfirmed = new Set(["w27", "school-northgate", "peer-mentors"]);
+export const mapConfirmed = new Set(["school-northgate", "peer-mentors"]);
 
 /** Events Maya is eyeing but has not signed up for. */
 export const mapPlannedEvents = [
@@ -85,7 +85,7 @@ export type PathState = "plan" | "suggested" | "touch" | "todo";
 export type PathOpen =
   | { to: "/event" }
   | { to: "/explore"; search: { open: string } }
-  | { to: "/portfolio"; search: { tab: "people" } }
+  | { to: "/explore"; search: { view: "people" } }
   | { to: "/degree"; search: { row: string; slot: string } }
   | { to: "/semester"; search: { term: string } };
 export type PathVisual = { type: "school"; school: "bayview" | "northgate" } | { type: "org"; org: OrgId; club?: ClubId };
@@ -118,15 +118,15 @@ export const pathCategories: { id: PathCategory; label: string }[] = [
 ];
 
 export const pathItems: PathItem[] = [
-  { id: "stat2", category: "classes", title: "STAT 2 · Statistics", sub: "Summer 2027, evening. Fills QR-1.", about: "Covers your statistics requirement before you transfer.", state: "plan", when: "Summer 2027", place: "Bayview CC", visual: { type: "school", school: "bayview" }, open: { to: "/degree", search: { row: "statistics", slot: "qr1" } }, openLabel: "See in Degree" },
+  { id: "stat2", category: "classes", title: "STAT 2 · Statistics", sub: "Winter 2027, evening. Fills QR-1.", about: "Covers your statistics requirement before you transfer.", state: "plan", when: "Winter 2027", place: "Bayview CC", visual: { type: "school", school: "bayview" }, open: { to: "/degree", search: { row: "statistics", slot: "qr1" } }, openLabel: "See in Degree" },
   { id: "dsgn20", category: "classes", title: "DSGN 20 · Human-Centered Design", sub: "Fall 2027 elective. Fills your usability testing gap.", about: "A design elective at Northgate where you run usability tests.", state: "suggested", when: "Fall 2027", place: "Northgate State", visual: { type: "school", school: "northgate" }, open: { to: "/explore", search: { open: "dsgn20" } } },
   { id: "psych-symposium", category: "events", title: "Psych Research Symposium", sub: "Thu Nov 19, 4 PM.", about: "Student posters and faculty from the Northgate psychology department.", state: "plan", date: "2026-11-19", when: "Thursday, Nov 19, 4:00 to 6:30 PM", place: "Northgate Student Union Ballroom", open: { to: "/event" }, openLabel: "Open your plan" },
-  { id: "ux-night", category: "events", title: "Watch Real People Use Things", sub: "UX night, Tue 5:30 PM. Eastshore Design Collective. Free.", about: "Watch usability tests happen live, then talk through them.", state: "suggested", date: "2026-11-17", when: "Tuesday, Nov 17, 5:30 PM", place: "Eastshore Makerspace", visual: { type: "org", org: "design-collective" }, open: { to: "/explore", search: { open: "ux-night" } } },
+  { id: "ux-night", category: "events", title: "Watch Real People Use Things", sub: "UX night, Tue 5:30 PM. Eastshore Design Collective. Free.", about: "Watch usability tests happen live, then talk through them.", state: "suggested", date: "2026-11-17", when: "Tuesday, Nov 10, 5:30 PM", place: "Eastshore Makerspace", visual: { type: "org", org: "design-collective" }, open: { to: "/explore", search: { open: "ux-night" } } },
   { id: "design-club", category: "clubs", title: "People + Products Club", sub: "Tuesdays 3:30, Bayview Student Center. Practice usability tests.", about: "Members run small usability tests on campus services.", state: "suggested", when: "Tuesdays, 3:30 PM", place: "Bayview Student Center", visual: { type: "org", org: "bayview", club: "people-products" }, open: { to: "/explore", search: { open: "design-club" } } },
   { id: "research-club", category: "clubs", title: "Psych Research Club", sub: "Places members as RAs in faculty labs each spring.", about: "A way into faculty labs at Northgate.", state: "suggested" },
   { id: "ux-intern", category: "internships", title: "UX Research Intern", sub: "Harbor Health, summer. Sam Lee went from psych to this role.", about: "A summer research internship at Harbor Health.", state: "suggested", when: "Summer" },
   { id: "campus-ra", category: "internships", title: "Campus Spaces Lab RA", sub: "Spring research assistant spot. Apply by Jan 15.", about: "Research assistant work in the lab Dr. Reyes runs.", state: "suggested", date: "2027-01-15", when: "Apply by Jan 15" },
-  { id: "priya", category: "networking", title: "Priya Shah", sub: "Met in April at Harbor Health. Judging posters Thursday.", about: "UX researcher at Harbor Health.", state: "touch", open: { to: "/portfolio", search: { tab: "people" } }, openLabel: "Open in People" },
+  { id: "priya", category: "networking", title: "Priya Shah", sub: "Met in April at Harbor Health. Judging posters Thursday.", about: "UX researcher at Harbor Health.", state: "touch", open: { to: "/explore", search: { view: "people" } }, openLabel: "Open in People" },
   { id: "reyes", category: "networking", title: "Dr. Elena Reyes", sub: "Meet at the symposium.", about: "Runs the Campus Spaces Lab at Northgate.", state: "suggested", open: { to: "/event" }, openLabel: "Open your plan" },
   { id: "winter-fair", category: "fairs", title: "Winter Career Fair", sub: "Dec 3, 11 AM. Three employers hire summer UX interns.", about: "Three employers here hire summer UX research interns.", state: "suggested", date: "2026-12-03", when: "Thursday, Dec 3, 11:00 AM", place: "Northgate State", open: { to: "/semester", search: { term: "sp27" } }, openLabel: "Open in Terms" },
   { id: "fair-resume", category: "fairs", title: "Before the fair: resume", sub: "Update it from Resume Lab.", about: "Bring the version you worked on at Resume Lab.", state: "todo" },

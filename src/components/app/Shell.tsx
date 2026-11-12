@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Wallpaper } from "@/components/app/Desktop";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
-import { ArrowLeft, RotateCcw, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, ChevronRight, ChevronDown, UserCheck, UserRound, Settings, BookOpenCheck, Compass, Sprout, Waypoints, GraduationCap, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ArrowLeft, RotateCcw, Shuffle, Eye, Pause, Home, CalendarDays, MousePointerClick, Bot, Database, ChevronRight, ChevronDown, UserCheck, UserRound, IdCard, Settings, Compass, Sprout, Target, Waypoints, GraduationCap, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { sources, student } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
-import { BrandLogo } from "./Brand";
+import { BrandLogo, Wordmark } from "./Brand";
 import mayaPhoto from "@/assets/maya.jpg";
 import { Button } from "@/components/ui/button";
-import { AgentPanel } from "./AgentPanel";
+import { AgentChat } from "./AgentChat";
 import { BlankPage, blankPages } from "./BlankState";
 import { useEvents } from "./activityBits";
 import { waitingCount } from "@/lib/activity";
@@ -26,26 +27,32 @@ declare module "@tanstack/history" {
   }
 }
 
+/** Overview sees everything, School only classes and the degree, Growth only what's beyond class. Agents stands alone. */
 const groups = [
   {
-    label: "Path",
+    label: "Overview",
     links: [
       { to: "/", label: "Home", icon: Home },
       { to: "/map", label: "Map", icon: Waypoints },
+    ],
+  },
+  {
+    label: "School",
+    links: [
       { to: "/degree", label: "Degree", icon: GraduationCap },
       { to: "/semester", label: "Terms", icon: CalendarDays },
       { to: "/portal", label: "Registration", icon: MousePointerClick },
     ],
   },
   {
-    label: "Grow",
+    label: "Growth",
     links: [
+      { to: "/career", label: "Career", icon: Target },
       { to: "/explore", label: "Explore", icon: Compass },
-      { to: "/portfolio", label: "Portfolio", icon: BookOpenCheck },
     ],
   },
   {
-    label: "Path Agent",
+    label: "",
     links: [{ to: "/agents", label: "Agents", icon: Bot }],
   },
 ] as const;
@@ -60,18 +67,19 @@ const sectionFor = (path: string): string => {
 };
 const groupOf = (navPath: string) => groups.find((g) => g.links.some((l) => l.to === navPath)) ?? groups[0];
 const tabs = [
-  { label: "Path", to: "/", icon: Home, group: "Path" },
-  { label: "Grow", to: "/portfolio", icon: Sprout, group: "Grow" },
-  { label: "Agents", to: "/agents", icon: Bot, group: "Path Agent" },
+  { label: "Overview", to: "/", icon: Home, group: "Overview" },
+  { label: "School", to: "/degree", icon: GraduationCap, group: "School" },
+  { label: "Growth", to: "/career", icon: Sprout, group: "Growth" },
+  { label: "Agents", to: "/agents", icon: Bot, group: "" },
 ] as const;
 
-/** Phone only: the three areas as a bottom tab bar, within thumb reach. */
+/** Phone only: the four areas as a bottom tab bar, within thumb reach. */
 function BottomTabs({ navPath }: { navPath: string }) {
   const waiting = waitingCount(useEvents());
   const active = groupOf(navPath).label;
   return (
     <nav aria-label="Main" className="bottom-tabs fixed inset-x-3 bottom-3 z-40 md:hidden">
-      <GlassBar className="grid w-full grid-cols-3 gap-1 p-1.5">
+      <GlassBar className="grid w-full grid-cols-4 gap-1 p-1.5">
         {tabs.map((t) => (
           <Link key={t.to} to={t.to} aria-current={active === t.group ? "page" : undefined} className={cn("relative flex flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] text-muted-foreground", active === t.group && "glass-active font-medium text-foreground")}>
             <t.icon className="size-5" aria-hidden="true" />
@@ -105,12 +113,70 @@ function AccountMenu({ compact = false }: { compact?: boolean }) {
         <DropdownMenuLabel>{student.name}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild><Link to="/profile"><UserRound />Profile</Link></DropdownMenuItem>
+        <DropdownMenuItem asChild><Link to="/career" search={{ tab: "card" }}><IdCard />Your card</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link to="/sources"><Database />Connected sources</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link to="/settings"><Settings />Settings</Link></DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild><Link to="/counselor"><UserCheck />Counselor's side preview</Link></DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+type Sub = { label: string; to: "/career" | "/explore" | "/agents"; search: Record<string, string>; on: (path: string, q: Record<string, unknown>) => boolean };
+
+/** Pages inside a page get their own indented item under it, so nothing hides behind one button. Views of the same thing (Map's switch) stay toggles. */
+function useSubPages(navPath: string): Sub[] {
+  const j = useJourney();
+  if (navPath === "/career") {
+    const main = j.interestedRoles[0];
+    return [
+      { label: "Goals", to: "/career", search: {}, on: (_, q) => !q["tab"] && !q["plan"] && !q["resume"] },
+      { label: "Skills", to: "/career", search: { tab: "skills" }, on: (_, q) => q["tab"] === "skills" || !!q["resume"] },
+      { label: "Card", to: "/career", search: { tab: "card" }, on: (_, q) => q["tab"] === "card" },
+      ...(main ? [{ label: "Plan", to: "/career" as const, search: { plan: main }, on: (_: string, q: Record<string, unknown>) => !!q["plan"] }] : []),
+    ];
+  }
+  if (navPath === "/explore") return [
+    { label: "Events", to: "/explore", search: {}, on: (_, q) => q["view"] !== "people" },
+    { label: "People", to: "/explore", search: { view: "people" }, on: (_, q) => q["view"] === "people" },
+  ];
+  if (navPath === "/agents") return [
+    { label: "Activity", to: "/agents", search: {}, on: (p, q) => (p === "/agents" && !q["tab"]) || q["tab"] === "timeline" || (p === "/activity" && q["tab"] !== "decisions") },
+    { label: "Your decisions", to: "/agents", search: { tab: "decisions" }, on: (p, q) => q["tab"] === "decisions" || p === "/decisions" },
+    { label: "Agent controls", to: "/agents", search: { tab: "controls" }, on: (p, q) => q["tab"] === "controls" || p === "/permissions" },
+  ];
+  return [];
+}
+
+function SubNav({ navPath }: { navPath: string }) {
+  const subs = useSubPages(navPath);
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const q = useRouterState({ select: (s) => s.location.search as Record<string, unknown> });
+  const router = useRouter();
+  const navigate = useNavigate();
+  if (subs.length === 0) return null;
+  return (
+    <ul className="sub-nav" aria-label="In this section">
+      {subs.map((sub) => {
+        const on = sub.on(path, q);
+        return (
+          <li key={sub.label}>
+            {/* A plain anchor: Link marks every loosely matching sub-item as the current page. */}
+            <a
+              href={router.buildLocation({ to: sub.to, search: sub.search }).href}
+              aria-current={on ? "true" : undefined}
+              className="sub-nav-link"
+              onClick={(e) => {
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                e.preventDefault();
+                void navigate({ to: sub.to, search: sub.search });
+              }}
+            >{sub.label}</a>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -122,9 +188,10 @@ function SidebarNav({ navPath, collapsed }: { navPath: string; collapsed: boolea
       <span ref={pillRef} className="sliding-pill liquid" aria-hidden="true" />
       {groups.map((g) => (
         <div key={g.label}>
-          {collapsed ? <div className="mx-auto h-px w-6 bg-border" aria-hidden="true" /> : <div className="px-3 text-xs text-muted-foreground">{g.label}</div>}
+          {collapsed || !g.label ? <div className={cn("h-px bg-border", collapsed ? "mx-auto w-6" : "mx-3")} aria-hidden="true" /> : <div className="px-3 text-xs text-muted-foreground">{g.label}</div>}
           <div className="mt-2 space-y-0.5">
             {g.links.map((l) => (
+              <Fragment key={l.to}>
               <Link
                 key={l.to}
                 to={l.to}
@@ -139,6 +206,8 @@ function SidebarNav({ navPath, collapsed }: { navPath: string; collapsed: boolea
                   <span title={`${waiting} thing${waiting > 1 ? "s" : ""} waiting for you`} aria-label={`${waiting} waiting for you`} className={collapsed ? "absolute right-1.5 top-0.5 grid size-4 place-items-center rounded-full count-badge text-[9px]" : badge}><Roll value={waiting} /></span>
                 )}
               </Link>
+              {!collapsed && navPath === l.to && <SubNav navPath={navPath} />}
+              </Fragment>
             ))}
           </div>
         </div>
@@ -185,16 +254,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
   if (welcomeOnScreen) return <>{children}</>;
 
   const navPath = sectionFor(path);
+  // Home is a desktop: its wallpaper sits behind the whole window.
+  const onDesk = path === "/" && j.pathBuilt === true;
   const current = allLinks.find((l) => l.to === navPath);
   const ev = j.evidenceId ? (sources as Record<string, (typeof sources)[keyof typeof sources] | undefined>)[j.evidenceId] : null;
 
   return (
-    <div className="brand-app app-shell min-h-screen md:h-dvh md:min-h-0 md:overflow-hidden">
+    <div className={cn("brand-app app-shell min-h-screen md:h-dvh md:min-h-0 md:overflow-hidden", onDesk && "desk-home")}>
+      {onDesk && <Wallpaper />}
       <div className="relative flex min-h-screen md:h-full md:min-h-0">
         <aside className={cn("app-sidebar fixed bottom-3 left-3 top-3 z-30 hidden flex-col py-5 md:flex", collapsed ? "w-[72px] px-2" : "w-60 px-3")}>
           <div className={cn("flex items-center gap-2.5", collapsed ? "flex-col px-0" : "px-2")}>
-            <BrandLogo />
-            {!collapsed && <span className="font-semibold tracking-tight">Path Agent</span>}
+            <BrandLogo className="!size-10" />
+            {!collapsed && <Wordmark className="text-[24px]" />}
             <button type="button" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} className={cn("grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-foreground/5 hover:text-foreground", !collapsed && "ml-auto")}>
               {collapsed ? <PanelLeftOpen className="size-4" aria-hidden="true" /> : <PanelLeftClose className="size-4" aria-hidden="true" />}
             </button>
@@ -207,7 +279,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {!collapsed && (j.paused || j.watchingRegistration) && (
               <Link to="/agents" search={{ tab: "controls" }} className="flex items-center gap-2 rounded-full bg-secondary px-3 py-2.5 text-xs">
                 {j.paused ? (
-                  <><Pause className="size-3.5" aria-hidden="true" /> Path Agent paused</>
+                  <><Pause className="size-3.5" aria-hidden="true" /> Sprout paused</>
                 ) : (
                   <><span className="size-2 rounded-full bg-success animate-pulse-dot" /><Eye className="size-3.5" aria-hidden="true" /> Watching registration only</>
                 )}
@@ -223,7 +295,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <GlassBar>
                 <span className="text-muted-foreground">Maya</span>
                 <ChevronRight className="size-3.5 text-muted-foreground" />
-                <span key={current?.to} className="swap-enter inline-flex items-center gap-1.5 font-medium">
+                <span className="inline-flex items-center gap-1.5 font-medium">
                   {current && <><current.icon className="size-4" /> {current.label}</>}
                 </span>
               </GlassBar>
@@ -240,7 +312,36 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </Link>
               ))}
             </nav>
-            <GlassBar className={cn("ml-auto", j.pathBuilt === false && "invisible")}>
+            <GlassBar className={cn("ml-auto flex items-center", j.pathBuilt === false && "invisible")}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground">
+                    <Shuffle className="size-3" aria-hidden="true" /> Try another path
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Play out what could happen next</DropdownMenuLabel>
+                  <DropdownMenuItem onSelect={() => j.trySeatFills()} className="flex-col items-start gap-0.5">
+                    <span className="font-medium">A seat fills while you decide</span>
+                    <span className="text-xs text-muted-foreground">MATH 13 fills, and the helpers re-check only what depended on it.</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => j.trySeatFills(true)} className="flex-col items-start gap-0.5">
+                    <span className="font-medium">A seat fills while you're away</span>
+                    <span className="text-xs text-muted-foreground">Stay on this page. Home tells you what changed.</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => j.tryNeedsNote()} className="flex-col items-start gap-0.5">
+                    <span className="font-medium">The helpers need a note from you</span>
+                    <span className="text-xs text-muted-foreground">Two options both work, so the Planner asks which matters more.</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild className="flex-col items-start gap-0.5">
+                    <Link to="/agents" search={{ tab: "controls" }}>
+                      <span className="font-medium">Turn a helper off</span>
+                      <span className="text-xs text-muted-foreground">See what you can still get without it.</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="ghost" size="sm" onClick={j.reset} className="reset-spin ml-auto gap-1 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground" title="Reset demo">
                 <RotateCcw className="size-3" /> Reset demo
               </Button>
@@ -248,19 +349,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <div className="md:hidden"><AccountMenu compact /></div>
           </header>
           {/* Keyed by route so each page opens at the top of this scroll area. */}
-          <div key={path} className={`app-scroll flex min-h-0 flex-1 flex-col md:overflow-y-auto ${onPortal ? "" : "app-canvas"}`}>
+          <div key={path} className={`app-scroll flex min-h-0 flex-1 flex-col md:overflow-y-auto ${onPortal || onDesk ? "" : "app-canvas"}`}>
             <main className={`app-page relative z-10 flex-1 px-6 py-8 md:px-10 ${onPortal ? "" : "page-stagger"}`}>
               {/* Until hydration we can't tell a new student from a returning one, so show neither. */}
               {j.pathBuilt === null && (blankPage || path === "/") ? null : j.pathBuilt === false && blankPage ? <BlankPage {...blankPage} /> : children}
             </main>
             {/* Room so the phone tab bar never covers the end of a page. */}
-            {!onCanvas && <div aria-hidden="true" className="h-24 md:h-6" />}
+            {!onCanvas && <div aria-hidden="true" className="agent-clear" />}
           </div>
         </div>
       </div>
 
       <BottomTabs navPath={navPath} />
-      {!onPortal && <AgentPanel />}
+      {!onPortal && <AgentChat />}
       <ClassDetails />
       <OpportunityDetails />
       <Sheet open={!!ev} onOpenChange={(o) => !o && j.openEvidence(null)}>

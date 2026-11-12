@@ -26,6 +26,6 @@ export function useConfirmWent() {
   const navigate = useNavigate();
   return (o: Opportunity) => {
     j.confirmWent(o.id);
-    toast(doneToast(o), { action: { label: "See Portfolio", onClick: () => navigate({ to: "/portfolio" }) }, cancel: { label: "Undo", onClick: () => j.undoWent(o.id) } });
+    toast(doneToast(o), { action: { label: "See skills", onClick: () => navigate({ to: "/career", search: { tab: "skills" } }) }, cancel: { label: "Undo", onClick: () => j.undoWent(o.id) } });
   };
 }

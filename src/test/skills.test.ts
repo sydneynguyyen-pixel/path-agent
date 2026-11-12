@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ledgerSkills, gapSkills, careerRoles } from "@/data/scenario";
-import { evidenceFor, resumeBullet, exportableSkills, canExport, orderRoles, skillsSummary, confirmableSkills } from "@/lib/skills";
+import { evidenceFor, resumeBullet, exportableSkills, orderRoles, skillsSummary, confirmableSkills, linkedinSections } from "@/lib/skills";
 const taught = ledgerSkills.find(s => s.id === "descriptive");
 const practiced = ledgerSkills.find(s => s.id === "sources");
 describe("Skills trust rules", () => {
@@ -12,8 +12,17 @@ describe("Skills trust rules", () => {
   it("leaves low-confidence, confirmed and hidden skills out of Confirm all", () => { const low = ledgerSkills.find(s => s.confidence === "Low"); if (!low) throw Error("Missing low-confidence skill"); const ids = confirmableSkills(ledgerSkills, { descriptive: { confirmed: true }, sources: { hidden: true } }).map(s => s.id); expect(ids).not.toContain(low.id); expect(ids).not.toContain("descriptive"); expect(ids).not.toContain("sources"); expect(ids.length).toBeGreaterThan(0); });
   it("summarizes what is ready, what needs checking and the most applied theme", () => { expect(skillsSummary(ledgerSkills, { observation: { confirmed: true } })).toMatchObject({ total: 15, ready: 1, toCheck: 14, strongestTheme: "Analysis and critical thinking", strongestCount: 4 }); });
   it("leaves hidden skills out of the summary and counts attached work as applied", () => { expect(skillsSummary(ledgerSkills, { observation: { confirmed: true, hidden: true }, descriptive: { work: "project.pdf" } })).toMatchObject({ total: 14, ready: 0, toCheck: 14 }); expect(skillsSummary([], {})).toMatchObject({ total: 0, strongestTheme: null }); });
-  it("requires accuracy confirmation before copying or download", () => { expect(canExport(false,3)).toBe(false); expect(canExport(true,0)).toBe(false); expect(canExport(true,3)).toBe(true); });
   it("keeps the uncertain ART 1 skill low confidence", () => { expect(ledgerSkills.find(s=>s.id === "speaking")).toMatchObject({ confidence: "Low", level: "Taught", quote: "Class discussion" }); });
   it("interest reorders options without hiding roles", () => { const ordered = orderRoles(["Creative work"], ["museum"]); expect(ordered[0]?.id).toBe("museum"); expect(ordered).toHaveLength(5); expect(ordered.map(r=>r.id).sort()).toEqual(careerRoles.map(r=>r.id).sort()); });
   it("preserves exactly the requested UX learning gap", () => { expect(careerRoles.find(r=>r.id === "ux")?.missing).toEqual(["Usability testing", "Survey design"]); });
+});
+describe("linkedinSections", () => {
+  it("lists skills with their first course, and each course once", () => {
+    const out = linkedinSections(
+      [{ name: "Survey design", classes: ["STAT 2"] }, { name: "Interviewing", classes: ["PSYC 33", "STAT 2"] }, { name: "Event planning", classes: [] }],
+      [{ code: "STAT 2", title: "Statistics", school: "Bayview CC" }, { code: "PSYC 33", title: "Personal Growth", school: "Bayview CC" }],
+    );
+    expect(out.skills).toEqual([{ name: "Survey design", course: "STAT 2" }, { name: "Interviewing", course: "PSYC 33" }, { name: "Event planning", course: undefined }]);
+    expect(out.courses.map((c) => c.number)).toEqual(["STAT 2", "PSYC 33"]);
+  });
 });

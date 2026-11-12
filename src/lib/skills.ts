@@ -19,7 +19,14 @@ export function skillsSummary(skills: Skill[], reviews: Record<string, SkillRevi
 }
 /** Skills safe to confirm in one click. Low-confidence ones still get checked one at a time. */
 export function confirmableSkills(skills: Skill[], reviews: Record<string, SkillReview>) { return skills.filter(s => s.confidence !== "Low" && !reviews[s.id]?.confirmed && !reviews[s.id]?.hidden); }
-export function canExport(checked: boolean, count: number) { return checked && count > 0; }
 export function orderRoles(interests: string[], interested: string[]) { return [...careerRoles].sort((a,b) => Number(interested.includes(b.id))-Number(interested.includes(a.id)) || b.interests.filter(i=>interests.includes(i)).length-a.interests.filter(i=>interests.includes(i)).length); }
 export function courseCode(value: string) { return value.replace(/^BCC\s+/, "").match(/^[A-Z]+\s+[0-9]+[A-Z]?/)?.[0] ?? value; }
 export function courseSkills(code: string) { return ledgerSkills.filter(s => s.course === courseCode(code)); }
+/** LinkedIn has a Skills section (each skill can name the course it came from) and a Courses section (name, number, school).
+ *  This turns picked skills into those two lists, so nothing has to be reworded to fit. */
+export function linkedinSections(picked: { name: string; classes: string[] }[], courses: { code: string; title: string; school: string }[]) {
+  const skills = picked.map((p) => ({ name: p.name, course: p.classes[0] }));
+  const codes = [...new Set(picked.flatMap((p) => p.classes))];
+  const list = codes.flatMap((code) => { const c = courses.find((x) => x.code === code); return c ? [{ name: c.title, number: c.code, school: c.school }] : []; });
+  return { skills, courses: list };
+}

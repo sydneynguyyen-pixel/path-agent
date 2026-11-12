@@ -22,7 +22,7 @@ function aboutClass(code: string) {
   return { code, title: elective?.title ?? "", term: "", units: "", description: elective?.about ?? "", tools: [] as string[], assignments: [] as string[] };
 }
 
-/** One class details panel, opened from Degree, Terms, Map, Explore and Portfolio. */
+/** One class details panel, opened from Degree, Terms, Map, Explore and Career. */
 export function ClassDetails() {
   const j = useJourney();
   const { audit } = useDegreeAudit();

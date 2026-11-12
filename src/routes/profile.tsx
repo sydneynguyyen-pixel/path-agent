@@ -11,10 +11,10 @@ export const Route = createFileRoute("/profile")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { title: "Profile — Path Agent" },
+      { title: "Profile — Trellis" },
       { name: "description", content: "Maya's student profile: schools, program, counselor and goals." },
-      { property: "og:title", content: "Profile — Path Agent" },
-      { property: "og:description", content: "The student profile Path Agent plans around." },
+      { property: "og:title", content: "Profile — Trellis" },
+      { property: "og:description", content: "The student profile Sprout plans around." },
     ],
   }),
   component: Profile,

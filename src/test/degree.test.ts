@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { psychologyDegree } from "@/data/degree";
 import { progress, requirements, terms } from "@/data/scenario";
-import { auditFor, formatCredits, groupTitle, layoutTree, placeOf, semesterCredits, slotForCourse, statisticsWays, transferReadiness, type AuditInput, type AuditSlot } from "@/lib/degree";
+import { auditFor, formatCredits, groupTitle, layoutTree, placeOf, semesterCredits, slotForCourse, standingOf, statisticsWays, transferReadiness, type AuditInput, type AuditSlot } from "@/lib/degree";
 
 const start: AuditInput = { stage: "idle", seatHeld: false, chosenId: null, counselor: null, atRisk: false, savedOpportunities: [] };
 const full: AuditInput = { ...start, stage: "failed", atRisk: true };
@@ -85,14 +85,14 @@ describe("open slots", () => {
 
 describe("graduation tree", () => {
   const tree = layoutTree(audit, start);
-  it("has the four rows and six columns", () => {
+  it("has the four rows and seven columns", () => {
     expect(tree.rows.map((r) => r.id)).toEqual(["major", "statistics", "ge", "ux"]);
-    expect(tree.columns).toHaveLength(6);
+    expect(tree.columns).toHaveLength(7);
   });
-  it("branches Statistics three ways in the summer", () => {
+  it("branches Statistics three ways in the winter", () => {
     const ways = tree.cards.filter((c) => c.kind === "way");
     expect(ways.map((w) => w.title)).toEqual(["STAT 2 · Evening", "MATH 13 · Online live", "PSYC 5 · In person"]);
-    expect(ways.every((w) => w.col === "su27")).toBe(true);
+    expect(ways.every((w) => w.col === "w27")).toBe(true);
   });
   it("never overlaps two cards", () => {
     for (const a of tree.cards) for (const b of tree.cards) {
@@ -109,7 +109,7 @@ describe("graduation tree", () => {
   });
   it("runs the planned path past classes that are only options", () => {
     expect(tree.links.find((l) => l.id === "major-sp27>major-fa27")?.state).toBe("plan");
-    expect(tree.links.find((l) => l.id === "major-sp27>lcc-psyc20")?.state).toBe("option");
+    expect(tree.links.find((l) => l.id === "major-done>lcc-psyc20")?.state).toBe("option");
   });
   it("always shows the class you chose", () => {
     expect(statisticsWays({ ...start, chosenId: "bus21" }).map((w) => w.id)).toEqual(["stat2", "math13", "bus21"]);
@@ -150,5 +150,13 @@ describe("transferReadiness", () => {
   it("follows the statistics decision", () => {
     const qr = (i: AuditInput) => transferReadiness(requirements, i).find((r) => r.id === "qr1");
     expect(qr(heldMath)?.detail).toContain("MATH 13");
+  });
+});
+
+describe("standing", () => {
+  it("names the standing and the units that reach the next one", () => {
+    expect(standingOf(37.9)).toEqual({ name: "Sophomore", next: { name: "Junior", at: 60 } });
+    expect(standingOf(12)).toEqual({ name: "Freshman", next: { name: "Sophomore", at: 30 } });
+    expect(standingOf(95).next).toBeUndefined();
   });
 });

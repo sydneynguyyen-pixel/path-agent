@@ -1,9 +1,16 @@
+import type { OrgId } from "@/data/scenario";
+
 // ---------- People Maya could meet (all synthetic) ----------
-// Only public, work-related facts. No photos up front, no ratings, nothing about looks.
+// Only public, work-related facts plus a profile photo. No ratings, nothing about looks.
+// Photos are free Unsplash images standing in for these fictional people.
 
 export type Person = {
   id: string;
   name: string;
+  /** Unsplash photo ID (see src/lib/photos.ts). */
+  photo: string;
+  /** Where they work or study, shown as a logo beside the photo. */
+  org: OrgId;
   role: string;
   /** Why this person fits her goal, and where that fact came from. */
   fit: string;
@@ -17,6 +24,8 @@ export type Person = {
 export const people: Person[] = [
   {
     id: "reyes",
+    org: "northgate",
+    photo: "photo-1581065178047-8ee15951ede6",
     name: "Dr. Elena Reyes",
     role: "Psychology faculty, Northgate State",
     fit: "Runs the Campus Spaces Lab, which studies where and how students study.",
@@ -26,6 +35,8 @@ export const people: Person[] = [
   },
   {
     id: "sam",
+    org: "northgate",
+    photo: "photo-1757744705465-ea08b0ddc38a",
     name: "Sam Lee",
     role: "Northgate senior · UX research intern at Harbor Health",
     fit: "Went from a psych major to a UX research internship.",
@@ -35,6 +46,8 @@ export const people: Person[] = [
   },
   {
     id: "club",
+    org: "northgate",
+    photo: "research-circle",
     name: "Psych Research Club table",
     role: "Student club, Northgate State",
     fit: "Places members as research assistants in faculty labs each spring.",
@@ -44,6 +57,8 @@ export const people: Person[] = [
   },
   {
     id: "priya",
+    org: "harbor-health",
+    photo: "photo-1547212371-eb5e6a4b590c",
     name: "Priya Shah",
     role: "UX researcher, Harbor Health · poster judge",
     fit: "Judging the poster session and hires research interns.",
@@ -53,6 +68,8 @@ export const people: Person[] = [
   },
   {
     id: "marcus",
+    org: "northgate",
+    photo: "photo-1522529599102-193c0d76b5b6",
     name: "Marcus Hill",
     role: "Grad student, Campus Spaces Lab",
     fit: "Coordinates the lab's research assistant openings.",
@@ -63,7 +80,25 @@ export const people: Person[] = [
 ];
 
 export type PastNote = { personId: string; event: string; date: string; text: string; promise?: string };
-/** What Maya wrote down herself after earlier events. Path Agent only recalls it. */
+/** What Maya wrote down herself after earlier events. Sprout only recalls it. */
 export const pastNotes: PastNote[] = [
   { personId: "priya", event: "Harbor Health info session", date: "2026-04-09", text: "Said diary studies are a good first research project.", promise: "Send Priya my ANTH 2 poster" },
 ];
+
+/** Students she met and wrote a note about. Their card shows only what they chose to share (from goTogetherEvent.visiblePeers). */
+export type MetStudent = { peerId: string; event: string; date: string; text: string };
+export const metStudents: MetStudent[] = [
+  { peerId: "jordan", event: "Figma for Non-Designers", date: "2025-11-15", text: "Sat next to me. Showed me how to check a screen with a screen reader. Also going to UX Night." },
+];
+
+/** Students she went to an event with before, after they both said yes. */
+export const pastMatches: { peerId: string; event: string }[] = [
+  { peerId: "tomas", event: "Fall Career Fair" },
+];
+
+/** Other upcoming events where students who chose to be seen are going. Only people she knows are pointed out. */
+export const alsoGoing: Record<string, string[]> = {
+  "diary-studies": ["jordan", "kai", "sofia"],
+  "civic-data": ["lena", "nia"],
+  "survey-lab": ["tomas", "ana", "ethan"],
+};

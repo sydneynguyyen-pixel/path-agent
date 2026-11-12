@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { careerRoles, freeTime, goTogetherEvent, opportunities, terms, type Term } from "@/data/scenario";
-import { canConfirm, fillsLine, notOnPlan, degreeLine, doneLine, doneToast, gapProgress, goalFor, nextSuggestion, otherWays, planName, planTermId, skillsFromDoing, suggestionWhy, gapSignal, deadlineDate, deadlineLine, detailLine, exploreResults, fitsWeek, groupByDate, groupByGap, helloDraft, hostLine, NO_FILTERS, reasonFor, stillOpen, timeLeftLine, whoIsGoing, whyLine, type ExploreFilters } from "@/lib/opportunities";
+import { askToGo, matchState, passAsk, canConfirm, fillsLine, notOnPlan, degreeLine, doneLine, doneToast, gapProgress, goalFor, nextSuggestion, otherWays, planName, planTermId, skillsFromDoing, suggestionWhy, gapSignal, deadlineDate, deadlineLine, detailLine, exploreResults, fitsWeek, groupByDate, groupByGap, helloDraft, hostLine, NO_FILTERS, reasonFor, stillOpen, timeLeftLine, whoIsGoing, whyLine, type ExploreFilters } from "@/lib/opportunities";
 
 const byId = (id: string) => opportunities.find((o) => o.id === id)!;
 
@@ -66,7 +66,7 @@ describe("time left", () => {
   const noTerms: Term[] = terms.map((t) => ({ ...t, status: "done" as const }));
 
   it("counts remaining terms", () => {
-    expect(timeLeftLine(terms, [byId("dsgn20"), byId("design-club")])).toBe("You have 5 terms left, through Spring 2029. All 2 of these still fit.");
+    expect(timeLeftLine(terms, [byId("dsgn20"), byId("design-club")])).toBe("You have 7 terms left, through Spring 2029. All 2 of these still fit.");
   });
   it("drops what has passed and keeps what is open to recent grads", () => {
     expect(stillOpen([byId("dsgn20"), byId("library-usability")], lastTerm).map((o) => o.id)).toEqual(["library-usability"]);
@@ -78,15 +78,27 @@ describe("time left", () => {
 
 describe("going together", () => {
   it("shows only a count until the student opts in", () => {
-    expect(whoIsGoing(goTogetherEvent, false)).toEqual({ count: 4, visible: [], private: 4 });
+    expect(whoIsGoing(goTogetherEvent, false)).toEqual({ count: 48, visible: [], private: 48 });
   });
   it("then shows only people who also opted in", () => {
     const seen = whoIsGoing(goTogetherEvent, true);
-    expect(seen.visible.map((p) => p.id)).toEqual(["tomas", "lena"]);
-    expect(seen.private).toBe(2);
+    expect(seen.visible.map((p) => p.id)).toEqual(goTogetherEvent.visiblePeers.map((p) => p.id));
+    expect(seen.private).toBe(48 - goTogetherEvent.visiblePeers.length);
   });
-  it("drafts a first-name note", () => {
-    expect(helloDraft("Tomás R.", "UX night", "Maya Reyes")).toMatch(/^Hi Tomás, .*Want to go together\?\n\nMaya$/s);
+  it("matches only when both say yes", () => {
+    const none = { sentTo: [], matched: [], passed: [] };
+    const asked = askToGo(none, "tomas", ["lena"]);
+    expect(matchState("tomas", asked, ["lena"])).toBe("you-asked");
+    expect(matchState("lena", none, ["lena"])).toBe("asked-you");
+    const both = askToGo(none, "lena", ["lena"]);
+    expect(matchState("lena", both, ["lena"])).toBe("matched");
+    expect(askToGo(both, "lena", ["lena"])).toBe(both);
+    const passed = passAsk(none, "lena");
+    expect(matchState("lena", passed, ["lena"])).toBe("none");
+    expect(matchState("lena", askToGo(passed, "lena", ["lena"]), ["lena"])).toBe("matched");
+  });
+  it("drafts a first-name note after a match", () => {
+    expect(helloDraft("Tomás R.", "UX night", "Maya Reyes")).toMatch(/^Hi Tomás, glad we matched.*\n\nMaya$/s);
   });
 });
 
@@ -156,7 +168,7 @@ describe("the loop from Explore to your plan and Skills", () => {
   const gaps = ["Usability testing", "Survey design"];
 
   it("puts something happening soon in the term you're in, and later things in their own term", () => {
-    expect(planTermId(byId("ux-night"), terms, today)).toBe("sp27");
+    expect(planTermId(byId("ux-night"), terms, today)).toBe("f26");
     expect(planTermId(byId("library-usability"), terms, today)).toBe("su27");
   });
 

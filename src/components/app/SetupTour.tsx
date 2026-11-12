@@ -7,7 +7,7 @@ import { reasonFor } from "@/lib/opportunities";
 import { nextBeat, tourSlides, type TourSlide } from "@/lib/tour";
 import { cn } from "@/lib/utils";
 import valleyHome from "@/assets/valley-home.jpg";
-import { AgentAvatar, BrandLogo } from "./Brand";
+import { AgentAvatar, AgentFace } from "./Brand";
 
 /** Scenes are drawn at this size and scaled to fit, so pointer positions hold at every width. */
 const CANVAS = { width: 520, height: 330 };
@@ -91,7 +91,7 @@ function MiniApp({ active, children }: { active: (typeof NAV)[number][0]; childr
   return (
     <div className="flex h-full text-[11px]">
       <div className="w-[112px] shrink-0 border-r p-3">
-        <div className="flex items-center gap-1.5 font-semibold"><BrandLogo className="size-5" /> Path Agent</div>
+        <div className="flex items-center gap-1.5 font-semibold"><AgentFace className="size-5" /> Sprout</div>
         <div className="mt-4 space-y-1">
           {NAV.map(([label, Icon]) => (
             <div key={label} className={cn("flex items-center gap-1.5 rounded-full px-2 py-1 transition-colors duration-300", label === active ? "bg-secondary font-medium" : "text-muted-foreground")}><Icon className="size-3" /> {label}</div>
@@ -119,7 +119,7 @@ function HomeScene({ b }: { b: number }) {
         <AgentAvatar agent="backup" bare className="size-9 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="text-[10px] text-muted-foreground">Needs your attention</div>
-          <div className="font-semibold">Summer 2027 registration is open</div>
+          <div className="font-semibold">Winter 2027 registration is open</div>
         </div>
         <MiniButton name="go" className="shrink-0">Register</MiniButton>
       </div>
@@ -128,14 +128,14 @@ function HomeScene({ b }: { b: number }) {
 }
 
 function TermsScene({ b }: { b: number }) {
-  const shown = ["sp27", "su27", "fa27"].map((id) => terms.find((t) => t.id === id)!);
+  const shown = ["f26", "w27", "su27"].map((id) => terms.find((t) => t.id === id)!);
   const term = b >= 2 ? shown[1]! : shown[0]!;
   return (
     <MiniApp active="Terms">
       <div className="text-[16px] font-semibold">Your terms</div>
       <div className="mt-2 flex gap-1.5">
         {shown.map((t) => (
-          <span key={t.id} data-cursor={t.id === "su27" ? "summer" : undefined} className={cn("rounded-full border px-2.5 py-1 transition-colors duration-300", t === term ? "aqua-chip border-transparent font-semibold" : "bg-card")}>{t.name}</span>
+          <span key={t.id} data-cursor={t.id === "w27" ? "winter" : undefined} className={cn("rounded-full border px-2.5 py-1 transition-colors duration-300", t === term ? "aqua-chip border-transparent font-semibold" : "bg-card")}>{t.name}</span>
         ))}
       </div>
       <div key={term.id} className="tour-swap mt-3 divide-y rounded-xl border">
@@ -176,7 +176,7 @@ function RegisterScene({ b }: { b: number }) {
       <div className={cn("tour-overlay", b >= 3 && "tour-overlay-in")}>
         <AgentAvatar agent="backup" className="size-9 shrink-0" />
         <div className="min-w-0 flex-1 font-sans">
-          <div className="text-[10px] text-muted-foreground">Path Agent</div>
+          <div className="text-[10px] text-muted-foreground">Sprout</div>
           <div className="font-semibold">STAT 2 is full. I found backups that still count.</div>
         </div>
         <MiniButton name="see" className="shrink-0 font-sans">See options</MiniButton>
@@ -235,8 +235,8 @@ function ExploreScene({ b }: { b: number }) {
             {shown ? <span className="tour-swap flex items-center gap-1 py-1 font-medium text-mark-yes"><Check className="size-3.5" /> Showing</span> : <MiniButton name="show" outline>Show me as going</MiniButton>}
           </div>
           <div className={cn("mt-1 flex items-center justify-between gap-2 transition-opacity duration-300", shown ? "opacity-100" : "opacity-0")}>
-            <span className="text-[10px]">{drafted ? "Draft ready. You send it." : `${goTogetherEvent.visiblePeers[0]!.name} chose to be seen`}</span>
-            <MiniButton name="hi">Say hi</MiniButton>
+            <span className="text-[10px]">{drafted ? `Asked. It's a match if ${goTogetherEvent.visiblePeers[1]!.name.split(" ")[0]} says yes.` : `${goTogetherEvent.visiblePeers[1]!.name} chose to be seen`}</span>
+            <MiniButton name="hi">Ask to go</MiniButton>
           </div>
         </div>
       </div>

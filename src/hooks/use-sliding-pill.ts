@@ -47,7 +47,7 @@ export function useSlidingPill<C extends HTMLElement>(activeSelector: string) {
 
     place();
     const mutations = new MutationObserver(place);
-    mutations.observe(container, { subtree: true, attributes: true, attributeFilter: ["aria-current", "aria-pressed", "data-state"] });
+    mutations.observe(container, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-current", "aria-pressed", "data-state"] });
     const resizes = new ResizeObserver(place);
     resizes.observe(container);
     void document.fonts?.ready.then(place);

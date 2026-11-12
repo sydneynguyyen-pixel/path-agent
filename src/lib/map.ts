@@ -150,7 +150,7 @@ export type MapNode = {
   coursework?: { title: string; date: string }[];
   skills?: string[];
   facts?: { label: string; value: string }[];
-  to?: "/semester" | "/portfolio";
+  to?: "/semester" | "/career";
 };
 export type MapLink = { id: string; d: string; layer?: MapLayer; school?: MapSchool; status: MapStatus };
 export type MapPort = { id: string; x: number; y: number; layer?: MapLayer; school?: MapSchool };
@@ -275,7 +275,7 @@ export function layoutMap({ masters, today, r = 1 }: { masters: boolean; today: 
   const eventDrafts: Draft[] = [
     ...experiences.map((e): Draft => {
       const anchor = worldY(e.date);
-      return { id: e.id, kind: "event", layer: "events", ...RIGHT, h: CARD_H, top: anchor - (CARD_H * r) / 2, anchor, iso: e.date, title: e.title, sub: `${shortDate(e.date)} · ${e.host}`, status: statusOf(e.date, e.date, today, true), visual: { type: "photo", photo: e.photo }, when: `${longDate(e.date)}, ${e.time}`, place: e.place, about: e.listing, skills: e.skills.map((s) => s.name), to: e.date >= today ? ("/semester" as const) : ("/portfolio" as const) };
+      return { id: e.id, kind: "event", layer: "events", ...RIGHT, h: CARD_H, top: anchor - (CARD_H * r) / 2, anchor, iso: e.date, title: e.title, sub: `${shortDate(e.date)} · ${e.host}`, status: statusOf(e.date, e.date, today, true), visual: { type: "photo", photo: e.photo }, when: `${longDate(e.date)}, ${e.time}`, place: e.place, about: e.listing, skills: e.skills.map((s) => s.name), to: e.date >= today ? ("/semester" as const) : ("/career" as const) };
     }),
     ...mapPlannedEvents.map((e): Draft => {
       const anchor = worldY(e.date);
@@ -305,7 +305,7 @@ export function layoutMap({ masters, today, r = 1 }: { masters: boolean; today: 
   });
 
   const now = worldY(today);
-  const lastConfirmed = worldY(termDates["w27"]!.end);
+  const lastConfirmed = worldY(termDates["f26"]!.end);
   const lowest = Math.max(...nodes.map((n) => n.top + n.h * r));
   const lineTop = main.find((n) => n.id === "school-bayview")!.top;
   const northgate = main.find((n) => n.id === "school-northgate")!;

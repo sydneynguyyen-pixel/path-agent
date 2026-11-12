@@ -100,3 +100,15 @@ export const callName = (name: string) => (name.startsWith("Dr. ") ? `Dr. ${name
 /** "The lab…" → "the lab…", but leave "RA spots…" alone. */
 export const lowerFirst = (t: string) => (/^[A-Z][a-z]/.test(t) ? t[0]!.toLowerCase() + t.slice(1) : t);
 const first = (name: string) => name.split(" ")[0]!;
+
+/** An email draft for a to-do like "Email Dr. Reyes my ANTH 2 poster". Null when the to-do isn't something you send. */
+export function promiseEmail(personName: string, event: string, promise: string, studentName: string): { subject: string; body: string } | null {
+  const m = /^(?:email|send|share)\s+(?:.+?\s+)?((?:my|the|a|an)\s.+)$/i.exec(promise.trim());
+  if (!m) return null;
+  const thing = m[1]!.replace(/[.!]+$/, "");
+  const greet = callName(personName);
+  return {
+    subject: `${thing.replace(/^my /i, "My ")} from ${event}`,
+    body: `Hi ${greet},\n\nThank you for talking with me at ${/^the /i.test(event) ? "" : "the "}${event}. As I said I would, here is ${thing}.\n\n[Attach it before you send]\n\nBest,\n${studentName.split(" ")[0]}`,
+  };
+}

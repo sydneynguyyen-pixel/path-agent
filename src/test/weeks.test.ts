@@ -1,3 +1,5 @@
+import { calendarWeeks, fridayOf } from "@/lib/weeks";
+import { FALL_2026_START, FALL_2026_WEEKS, fallWork } from "@/data/scenario";
 import { describe, expect, it } from "vitest";
 import { currentWeek, firstWeekToShow, isPileup, pileupLine, shortDate, weekDates } from "@/lib/weeks";
 
@@ -37,5 +39,57 @@ describe("weeks", () => {
     expect(pileupLine(4, weeks, load)).toBe("3 things due in Week 4. Week 1 is clear, so start early.");
     expect(pileupLine(4, weeks, (w) => (w === 4 ? 3 : 1))).toBe("3 things due in Week 4. Week 1 is lighter, so start early.");
     expect(pileupLine(1, weeks, () => 3)).toBe("3 things due in Week 1.");
+  });
+});
+
+describe("term calendar", () => {
+  it("lays a term out Monday to Sunday with each item on its day", () => {
+    const weeks = calendarWeeks(FALL_2026_START, FALL_2026_WEEKS, fallWork);
+    expect(weeks).toHaveLength(12);
+    expect(weeks[0]!.days[0]!.date).toBe("2026-09-21");
+    expect(weeks[0]!.days[6]!.date).toBe("2026-09-27");
+    expect(weeks.reduce((n, w) => n + w.due, 0)).toBe(fallWork.length);
+  });
+  it("puts the busy week right after today, with three things due", () => {
+    const weeks = calendarWeeks(FALL_2026_START, FALL_2026_WEEKS, fallWork);
+    expect(currentWeek(FALL_2026_START, 12, "2026-11-08")).toBe(7);
+    expect(weeks[7]!.due).toBe(3);
+    expect(isPileup(weeks[7]!.due)).toBe(true);
+  });
+  it("places week-only syllabus items on that week's Friday", () => {
+    expect(fridayOf("2027-06-21", 1)).toBe("2027-06-25");
+    expect(fridayOf("2027-06-21", 2)).toBe("2027-07-02");
+  });
+});
+
+describe("week calendar helpers", () => {
+  it("opens on this week, or next week on a weekend", async () => {
+    const { weekToOpen } = await import("@/lib/weeks");
+    expect(weekToOpen("2026-09-21", 12, "2026-11-04")).toBe(7); // Wednesday
+    expect(weekToOpen("2026-09-21", 12, "2026-11-08")).toBe(8); // Sunday → next week
+    expect(weekToOpen("2026-09-21", 12, "2026-08-01")).toBe(1);
+    expect(weekToOpen("2026-09-21", 12, "2027-03-01")).toBe(12);
+    expect(weekToOpen("2026-09-21", 12, "2026-12-13")).toBe(12); // last Sunday stays in the term
+  });
+
+  it("formats times and spans the day", async () => {
+    const { clock, hourSpan, minutes } = await import("@/lib/weeks");
+    expect(minutes("13:30")).toBe(810);
+    expect(clock("13:30")).toBe("1:30");
+    expect(clock("09:00", true)).toBe("9 AM");
+    expect(clock("12:00", true)).toBe("12 PM");
+    expect(hourSpan([{ start: "10:30", end: "12:20" }])).toEqual({ from: 8, to: 17 });
+    expect(hourSpan([{ start: "07:30", end: "18:10" }])).toEqual({ from: 7, to: 19 });
+  });
+
+  it("lays out a month Monday first", async () => {
+    const { monthGrid, weekday } = await import("@/lib/weeks");
+    expect(weekday("2026-11-09")).toBe(0);
+    expect(weekday("2026-11-08")).toBe(6);
+    const nov = monthGrid("2026-11-12");
+    expect(nov[0]![0]).toBe("2026-10-26");
+    expect(nov[0]![6]).toBe("2026-11-01");
+    expect(nov.at(-1)!.at(-1)).toBe("2026-12-06");
+    expect(nov.every((r) => r.length === 7)).toBe(true);
   });
 });

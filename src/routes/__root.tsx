@@ -70,9 +70,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Path Agent" },
+      { title: "Trellis" },
       { name: "description", content: "Keeps transfer students' degree plans on track. Synthetic prototype." },
-      { property: "og:title", content: "Path Agent" },
+      { property: "og:title", content: "Trellis" },
       { property: "og:description", content: "Keeps transfer students' degree plans on track." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

@@ -1,5 +1,5 @@
 import { goTogetherEvent, options, opportunities, rankOptions, student, DROP_DEADLINE, syllabi, PILEUP_THRESHOLD } from "@/data/scenario";
-import type { AgentRun } from "@/lib/agent/loop";
+import type { TraceRun } from "@/lib/run";
 import { recoveryPath } from "@/lib/confidence";
 import { doneLine, planName } from "@/lib/opportunities";
 import { SCRIPT_START, type AgentId, type GoTogether } from "@/lib/journey";
@@ -36,7 +36,7 @@ export type JourneyView = {
   goTogether?: GoTogether | undefined;
   savedAt?: Record<string, Date> | undefined;
   wentTo?: Record<string, Date> | undefined;
-  agentRun?: AgentRun | null | undefined;
+  agentRun?: TraceRun | null | undefined;
 };
 
 const at = (secFromStart: number) => new Date(SCRIPT_START + secFromStart * 1000);
@@ -60,11 +60,11 @@ export function buildEvents(j: JourneyView): ActivityEvent[] {
     status: "done",
     steps: [
       { at: a0, helper: "reader", perm: "read", text: "Read your transcript, your degree audit, and Northgate's course catalog" },
-      { at: plus(a0, 1), helper: "reader", perm: "read", text: "Read the 3 syllabi for your summer classes" },
+      { at: plus(a0, 1), helper: "reader", perm: "read", text: "Read the 3 syllabi for your winter classes" },
       { at: plus(a0, 2), helper: "planner", perm: "read", text: "Matched each finished Bayview class to the Northgate requirement it fills" },
       { at: plus(a0, 3), helper: "planner", perm: "suggested", text: "Found that the statistics requirement is the one still open" },
     ],
-    found: ["4 of your 6 requirements are done or transferring.", "Statistics (QR-1, the quantitative reasoning requirement) is still open. You planned STAT 2 for summer."],
+    found: ["4 of your 6 requirements are done or transferring.", "Statistics (QR-1, the quantitative reasoning requirement) is still open. You planned STAT 2 for winter."],
     didNot: ["I didn't change your degree record.", "I didn't share anything with anyone."],
     details: {
       inputs: ["Transcript (Bayview, synthetic)", "Degree audit (Northgate)", "Northgate course catalog", "Transfer rules between the two schools (articulation file — the official list of which classes transfer)"],
@@ -79,7 +79,7 @@ export function buildEvents(j: JourneyView): ActivityEvent[] {
   ev.push({
     id: "term",
     at: b0,
-    headline: "I checked how heavy your summer term is",
+    headline: "I checked how heavy your winter term is",
     because: "a busy week can make a good class a bad choice.",
     goal: "on_time",
     status: "nothing",
@@ -95,24 +95,24 @@ export function buildEvents(j: JourneyView): ActivityEvent[] {
 
   // Going together: appears only after the student opts in, and never asks for attention.
   const g = j.goTogether;
-  if (g?.shownAt && (g.showMe || g.sentTo.length > 0)) {
-    const firstName = (id: string | null) => goTogetherEvent.visiblePeers.find((p) => p.id === id)?.name.split(" ")[0] ?? "";
-    const sent = g.sentTo.map(firstName).join(" and ");
-    const drafting = g.draftTo ? firstName(g.draftTo) : null;
-    const steps: Step[] = [{ at: g.shownAt, helper: "planner", perm: "read", text: `Showed you the students going to the ${goTogetherEvent.shortName} who also chose to be seen` }];
-    if (g.draftedAt && drafting) steps.push({ at: g.draftedAt, helper: "drafter", perm: "suggested", text: `Drafted a note to ${drafting} and left it for you to send` });
-    if (g.sentAt) steps.push({ at: g.sentAt, helper: "drafter", perm: "handed", text: `You sent the note to ${sent} yourself` });
+  if (g?.shownAt && (g.showMe || g.sentTo.length > 0 || g.matched.length > 0)) {
+    const names = (ids: string[]) => ids.map((id) => goTogetherEvent.visiblePeers.find((p) => p.id === id)?.name.split(" ")[0] ?? "").join(" and ");
+    const sent = names(g.sentTo);
+    const matched = names(g.matched);
+    const steps: Step[] = [{ at: g.shownAt, helper: "planner", perm: "read", text: `Showed you the cards of students going to the ${goTogetherEvent.shortName} who also chose to be seen` }];
+    if (g.sentAt && sent) steps.push({ at: g.sentAt, helper: "planner", perm: "handed", text: `You asked ${sent} to go together. It's a match only if they say yes` });
+    if (g.matchedAt && matched) steps.push({ at: g.matchedAt, helper: "planner", perm: "handed", text: `You and ${matched} both said yes, so their school email is on their card` });
+    const at = [g.shownAt, g.sentAt, g.matchedAt].filter((d): d is Date => !!d).sort((x, y) => y.getTime() - x.getTime())[0]!;
     ev.push({
       id: "go-together",
-      at: g.sentAt ?? g.draftedAt ?? g.shownAt,
-      headline: sent ? `You asked ${sent} to go to the ${goTogetherEvent.shortName} together` : drafting && g.draftedAt ? `I drafted a note to ${drafting} for the ${goTogetherEvent.shortName}` : `You chose to show yourself as going to the ${goTogetherEvent.shortName}`,
+      at,
+      headline: matched ? `You and ${matched} are going to the ${goTogetherEvent.shortName} together` : sent ? `You asked ${sent} to go to the ${goTogetherEvent.shortName} together` : `You chose to show yourself as going to the ${goTogetherEvent.shortName}`,
       because: "you turned on Show me as going.",
       goal: "explore",
-      status: sent ? "done" : "nothing",
+      status: sent || matched ? "done" : "nothing",
       steps,
-      didNot: [g.sentAt ? "Demo only: no message actually went out." : "I didn't send anything. Only you can.", "I didn't show you to anyone who hasn't opted in."],
-      action: drafting ? { label: "Open the draft", kind: "explore" } : undefined,
-      details: { inputs: ["Your Show me as going setting", "Students who also opted in (synthetic)"], outputs: [drafting ? "Draft note (editable)" : "List of students who opted in"], sourceIds: [] },
+      didNot: ["I didn't send anything. Demo only: no request or email went out.", "I didn't show you to anyone who hasn't opted in."],
+      details: { inputs: ["Your Show me as going setting", "Students who also opted in (synthetic)"], outputs: ["Path cards of students who opted in"], sourceIds: [] },
     });
   }
 
@@ -166,7 +166,7 @@ export function buildEvents(j: JourneyView): ActivityEvent[] {
     suggest: plannerOff ? undefined : ranked.slice(0, 3).map((o) => `${short(o.course)}, Section ${o.section} — ${word(o)}`),
     didNot: ["I didn't register you for anything.", "I didn't drop STAT 2 or put you on the waitlist."],
     action: j.chosenId ? undefined : { label: `Review the ${ranked.length} options`, kind: "options" },
-    change: j.chosenId ? undefined : ["Skip summer options", "Ask me before looking up classes"],
+    change: j.chosenId ? undefined : ["Skip winter options", "Ask me before looking up classes"],
     details: {
       inputs: ["Registration page: “Closed Section”", "Statistics requirement (QR-1)", "Transfer rules", "Open seats and section times"],
       outputs: [...(howRan ? [howRan] : []), ...ranked.map((o) => `${o.course} §${o.section} · ${o.seatsOpen} seats · ${word(o)}`)],

@@ -14,9 +14,9 @@ export const Route = createFileRoute("/settings")({
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { title: "Settings — Path Agent" },
+      { title: "Settings — Trellis" },
       { name: "description", content: "Notifications, school rules, your data, and onboarding." },
-      { property: "og:title", content: "Settings — Path Agent" },
+      { property: "og:title", content: "Settings — Trellis" },
       { property: "og:description", content: "Notifications, privacy and app preferences." },
     ],
   }),
@@ -41,14 +41,18 @@ function Settings() {
 
       <Section title="Set by your school">
         <Info title="Counselor review" value="When sources disagree or a course rule needs a person to confirm" />
-        <Info title="What Path Agent can never do" value="Register, drop, waitlist, or send without your approval" />
+        <Info title="What Sprout can never do" value="Register, drop, waitlist, or send without your approval" />
         <Info title="Advice it won't give" value="Legal, financial-aid, or immigration" />
       </Section>
 
+      <Section title="Profile">
+        <Row title="Your card" desc="What other students see at events where you turn on Show me as going."><Button variant="outline" size="sm" asChild><Link to="/career" search={{ tab: "card" }}>Edit</Link></Button></Row>
+      </Section>
+
       <Section title="Agent & data">
-        <Row title="Controls" desc="Choose what Path Agent does and reads."><Button variant="outline" size="sm" asChild><Link to="/agents" search={{ tab: "controls" }}>Open</Link></Button></Row>
+        <Row title="Controls" desc="Choose what Sprout does and reads."><Button variant="outline" size="sm" asChild><Link to="/agents" search={{ tab: "controls" }}>Open</Link></Button></Row>
         <Row title="Your sources" desc="Canvas, student system, degree audit, articulation, career center, email."><Button variant="outline" size="sm" asChild><Link to="/sources">Open</Link></Button></Row>
-        <Row title="Download my data" desc="Everything Path Agent read and produced."><Button variant="outline" size="sm" onClick={() => toast("Demo only: nothing was downloaded.")}>Download</Button></Row>
+        <Row title="Download my data" desc="Everything Sprout read and produced."><Button variant="outline" size="sm" onClick={() => toast("Demo only: nothing was downloaded.")}>Download</Button></Row>
       </Section>
 
       <Section title="Demo">

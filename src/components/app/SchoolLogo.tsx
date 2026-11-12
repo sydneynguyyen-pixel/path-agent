@@ -19,6 +19,7 @@ const MARKS: Record<Exclude<OrgId, "bayview" | "northgate">, ReactNode> = {
   "harbor-grocery": <><circle cx="20" cy="20" r="18.5" fill="#2F8F4E" /><circle cx="20" cy="10.5" r="2.8" fill="none" stroke={CREAM} strokeWidth="2.2" /><path d="M20 13.300V31M14 18h12M9.5 23.500C10.5 28.5 15 31 20 31s9.5-2.5 10.5-7.5" fill="none" stroke={CREAM} strokeWidth="2.4" strokeLinecap="round" /></>,
   "history-center": <><rect x="2" y="2" width="36" height="36" rx="10" fill="#B8741A" /><path d="M12 9h16M12 31h16" stroke={CREAM} strokeWidth="2.6" strokeLinecap="round" /><path d="M14 10.500h12c0 5-3 6.3-4.6 9.5 1.6 3.2 4.6 4.5 4.6 9.500H14c0-5 3-6.3 4.6-9.500C17 16.8 14 15.5 14 10.500Z" fill={CREAM} /></>,
   "valley-museum": <><rect x="2" y="2" width="36" height="36" rx="10" fill="#6B3FA0" /><path d="m7.5 12 7 16 5.5-11 5.5 11 7-16" fill="none" stroke={CREAM} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></>,
+  "harbor-health": <><rect x="2" y="2" width="36" height="36" rx="10" fill="#1B6F8A" /><path d="M16.500 10h7v6.500H30v7h-6.500V30h-7v-6.500H10v-7h6.500Z" fill={CREAM} /><path d="M8 31c4-2.400 8-2.400 12 0s8 2.400 12 0" fill="none" stroke={GOLD} strokeWidth="2.400" strokeLinecap="round" /></>,
   "food-network": <><circle cx="20" cy="20" r="18.5" fill="#E8772E" /><path d="M20 19.500c-5.5-3.8-7-6-7-8.3 0-2.2 1.8-3.7 3.7-3.7 1.4 0 2.6.8 3.3 2 .7-1.2 1.9-2 3.3-2 1.9 0 3.7 1.5 3.7 3.7 0 2.3-1.5 4.5-7 8.300Z" fill={CREAM} /><path d="M9 22.500h22c0 5.5-4.5 9.5-11 9.500S9 28 9 22.500Z" fill={GOLD} /></>,
 };
 

@@ -23,7 +23,7 @@ export const blankPages: Partial<Record<string, BlankPageContent>> = {
   "/portal": { spot: "signpost", title: "Build your path first", body: "Build your path first, and I'll be ready when a class is full." },
   "/portfolio": noSkills,
   "/explore": { spot: "flowers", title: "Explore opens once you have a path", body: "Build your path to see classes, clubs, internships and events that fit." },
-  "/activity": { spot: "journal", title: "Nothing has happened yet", body: "Everything Path Agent does will show up here." },
+  "/activity": { spot: "journal", title: "Nothing has happened yet", body: "Everything Sprout does will show up here." },
 };
 
 export function BlankPage({ spot, title, body }: BlankPageContent) {

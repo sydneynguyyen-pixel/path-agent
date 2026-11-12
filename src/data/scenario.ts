@@ -39,7 +39,7 @@ export const sources = {
     school: "Northgate State University",
     section: "Req. QR-1 Statistics",
     passage:
-      "QR-1 Statistics: one course in introductory statistics, minimum 3.0 semester units. Planned: BCC STAT 2 (Summer 2027).",
+      "QR-1 Statistics: one course in introductory statistics, minimum 3.0 semester units. Planned: BCC STAT 2 (Winter 2027).",
   },
   "audit-engl": {
     id: "audit-engl",
@@ -96,7 +96,7 @@ export const sources = {
     school: "Bayview Community College",
     section: "§6.1 Dropping a Course",
     passage:
-      "Summer students may drop a course without a W notation through the end of the second week of the term (July 2, 2027 for Summer 2027). Drops are made by the student in the registration portal.",
+      "Students may drop a course without a W notation through the end of the second week of the term (January 15, 2027 for Winter 2027). Drops are made by the student in the registration portal.",
   },
   "bcc-waitlist": {
     id: "bcc-waitlist",
@@ -145,21 +145,21 @@ export const sources = {
   },
   "syl-engl": {
     id: "syl-engl",
-    doc: "ENGL 1B Syllabus, Summer 2027",
+    doc: "ENGL 1B Syllabus, Winter 2027",
     school: "Bayview Community College",
     section: "Schedule",
     passage: "Wk 2 essay draft · Wk 4 research paper · Wk 7 portfolio due.",
   },
   "syl-bio": {
     id: "syl-bio",
-    doc: "BIO 12 Syllabus, Summer 2027",
+    doc: "BIO 12 Syllabus, Winter 2027",
     school: "Bayview Community College",
     section: "Schedule",
     passage: "Wk 3 lab report · Wk 4 midterm · Wk 7 lab practical · Wk 8 final.",
   },
   "syl-hist": {
     id: "syl-hist",
-    doc: "HIST 18 Syllabus, Summer 2027",
+    doc: "HIST 18 Syllabus, Winter 2027",
     school: "Bayview Community College",
     section: "Schedule",
     passage: "Wk 4 response essay · Wk 6 midterm · Wk 8 final paper.",
@@ -185,7 +185,7 @@ export const requirements: Requirement[] = [
   { id: "math", code: "MATH-150", name: "Calculus I", status: "transfer", detail: "BCC MATH 1A → NSU MATH 150", units: "3.3 semester units", sourceId: "artic-math1a", confidence: 0.95 },
   { id: "lab", code: "GE-B2/B3", name: "Lab Science", status: "transfer", detail: "BCC BIO 10 + 10L", units: "4.0 semester units", sourceId: "artic-bio", confidence: 0.93 },
   { id: "hum", code: "GE-C2", name: "Humanities", status: "in_progress", detail: "BCC HIST 17 · Spring 2027", units: "3.3 semester units", sourceId: "audit-hum", confidence: 0.88 },
-  { id: "qr1", code: "QR-1", name: "Statistics", status: "remaining", detail: "Planned: BCC STAT 2 · Summer 2027", units: "3.0 semester units min", sourceId: "audit-stats", confidence: 0.9 },
+  { id: "qr1", code: "QR-1", name: "Statistics", status: "remaining", detail: "Planned: BCC STAT 2 · Winter 2027", units: "3.0 semester units min", sourceId: "audit-stats", confidence: 0.9 },
   { id: "maj", code: "MAJ-PREP", name: "Psychology major preparation", status: "remaining", detail: "PSYC 100, PSYC 110 at Northgate", units: "6.0 semester units", sourceId: "audit-major", confidence: 0.86 },
 ];
 
@@ -314,21 +314,60 @@ export function rankOptions(list: Option[]): Option[] {
 }
 
 /** Synthetic Bayview policy (cited in sources): drop without a W through end of week 2. */
-export const DROP_DEADLINE = "July 2, 2027";
+export const DROP_DEADLINE = "January 15, 2027";
+/** Synthetic: the Northgate transfer application for Fall 2027 closes Nov 30. The agent drafts; Maya submits. */
+export const APPLY_DEADLINE = "2026-11-30";
 export const REQUIREMENT_LABEL = "QR-1 Statistics";
 
 /** Synthetic Bayview policy allows one waitlist spot on a full section while enrolled in an alternate. */
 export const waitlist = { allowed: true, course: "STAT 2-01", spots: "4 of 10 spots left", sourceId: "bcc-waitlist" };
 
 export const syllabi = [
-  { course: "ENGL 1B", sourceId: "syl-engl", items: [{ week: 2, label: "Essay draft" }, { week: 4, label: "Research paper" }, { week: 7, label: "Portfolio" }] },
-  { course: "BIO 12", sourceId: "syl-bio", items: [{ week: 3, label: "Lab report" }, { week: 4, label: "Midterm" }, { week: 7, label: "Lab practical" }, { week: 8, label: "Final" }] },
-  { course: "HIST 18", sourceId: "syl-hist", items: [{ week: 4, label: "Response essay" }, { week: 6, label: "Midterm" }, { week: 8, label: "Final paper" }] },
+  { course: "ENGL 1B", sourceId: "syl-engl", items: [{ week: 2, label: "Essay draft", worth: "10% of grade" }, { week: 4, label: "Research paper", worth: "30% of grade" }, { week: 7, label: "Portfolio", worth: "35% of grade" }] },
+  { course: "BIO 12", sourceId: "syl-bio", items: [{ week: 3, label: "Lab report", worth: "15% of grade" }, { week: 4, label: "Midterm", worth: "25% of grade" }, { week: 7, label: "Lab practical", worth: "20% of grade" }, { week: 8, label: "Final", worth: "30% of grade" }] },
+  { course: "HIST 18", sourceId: "syl-hist", items: [{ week: 4, label: "Response essay", worth: "15% of grade" }, { week: 6, label: "Midterm", worth: "25% of grade" }, { week: 8, label: "Final paper", worth: "35% of grade" }] },
+];
+
+/** Fall 2026 coursework from the two current syllabi (synthetic). ANTH 2 grades by weight, ART 1 by points. */
+export const FALL_2026_START = "2026-09-21";
+export const FALL_2026_WEEKS = 12;
+export type CourseWork = { course: string; date: string; label: string; worth: string; detail: string };
+export const fallWork: CourseWork[] = [
+  { course: "ANTH 2", date: "2026-09-30", label: "Reading response 1", worth: "5% of grade", detail: "One page on the first two chapters." },
+  { course: "ART 1", date: "2026-10-09", label: "Visual analysis 1", worth: "50 of 400 points", detail: "Describe one painting from the course reader." },
+  { course: "ANTH 2", date: "2026-10-14", label: "Fieldnotes 1", worth: "10% of grade", detail: "Two hours of observation in a public place." },
+  { course: "ANTH 2", date: "2026-10-21", label: "Midterm", worth: "20% of grade", detail: "Short answers on readings and lectures." },
+  { course: "ART 1", date: "2026-10-23", label: "Midterm", worth: "100 of 400 points", detail: "Slide identification and two short essays." },
+  { course: "ANTH 2", date: "2026-11-04", label: "Fieldnotes 2", worth: "10% of grade", detail: "Return to your site and compare with your first visit." },
+  { course: "ANTH 2", date: "2026-11-10", label: "Interview transcript", worth: "10% of grade", detail: "A 20-minute open-ended interview, transcribed." },
+  { course: "ART 1", date: "2026-11-12", label: "Written critique", worth: "75 of 400 points", detail: "Three pages on a work you saw in person." },
+  { course: "ART 1", date: "2026-11-13", label: "Museum visit notes", worth: "25 of 400 points", detail: "Notes and a photo from the museum visit." },
+  { course: "ANTH 2", date: "2026-11-18", label: "Reading response 4", worth: "5% of grade", detail: "One page on the kinship readings." },
+  { course: "ANTH 2", date: "2026-12-02", label: "Cultural analysis essay", worth: "25% of grade", detail: "Six pages built on your fieldnotes and interview." },
+  { course: "ART 1", date: "2026-12-04", label: "Visual analysis essay", worth: "75 of 400 points", detail: "Compare two works from different periods." },
+  { course: "ANTH 2", date: "2026-12-09", label: "Final exam", worth: "15% of grade", detail: "Cumulative. Finals week." },
+  { course: "ART 1", date: "2026-12-10", label: "Final exam", worth: "75 of 400 points", detail: "Cumulative. Finals week." },
+];
+
+/** When each class meets (synthetic, from the schedule of classes). Days: 0 = Mon … 4 = Fri; 24-hour times. */
+export type ClassMeeting = { course: string; days: number[]; start: string; end: string; room: string };
+export const classMeetings: ClassMeeting[] = [
+  { course: "ANTH 2", days: [0, 2], start: "10:30", end: "12:20", room: "Social Sciences 204" },
+  { course: "ART 1", days: [1, 3], start: "13:30", end: "15:20", room: "Fine Arts 110" },
+  { course: "ENGL 1B", days: [0, 2], start: "09:00", end: "10:50", room: "Humanities 118" },
+  { course: "BIO 12", days: [1, 3], start: "10:00", end: "11:50", room: "Science 230" },
+  { course: "BIO 12", days: [4], start: "09:00", end: "11:50", room: "Science lab 3" },
+  { course: "HIST 18", days: [0, 2], start: "13:00", end: "14:50", room: "Social Sciences 112" },
+  { course: "STAT 2", days: [1, 3], start: "13:30", end: "15:20", room: "Math 101" },
+  { course: "MATH 13", days: [1, 3], start: "08:00", end: "09:50", room: "Math 105" },
+  { course: "PSYC 5", days: [0, 2], start: "15:00", end: "16:50", room: "Social Sciences 210" },
+  { course: "BUS 21", days: [1, 3], start: "16:00", end: "17:50", room: "Business 140" },
 ];
 
 export const PILEUP_THRESHOLD = 3;
-/** Monday after Summer registration closes on Jun 18 (synthetic). */
-export const SUMMER_2027_START = "2027-06-21";
+/** First Monday of Winter quarter (synthetic). Registration closes Nov 20. */
+export const WINTER_2027_START = "2027-01-04";
+export const WINTER_2027_WEEKS = 12;
 /** Synthetic Northgate policy (cited in sources as nsu-admit). */
 export const TRANSFER_MIN_UNITS = 60;
 export const TERM_LOAD_LIMIT = 16;
@@ -342,7 +381,7 @@ export const agents = [
     why: "Every later claim must point to a passage, so it extracts before anyone reasons.",
     name: "Reader",
     role: "Reads records and documents",
-    inputs: ["Transcript (Bayview, synthetic)", "Degree audit (Northgate)", "Articulation file 2026-27", "Northgate catalog", "3 summer syllabi", "Portal response: Section full"],
+    inputs: ["Transcript (Bayview, synthetic)", "Degree audit (Northgate)", "Articulation file 2026-27", "Northgate catalog", "3 winter syllabi", "Portal response: Section full"],
     outputs: ["Marked QR-1 Statistics as at risk", "Extracted 14 cited passages", "Converted 5 quarter units → 3.3 semester units (both policies cited)"],
   },
   {
@@ -358,7 +397,7 @@ export const agents = [
     why: "A course that counts but collides with three deadlines in one week is a worse plan, so it checks workload.",
     name: "Backup finder",
     role: "Finds open sections and checks workload",
-    inputs: ["Summer schedule (simulated)", "Merged syllabi deadlines"],
+    inputs: ["Winter schedule (simulated)", "Merged syllabi deadlines"],
     outputs: ["Seat counts and section times for 5 sections", "Waitlist allowed per §5.4", "Deadline pile-up check per option"],
   },
   {
@@ -433,23 +472,23 @@ export const terms: Term[] = [
     { code: "PHIL 2", title: "Ethics", units: "5 quarter units", grade: "B+" },
     { code: "PSYC 2", title: "Research Methods", units: "5 quarter units", grade: "A-" },
   ] },
-  { id: "f26", name: "Fall 2026", school: "bayview", system: "quarter", status: "done", courses: [
-    { code: "ANTH 2", title: "Cultural Anthropology", units: "5 quarter units", grade: "A" },
-    { code: "ART 1", title: "Art History", units: "4 quarter units", grade: "B+" },
+  { id: "f26", name: "Fall 2026", school: "bayview", system: "quarter", status: "in_progress", courses: [
+    { code: "ANTH 2", title: "Cultural Anthropology", units: "5 quarter units" },
+    { code: "ART 1", title: "Art History", units: "4 quarter units" },
   ] },
-  { id: "w27", name: "Winter 2027", school: "bayview", system: "quarter", status: "done", courses: [
-    { code: "PSYC 14", title: "Developmental Psych", units: "5 quarter units", grade: "A" },
-    { code: "ECON 1", title: "Macroeconomics", units: "5 quarter units", grade: "B" },
-  ] },
-  { id: "sp27", name: "Spring 2027", school: "bayview", system: "quarter", status: "in_progress", courses: [
-    { code: "HIST 17", title: "U.S. History", units: "5 quarter units" },
-    { code: "PSYC 33", title: "Personal Growth", units: "3 quarter units" },
-  ] },
-  { id: "su27", name: "Summer 2027", school: "bayview", system: "quarter", status: "registering", registration: "Open now · closes Jun 18", courses: [
+  { id: "w27", name: "Winter 2027", school: "bayview", system: "quarter", status: "registering", registration: "Open now · closes Nov 20", courses: [
     { code: "ENGL 1B", title: "Critical Thinking & Writing", units: "5 quarter units" },
     { code: "BIO 12", title: "Human Biology", units: "5 quarter units" },
     { code: "HIST 18", title: "Modern World History", units: "5 quarter units" },
     { code: "STAT 2", title: "Statistics (QR-1)", units: "5 quarter units", flag: "qr1" },
+  ] },
+  { id: "sp27", name: "Spring 2027", school: "bayview", system: "quarter", status: "planned", registration: "Registers Feb 2027", courses: [
+    { code: "HIST 17", title: "U.S. History", units: "5 quarter units" },
+    { code: "PSYC 33", title: "Personal Growth", units: "3 quarter units" },
+  ] },
+  { id: "su27", name: "Summer 2027", school: "bayview", system: "quarter", status: "planned", registration: "Registers Apr 2027", courses: [
+    { code: "PSYC 14", title: "Developmental Psych", units: "5 quarter units" },
+    { code: "ECON 1", title: "Macroeconomics", units: "5 quarter units" },
   ] },
   { id: "fa27", name: "Fall 2027", school: "northgate", system: "semester", status: "planned", registration: "Transfer orientation Jul 20 · registers Jul 22", courses: [
     { code: "PSYC 100", title: "Foundations of Psychology", units: "3 semester units" },
@@ -476,7 +515,8 @@ export const terms: Term[] = [
   ] },
 ];
 
-export const progress = { earned: 50.6, inProgress: 5.3, needed: 120, gradTerm: "Spring 2029" };
+/** Semester units. `planned` is what's still ahead at Bayview after Winter (Spring and Summer 2027). */
+export const progress = { earned: 37.9, inProgress: 6.0, planned: 12.0, needed: 120, gradTerm: "Spring 2029" };
 
 export const schools = {
   bayview: { name: "Bayview Community College", short: "Bayview CC", system: "Quarter system", role: "Current school" },
@@ -506,12 +546,12 @@ export type SkillConfidence = "High" | "Medium" | "Low";
 export type Skill = { id: string; name: string; method: string; theme: string; course: string; level: EvidenceLevel; confidence: SkillConfidence; quote: string; source: string; work?: string };
 export type SkillCourse = { code: string; title: string; term: string; termId: string; units: string; school: string; description: string; tools: string[]; assignments: string[]; thin?: boolean };
 export const skillCourses: SkillCourse[] = [
-  { code: "STAT 2", title: "Statistics", term: "Summer 2027", termId: "su27", units: "5 quarter units", school: "Bayview CC", description: "An introduction to statistical reasoning, data summaries and inference.", tools: ["Excel", "R"], assignments: ["Planned: data summary worksheet", "Planned: visualization exercise"] },
+  { code: "STAT 2", title: "Statistics", term: "Winter 2027", termId: "w27", units: "5 quarter units", school: "Bayview CC", description: "An introduction to statistical reasoning, data summaries and inference.", tools: ["Excel", "R"], assignments: ["Planned: data summary worksheet", "Planned: visualization exercise"] },
   { code: "PSYC 33", title: "Personal Growth", term: "Spring 2027", termId: "sp27", units: "3 quarter units", school: "Bayview CC", description: "Explore personal development through reflection and communication.", tools: [], assignments: ["Reflection journal", "Interview practice"] },
   { code: "HIST 17", title: "U.S. History", term: "Spring 2027", termId: "sp27", units: "5 quarter units", school: "Bayview CC", description: "Study U.S. history through primary sources and research writing.", tools: [], assignments: ["Primary-source analysis", "10-page research paper"] },
-  { code: "ANTH 2", title: "Cultural Anthropology", term: "Fall 2026", termId: "f26", units: "5 quarter units · grade A", school: "Bayview CC", description: "Explore culture through observation, interviewing and ethnographic methods.", tools: [], assignments: ["Ethnography fieldnotes (synthetic attachment)", "Cultural analysis essay"] },
-  { code: "ART 1", title: "Art History", term: "Fall 2026", termId: "f26", units: "4 quarter units · grade B+", school: "Bayview CC", description: "Interpret works of art through visual analysis and historical context.", tools: [], assignments: ["Visual analysis essay", "Written critique", "Class discussion (thin description)"] },
-  { code: "ENGL 1B", title: "Critical Thinking", term: "Summer 2027", termId: "su27", units: "5 quarter units", school: "Bayview CC", description: "Study arguments and develop evidence-based persuasive writing.", tools: [], assignments: ["Planned: argument analysis", "Planned: persuasive essay"] },
+  { code: "ANTH 2", title: "Cultural Anthropology", term: "Fall 2026", termId: "f26", units: "5 quarter units · in progress", school: "Bayview CC", description: "Explore culture through observation, interviewing and ethnographic methods.", tools: [], assignments: ["Ethnography fieldnotes (synthetic attachment)", "Cultural analysis essay"] },
+  { code: "ART 1", title: "Art History", term: "Fall 2026", termId: "f26", units: "4 quarter units · in progress", school: "Bayview CC", description: "Interpret works of art through visual analysis and historical context.", tools: [], assignments: ["Visual analysis essay", "Written critique", "Class discussion (thin description)"] },
+  { code: "ENGL 1B", title: "Critical Thinking", term: "Winter 2027", termId: "w27", units: "5 quarter units", school: "Bayview CC", description: "Study arguments and develop evidence-based persuasive writing.", tools: [], assignments: ["Planned: argument analysis", "Planned: persuasive essay"] },
   { code: "PSYC 41", title: "Research Methods", term: "Fall 2027", termId: "fa27", units: "3 semester units", school: "Northgate State", description: "Design surveys and experiments to investigate research questions.", tools: [], assignments: ["Planned: survey proposal", "Planned: experiment design"] },
   { code: "DSGN 20", title: "Intro to Human-Centered Design", term: "Fall 2027", termId: "fa27", units: "3 semester units", school: "Northgate State", description: "Explore human-centered design through prototypes and usability studies.", tools: [], assignments: ["Planned: paper prototype", "Planned: usability study plan"] },
 ];
@@ -556,7 +596,7 @@ export const registrationSkills: Record<string, string[]> = {
 // Explore: synthetic classes, clubs, internships and events. There is deliberately no sponsor or paid field.
 export type OpportunityKind = "class" | "club" | "internship" | "event";
 /** Who runs a listing. Picks the logo shown next to its name. */
-export type OrgId = "bayview" | "northgate" | "lakeshore" | "redwood-bend" | "eastshore-city" | "library" | "design-collective" | "open-eastshore" | "county" | "harbor-grocery" | "history-center" | "valley-museum" | "food-network";
+export type OrgId = "bayview" | "northgate" | "lakeshore" | "redwood-bend" | "eastshore-city" | "library" | "design-collective" | "open-eastshore" | "county" | "harbor-grocery" | "history-center" | "valley-museum" | "food-network" | "harbor-health";
 export type ClubId = "people-products" | "research-circle" | "student-government" | "data-club";
 export type FlyerStyle = "haze" | "poster" | "bands" | "cutout" | "checker" | "slab" | "ribbon" | "inset" | "scatter" | "marquee" | "masthead" | "scrawl" | "patch" | "collage" | "tape" | "expo";
 /** A fictional flyer, the way a club or employer would upload one. `brand` also colors what surrounds it. */
@@ -611,16 +651,16 @@ const remainingTerms = ["su27", "fa27", "sp28", "fa28", "sp29"];
 export const opportunities: Opportunity[] = [
   { id: "dsgn20", kind: "class", degree: "elective", title: "DSGN 20 · Intro to Human-Centered Design", host: "Northgate State", org: "northgate", when: "Fall 2027 · 3 semester units", cost: 1188, fills: ["Usability testing"], termIds: ["fa27"], fitNote: "Uses your open elective in Fall 2027", courseCode: "DSGN 20", photo: "photo-1586936893354-362ad6ae47ba", subject: "Design", industry: "Technology", place: "Northgate State", deadline: "2027-08-13", startsOn: "2027-08-23" },
   { id: "design-club", kind: "club", title: "People + Products Club", host: "Bayview CC", org: "bayview", club: "people-products", when: "Tuesdays, 3:30 PM · Student Center", fills: ["Usability testing"], termIds: remainingTerms, slot: { day: "Tue", part: "afternoon" }, photo: "design-club", subject: "Design", industry: "Technology", place: "Bayview CC", flyer: { style: "masthead", headline: ["People +", "Products"], when: "Tuesdays 3:30", note: "Student Center", brand: "#FFF04D", ink: "#0A0A0A", accent: "#0A0A0A", pop: "#0A0A0A", focus: "62% 55%" }, startsOn: "2026-11-10" },
-  { id: "library-usability", kind: "internship", title: "Library website usability intern", host: "Eastshore Public Library", org: "library", when: "Summer · 8 hours a week · Paid", fills: ["Usability testing"], termIds: ["su27"], openToGrads: true, fitNote: "Set your own hours around summer classes", photo: "photo-1514513452089-17f8a9771ee8", subject: "Design", industry: "Libraries & museums", place: "Off campus", deadline: "2027-03-15", flyer: { style: "checker", headline: ["Library", "UX Intern"], when: "Apply by Mar 15", note: "Paid · Summer", brand: "#F5F5F5", ink: "#0A0A0A", accent: "#FF3E96", pop: "#FF3E96" }, startsOn: "2027-06-01" },
+  { id: "library-usability", kind: "internship", title: "Library website usability intern", host: "Eastshore Public Library", org: "library", when: "Summer · 8 hours a week · Paid", fills: ["Usability testing"], termIds: ["su27"], openToGrads: true, fitNote: "Set your own hours around summer classes", photo: "photo-1514513452089-17f8a9771ee8", subject: "Design", industry: "Libraries & museums", place: "Off campus", deadline: "2027-03-15", flyer: { style: "checker", headline: ["Library", "UX Intern"], when: "Apply by Mar 15", note: "Paid · Summer", brand: "#F5F5F5", ink: "#0A0A0A", accent: "#D41C72", pop: "#D41C72" }, startsOn: "2027-06-01" },
   { id: "ux-night", kind: "event", title: "Watch Real People Use Things: a UX night", host: "Eastshore Design Collective", org: "design-collective", when: "Next Tuesday, 5:30 PM · Free", fills: ["Usability testing"], termIds: remainingTerms, openToGrads: true, slot: { day: "Tue", part: "evening" }, photo: "ux-night", subject: "Design", industry: "Technology", place: "Off campus", flyer: { style: "scatter", headline: ["UX", "Night"], when: "Nov 10 · 5:30 PM", note: "Real people, real things", brand: "#1B2B6B", ink: "#FFFFFF", accent: "#FFF1A8", pop: "#FF5A5F", deep: "#7CF0A0", focus: "50% 100%" }, startsOn: "2026-11-10" },
   { id: "psyc41", kind: "class", degree: "major", title: "PSYC 41 · Research Methods", host: "Northgate State", org: "northgate", when: "Fall 2027 · 3 semester units", cost: 1188, fills: ["Survey design", "Evaluation design", "Policy evaluation"], termIds: ["fa27"], fitNote: "Also counts toward your Psychology major", courseCode: "PSYC 41", photo: "photo-1460518451285-97b6aa326961", subject: "Psychology", industry: "Education", place: "Northgate State", deadline: "2027-08-13", startsOn: "2027-08-23" },
   { id: "research-circle", kind: "club", title: "Student Research Circle", host: "Bayview CC", org: "bayview", club: "research-circle", when: "Fridays, 1:00 PM · Library room 204", fills: ["Survey design", "Data analysis"], termIds: remainingTerms, slot: { day: "Fri", part: "afternoon" }, photo: "research-circle", subject: "Research", industry: "Education", place: "Bayview CC", flyer: { style: "ribbon", headline: ["Research", "Circle"], when: "Fridays 1 PM", note: "Library 204", brand: "#5630E6", ink: "#FFFFFF", accent: "#FFFFFF", pop: "#FFFFFF", focus: "50% 0%" }, startsOn: "2026-11-13" },
-  { id: "campus-survey", kind: "internship", title: "Campus climate survey assistant", host: "Bayview Office of Research", org: "bayview", when: "Fall · 6 hours a week · Paid", fills: ["Survey design"], termIds: ["fa27"], fitNote: "Hours are set around your classes", photo: "photo-1562774053-701939374585", subject: "Research", industry: "Education", place: "Bayview CC", deadline: "2027-06-30", flyer: { style: "cutout", headline: ["Survey", "Assistant"], when: "Apply by Jun 30", note: "Paid · Fall", brand: "#0E7C5B", ink: "#FFE36E", accent: "#FFE36E", pop: "#FFE36E" }, startsOn: "2027-08-30" },
+  { id: "campus-survey", kind: "internship", title: "Campus climate survey assistant", host: "Bayview Office of Research", org: "bayview", when: "Fall · 6 hours a week · Paid", fills: ["Survey design"], termIds: ["fa27"], fitNote: "Hours are set around your classes", photo: "photo-1562774053-701939374585", subject: "Research", industry: "Education", place: "Bayview CC", deadline: "2027-06-30", flyer: { style: "cutout", headline: ["Survey", "Assistant"], when: "Apply by Jun 30", note: "Paid · Fall", brand: "#0A6B4E", ink: "#FFE36E", accent: "#FFE36E", pop: "#FFE36E" }, startsOn: "2027-08-30" },
   { id: "survey-lab", kind: "event", title: "Write Better Questions: a survey workshop", host: "Bayview Career Center", org: "bayview", when: "Saturday, 10:00 AM · Free", fills: ["Survey design"], termIds: remainingTerms, openToGrads: true, slot: { day: "Sat", part: "morning" }, photo: "survey-lab", subject: "Research", industry: "Education", place: "Bayview CC", flyer: { style: "scrawl", headline: ["Write Better", "Questions"], when: "Saturday, Nov 14", note: "Free · 10 AM workshop", brand: "#EE4A4F", ink: "#FFFFFF", accent: "#FFEE57", pop: "#FFEE57", focus: "60% 60%" }, startsOn: "2026-11-14" },
   { id: "policy-committee", kind: "club", title: "Student Government policy committee", host: "Bayview CC", org: "bayview", club: "student-government", when: "Thursdays, 6:00 PM · Student Center", fills: ["Policy evaluation"], termIds: remainingTerms, slot: { day: "Thu", part: "evening" }, photo: "policy-committee", subject: "Government", industry: "Government", place: "Bayview CC", flyer: { style: "slab", headline: ["Student", "Gov"], when: "Thursdays 6 PM", note: "Policy committee", brand: "#1F3FDC", ink: "#050508", accent: "#FFFFFF", pop: "#FFFFFF", focus: "50% 70%" }, startsOn: "2026-11-12" },
-  { id: "county-policy", kind: "internship", title: "County budget office research intern", host: "Eastshore County", org: "county", when: "Summer · 10 hours a week · Paid", fills: ["Policy evaluation", "Data analysis in R"], termIds: ["su27"], openToGrads: true, fitNote: "Remote, so you choose the hours", photo: "photo-1565832077355-ad10f941cc11", subject: "Government", industry: "Government", place: "Online", deadline: "2027-03-01", flyer: { style: "collage", headline: ["Budget", "Office", "Intern"], when: "Apply by Mar 1", note: "Remote · Paid", brand: "#0FA3B1", ink: "#0B0B0B", accent: "#FBF3CF", pop: "#3CBCC8" }, startsOn: "2027-06-01" },
+  { id: "county-policy", kind: "internship", title: "County budget office research intern", host: "Eastshore County", org: "county", when: "Summer · 10 hours a week · Paid", fills: ["Policy evaluation", "Data analysis in R"], termIds: ["su27"], openToGrads: true, fitNote: "Remote, so you choose the hours", photo: "photo-1565832077355-ad10f941cc11", subject: "Government", industry: "Government", place: "Online", deadline: "2027-03-01", flyer: { style: "collage", headline: ["Budget", "Office", "Intern"], when: "Apply by Mar 1", note: "Remote · Paid", brand: "#087380", ink: "#0B0B0B", accent: "#FBF3CF", pop: "#3CBCC8" }, startsOn: "2027-06-01" },
   { id: "r-group", kind: "club", title: "Eastshore R Users Group", host: "Open Eastshore", org: "open-eastshore", when: "Tuesdays, 6:00 PM · Online", fills: ["Data analysis in R", "Data analysis"], termIds: remainingTerms, openToGrads: true, slot: { day: "Tue", part: "evening" }, photo: "photo-1607799279861-4dd421887fb3", subject: "Data", industry: "Technology", place: "Online", flyer: { style: "expo", headline: ["R Users", "Group"], when: "Tuesdays 6 PM", note: "Online", brand: "#A8E8B0", ink: "#1D1D22", accent: "#79D98A", pop: "#C6B4EC" }, startsOn: "2026-11-10" },
-  { id: "civic-data", kind: "event", title: "Civic Data Saturday", host: "Open Eastshore", org: "open-eastshore", when: "Saturday, 9:30 AM · Free", fills: ["Data analysis in R", "SQL", "Data analysis"], termIds: remainingTerms, openToGrads: true, slot: { day: "Sat", part: "morning" }, photo: "civic-data", subject: "Data", industry: "Government", place: "Off campus", flyer: { style: "patch", headline: ["Civic", "Data"], when: "Sat Nov 14 · 9:30 AM", note: "Free · All levels", brand: "#E8438A", ink: "#0A0A0A", accent: "#FFE94D", pop: "#E8438A" }, startsOn: "2026-11-14" },
+  { id: "civic-data", kind: "event", title: "Civic Data Saturday", host: "Open Eastshore", org: "open-eastshore", when: "Saturday, 9:30 AM · Free", fills: ["Data analysis in R", "SQL", "Data analysis"], termIds: remainingTerms, openToGrads: true, slot: { day: "Sat", part: "morning" }, photo: "civic-data", subject: "Data", industry: "Government", place: "Off campus", flyer: { style: "patch", headline: ["Civic", "Data"], when: "Sat Nov 14 · 9:30 AM", note: "Free · All levels", brand: "#C42A72", ink: "#0A0A0A", accent: "#FFE94D", pop: "#C42A72" }, startsOn: "2026-11-14" },
   { id: "sql-sprint", kind: "club", title: "Data Club SQL sprint", host: "Northgate State", org: "northgate", club: "data-club", when: "Fridays, 2:00 PM · Six weeks", fills: ["SQL"], termIds: ["fa27", "sp28"], slot: { day: "Fri", part: "afternoon" }, photo: "sql-sprint", subject: "Data", industry: "Technology", place: "Northgate State", flyer: { style: "tape", headline: ["SQL", "Sprint"], when: "Fridays 2 PM", note: "Six weeks", brand: "#F6F7FF", ink: "#0A0A0A", accent: "#1F44E0", pop: "#AEBEFF" }, startsOn: "2027-08-27" },
   { id: "market-intern", kind: "internship", title: "Customer insights intern", host: "Harbor Grocery Co-op", org: "harbor-grocery", when: "Summer · 10 hours a week · Paid", fills: ["SQL"], termIds: ["su27"], openToGrads: true, fitNote: "Set your own hours around summer classes", photo: "photo-1542838132-92c53300491e", subject: "Business", industry: "Retail", place: "Off campus", deadline: "2027-04-01", flyer: { style: "bands", headline: ["Customer", "Insights"], when: "Apply by Apr 1", note: "Paid", brand: "#F4B93A", ink: "#1F5A2E", accent: "#1F5A2E", pop: "#F7E9B0", deep: "#D9481C" }, startsOn: "2027-06-01" },
   { id: "archive-volunteers", kind: "club", title: "Community Archive volunteers", host: "Eastshore History Center", org: "history-center", when: "Saturdays, 10:00 AM", fills: ["Collections management"], termIds: remainingTerms, openToGrads: true, slot: { day: "Sat", part: "morning" }, photo: "archive-volunteers", subject: "Art & history", industry: "Libraries & museums", place: "Off campus", flyer: { style: "haze", headline: ["Archive", "Volunteers"], when: "Saturdays", note: "10 AM", brand: "#CFF5EC", ink: "#0B5D52", accent: "#36C9B0", pop: "#FFD36E" }, startsOn: "2026-11-14" },
@@ -634,16 +674,35 @@ export const opportunities: Opportunity[] = [
   { id: "rbc-soc31", kind: "class", degree: "check", title: "SOC 31 · Program Evaluation Basics", host: "Redwood Bend College", org: "redwood-bend", when: "Fall 2027 · 3 semester units", cost: 138, milesAway: 14, fills: ["Evaluation design", "Policy evaluation"], termIds: ["fa27"], fitNote: "Saturday mornings, so it stays clear of your weekdays", photo: "photo-1522202176988-66273c2fd55f", subject: "Research", industry: "Nonprofit", place: "Redwood Bend College", deadline: "2027-08-14", startsOn: "2027-08-28" },
   { id: "ecc-dsgn14", kind: "class", degree: "check", title: "DSGN 14 · UX Research Studio", host: "Eastshore City College", org: "eastshore-city", when: "Fall 2027 · 3 semester units", cost: 138, milesAway: 6, fills: ["Usability testing"], termIds: ["fa27"], fitNote: "Tuesday evenings, when you're usually free", photo: "photo-1586717791821-3f44a563fa4c", subject: "Design", industry: "Technology", place: "Eastshore City College", deadline: "2027-08-10", startsOn: "2027-08-24" },
 ];
-export type EventPeer = { id: string; name: string; note: string };
+/** A student going to the same event who chose to be seen. Their card shows only what they picked; their email appears only after you both say yes. */
+export type EventPeer = { id: string; name: string; note: string; photo: string; org: "bayview"; major: string; standing: string; ask: string; fact: string; skills: string[]; tools: string[]; why: string; email: string;
+  /** The note they wrote with their ask, in their own words. */
+  message?: string;
+  /** Classmates they've added as friends, so you can see who you both know. */
+  friendsWith?: string[] };
 /** Everyone is synthetic. Only peers listed here chose to be visible; the rest exist only in the count. */
-export const goTogetherEvent: { id: string; shortName: string; going: number; visiblePeers: EventPeer[] } = {
+export const goTogetherEvent: { id: string; shortName: string; name: string; when: string; going: number; visiblePeers: EventPeer[]; asksYou: string[] } = {
   id: "ux-night",
   shortName: "UX night",
-  going: 4,
+  name: "UX Night",
+  when: "Tue Nov 10 · 5:30 PM",
+  going: 48,
   visiblePeers: [
-    { id: "tomas", name: "Tomás R.", note: "Bayview · Psychology" },
-    { id: "lena", name: "Lena K.", note: "Bayview · Graphic Design" },
+    { id: "lena", name: "Lena K.", note: "Bayview · Graphic Design", photo: "photo-1571234018566-1d3cc5d2991a", org: "bayview", major: "Graphic Design", standing: "Sophomore", ask: "Turning messy research notes into clear visuals.", fact: "I've sketched every bus stop on my route.", skills: ["Visual design", "User interviews", "Prototyping"], tools: ["figma", "notion"], why: "You both picked user research and are going alone", email: "lena.k@bayview.example", message: "Hey, I'm Lena! I saw you're going to UX Night and I'm going alone too. Your card says you like observing how people use spaces, which is so my thing. Want to go together? I can meet you by the front doors.", friendsWith: ["jordan"] },
+    { id: "tomas", name: "Tomás R.", note: "Bayview · Psychology", photo: "photo-1525457136159-8878648a7ad0", org: "bayview", major: "Psychology", standing: "Freshman", ask: "Why people click the wrong button.", fact: "I've run the same 5K every Sunday for two years.", skills: ["Survey design", "Note taking"], tools: ["gforms"], why: "You're both in Psychology and new to UX events", email: "tomas.r@bayview.example" },
+    { id: "jordan", name: "Jordan P.", note: "Bayview · Computer Science", photo: "photo-1544168190-79c17527004f", org: "bayview", major: "Computer Science", standing: "Sophomore", ask: "Making apps work with a screen reader.", fact: "I fix old film cameras.", skills: ["Accessibility checks", "Prototyping"], tools: ["figma"], why: "You both want to practice usability testing", email: "jordan.p@bayview.example" },
+    { id: "ana", name: "Ana M.", note: "Bayview · Psychology", photo: "photo-1494790108377-be9c29b29330", org: "bayview", major: "Psychology", standing: "Junior", ask: "How sleep changes the way students study.", fact: "I've kept a paper planner since 6th grade.", skills: ["Survey design", "Data analysis"], tools: ["gforms"], why: "You both take PSYC 5 this term", email: "ana.m@bayview.example", friendsWith: ["jordan"] },
+    { id: "devon", name: "Devon T.", note: "Bayview · Business", photo: "photo-1546525848-3ce03ca516f6", org: "bayview", major: "Business", standing: "Sophomore", ask: "Why some sign-up forms get finished and others don't.", fact: "I DJ at friends' birthday parties.", skills: ["Note taking", "Interviewing"], tools: ["notion"], why: "You're both new to UX events", email: "devon.t@bayview.example" },
+    { id: "mei", name: "Mei L.", note: "Bayview · Graphic Design", photo: "photo-1534528741775-53994a69daeb", org: "bayview", major: "Graphic Design", standing: "Freshman", ask: "Icons people understand without words.", fact: "I collect transit maps from every city I visit.", skills: ["Visual design", "Prototyping"], tools: ["figma"], why: "You both saved People + Products Club", email: "mei.l@bayview.example", friendsWith: ["lena"] },
+    { id: "sofia", name: "Sofia G.", note: "Bayview · Sociology", photo: "photo-1517841905240-472988babdf9", org: "bayview", major: "Sociology", standing: "Junior", ask: "How neighborhoods share news.", fact: "I volunteer at the food pantry on Saturdays.", skills: ["Interviewing", "Field notes"], tools: ["notion"], why: "You both like field research", email: "sofia.g@bayview.example" },
+    { id: "kai", name: "Kai W.", note: "Bayview · Computer Science", photo: "photo-1527980965255-d3b416303d12", org: "bayview", major: "Computer Science", standing: "Sophomore", ask: "Apps that work on a slow connection.", fact: "I build tiny keyboards.", skills: ["Prototyping", "Accessibility checks"], tools: ["figma"], why: "You both want to practice usability testing", email: "kai.w@bayview.example", friendsWith: ["jordan"] },
+    { id: "marisol", name: "Marisol V.", note: "Bayview · Communication", photo: "photo-1524504388940-b1c1722653e1", org: "bayview", major: "Communication", standing: "Senior", ask: "Plain-language health info.", fact: "I've read every book in our library's comics section.", skills: ["Writing", "User interviews"], tools: ["notion"], why: "You're both going alone", email: "marisol.v@bayview.example" },
+    { id: "ethan", name: "Ethan B.", note: "Bayview · Psychology", photo: "photo-1539571696357-5a69c17a67c6", org: "bayview", major: "Psychology", standing: "Freshman", ask: "Why people trust some reviews and not others.", fact: "I play bass in a jazz trio.", skills: ["Survey design"], tools: ["gforms"], why: "You're both in Psychology", email: "ethan.b@bayview.example" },
+    { id: "nia", name: "Nia O.", note: "Bayview · Anthropology", photo: "photo-1531123897727-8f129e1688ce", org: "bayview", major: "Anthropology", standing: "Sophomore", ask: "How students pick where to study.", fact: "I've hiked every trail in Eastshore Park.", skills: ["Field notes", "Interviewing"], tools: ["notion"], why: "You both took ANTH 2", email: "nia.o@bayview.example", friendsWith: ["ana"] },
+    { id: "sam-r", name: "Sam R.", note: "Bayview · Undeclared", photo: "photo-1463453091185-61582044d556", org: "bayview", major: "Undeclared", standing: "Freshman", ask: "Where people get stuck on the bus app.", fact: "I bake bread every Sunday.", skills: ["Note taking"], tools: ["notion"], why: "You're both new to UX events", email: "sam.r@bayview.example" },
   ],
+  // Lena turned on matching and asked to go with Maya. She only sees Maya once Maya shows herself as going.
+  asksYou: ["lena"],
 };
 
 // ---------- Experiences: events from the student's own event accounts (synthetic) ----------
@@ -672,7 +731,7 @@ export type Experience = {
   listing: string;
   skills: ExperienceSkill[];
   outcome?: string;
-  /** Upcoming only: why Path Agent thinks it's worth the time. */
+  /** Upcoming only: why Sprout thinks it's worth the time. */
   prep?: string;
   /** The matching Explore listing, when there is one. */
   opportunityId?: string;

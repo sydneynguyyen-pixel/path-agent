@@ -1,0 +1,33 @@
+/* The "STAT 2 is full" run as a conversation. Reuses the chat's bubbles; these are the pieces it adds. */
+
+/* Something that happened: a slim line, not a banner. */
+.chat-event { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; align-self: stretch; padding: 6px 12px; border-radius: 12px; font-size: 13px; background: color-mix(in oklab, var(--muted) 70%, transparent); }
+
+/* The work, folded into one line under Sprout's words. */
+.chat-fold { border-radius: 12px; border: 1px solid var(--border); background: var(--card); }
+.chat-fold > summary { display: flex; align-items: center; gap: 8px; padding: 7px 10px; cursor: pointer; list-style: none; font-size: 12.5px; color: var(--muted-foreground); }
+.chat-fold > summary::-webkit-details-marker { display: none; }
+.chat-fold > summary:hover { color: var(--foreground); }
+.chat-fold[open] > summary { border-bottom: 1px solid var(--border); }
+.chat-fold-body { padding: 10px 12px 12px; animation: chat-open 220ms var(--settle, cubic-bezier(.22,.8,.2,1)) both; }
+.chat-fold-dots { display: inline-flex; gap: 3px; }
+.chat-fold-dots i { width: 7px; height: 7px; border-radius: 999px; background: var(--foreground); opacity: .75; }
+.chat-fold-dots i[data-s="kept"] { background: transparent; box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--foreground) 45%, transparent); opacity: 1; }
+.chat-fold-dots i[data-s="idle"] { opacity: .18; }
+
+.chat-step { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; }
+.chat-step-tag { flex-shrink: 0; margin-top: 2px; font-size: 11px; padding: 1px 8px; border-radius: 999px; background: var(--secondary); color: var(--muted-foreground); }
+.chat-step[data-s="ran"] .chat-step-tag { background: var(--success-soft); color: var(--foreground); }
+.chat-step[data-s="kept"] .chat-step-tag { background: transparent; box-shadow: inset 0 0 0 1px var(--border); }
+
+/* The one decision, as a small card inside the message. */
+.chat-card { border-radius: 14px; border: 1px solid var(--border); background: var(--card); padding: 12px 14px; box-shadow: var(--shadow-soft, none); }
+
+/* Next steps reuse the panel's sections; inside a message they lose their heavy frames. */
+.chat-steps > section { border-radius: 14px !important; border: 1px solid var(--border); box-shadow: none !important; padding: 14px !important; }
+
+/* Notes she can tap, under the last message. */
+.chat-steers { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 42px; }
+
+@keyframes chat-open { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .chat-fold-body { animation: none; } }

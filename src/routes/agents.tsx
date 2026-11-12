@@ -18,7 +18,7 @@ export const Route = createFileRoute("/agents")({
     { title: "Agents — Academic Sprout" },
     { name: "description", content: "See what your helpers did and control what each may read or prepare." },
     { property: "og:title", content: "Agents — Academic Sprout" },
-    { property: "og:description", content: "One place for agent activity, your decisions and helper controls." },
+    { property: "og:description", content: "What Sprout and the helpers did, what you decided, and what they may do." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
   ] }),
   component: Agents,

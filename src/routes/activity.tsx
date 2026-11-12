@@ -1,15 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, Ban } from "lucide-react";
 import { PageHeader } from "@/components/app/bits";
-import { useEvents, useScriptNow, When, EventStatusChip } from "@/components/app/activityBits";
+import { useEvents, useScriptNow } from "@/components/app/activityBits";
 import { useJourney, type AgentId } from "@/lib/journey";
-import { runGroups } from "@/lib/run";
-import { NeedsYou, RunCard } from "@/components/app/RunCard";
-import { BehindScenes } from "@/components/app/BehindScenes";
-import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import { runGroups, type RunGroup } from "@/lib/run";
+import { needsHer, NeedsYou, RunCard } from "@/components/app/RunCard";
+import { EventCard } from "@/components/app/ActivityItem";
+import type { ActivityEvent } from "@/lib/activity";
+import { useState } from "react";
 import { Spot } from "@/components/app/Illustrations";
 
+// `tab=decisions` is an old link (Your decisions used to be its own view). It still parses so those links land here, and is ignored.
 type Search = { tab?: "timeline" | "decisions" | undefined; helper?: AgentId | undefined };
 const HELPERS: AgentId[] = ["reader", "planner", "backup", "drafter"];
 
@@ -44,35 +45,23 @@ function ActivityPage() {
 }
 
 /**
- * Runs: each agent run as a card, newest first, with the decision she made on it. Your decisions
- * now live on their runs, so the old Decisions tab and the table view are gone.
+ * Activity: one list, newest first, of everything Sprout's helpers did. Each run (with its re-checks
+ * and re-plans) and each earlier item is a light one-line card that opens to show how they found it
+ * and what she decided on it. The live conversation is in the chat; this is the history.
  */
 export function Activity({ embedded = false }: { embedded?: boolean; tab?: "timeline" | "decisions" | undefined; helper?: AgentId | undefined }) {
   return (
     <div className="w-full min-w-0">
-      <PageHeader title="Activity" sub="What Sprout and your helpers did, and what's waiting on you." />
-      <Runs />
+      <PageHeader title="Activity" sub="What Sprout and your helpers did, and what you decided along the way." />
+      <Feed />
       <CanCantStrip embedded={embedded} />
     </div>
   );
 }
 
-const VIEW_KEY = "pa-runs-view";
+type Item = { kind: "run"; key: string; at: number; group: RunGroup; until: number } | { kind: "event"; key: string; at: number; e: ActivityEvent };
 
-/** Simple for students; Behind the scenes for anyone who wants to see how it worked. Remembered in this browser. */
-function useView() {
-  const [view, setView] = useState<"simple" | "behind">("simple");
-  useEffect(() => {
-    try { if (localStorage.getItem(VIEW_KEY) === "behind") setView("behind"); } catch { /* storage blocked */ }
-  }, []);
-  const set = (v: "simple" | "behind") => {
-    setView(v);
-    try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ }
-  };
-  return [view, set] as const;
-}
-
-function Runs() {
+function Feed() {
   const j = useJourney();
   const events = useEvents();
   const now = useScriptNow();
@@ -81,48 +70,37 @@ function Runs() {
   const all = [...j.runs, ...live];
   const groups = runGroups(all);
   const latest = all.at(-1) ?? null;
+  // The scripted "STAT 2 is full" item is the same thing as the first run, so it only shows before any run.
   const earlier = events.filter((e) => !(groups.length && e.id === "stat2-full"));
-  const [view, setView] = useView();
+  const lastOf = (g: RunGroup) => (g.rechecks.at(-1) ?? g.root).startedAt?.getTime() ?? 0;
+  const items: Item[] = [
+    ...groups.map((g, i): Item => ({ kind: "run", key: `run-${g.root.runId ?? i}`, at: lastOf(g), group: g, until: groups[i - 1]?.root.startedAt?.getTime() ?? Infinity })),
+    ...earlier.map((e): Item => ({ kind: "event", key: `ev-${e.id}`, at: e.at.getTime(), e })),
+  ].sort((a, b) => b.at - a.at);
+  // The newest run that needs her opens by default; anything she opens or closes stays that way.
+  // Only the newest run can still be waiting on her; older ones were superseded.
+  const newest = groups[0];
+  const newestNeeds = !!newest && needsHer(newest.rechecks.at(-1) ?? newest.root, j);
+  const defaultKey = newest && newestNeeds ? `run-${newest.root.runId ?? 0}` : null;
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
+  const isOpen = (k: string) => toggled[k] ?? k === defaultKey;
+  const toggle = (k: string) => setToggled((t) => ({ ...t, [k]: !isOpen(k) }));
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <NeedsYou latest={latest} />
-      {groups.length > 0 && (
-        <div role="tablist" aria-label="How much detail" className="inline-flex gap-1 rounded-full border bg-card p-1 text-sm">
-          {([["simple", "Simple"], ["behind", "Behind the scenes"]] as const).map(([v, l]) => (
-            <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => setView(v)} className={cn("inline-flex h-8 items-center rounded-full px-4", view === v ? "glass-active font-medium" : "text-muted-foreground hover:text-foreground")}>{l}</button>
-          ))}
-        </div>
-      )}
-      {groups.length === 0 ? (
-        <div className="rounded-3xl border border-dashed p-10 text-center text-muted-foreground">
-          <Spot name="rocks" className="mx-auto mb-3 w-28" />
-          <p className="font-medium text-foreground">No runs yet</p>
-          <p className="mt-1 text-sm">When a class you try to add is full, Sprout's helpers start a run. It shows up here with what each one did.</p>
+      {items.length === 0 ? (
+        <div className="rounded-xl border border-dashed p-8 text-center text-muted-foreground">
+          <Spot name="rocks" className="mx-auto mb-3 w-24" />
+          <p className="font-medium text-foreground">Nothing yet</p>
+          <p className="mt-1 text-sm text-balance">When a class you try to add is full, Sprout's helpers start a run. It shows up here with how they found your options.</p>
         </div>
       ) : (
-        groups.map((g, i) => {
-          const from = g.root.startedAt?.getTime() ?? 0;
-          const until = groups[i - 1]?.root.startedAt?.getTime() ?? Infinity;
-          const decisions = j.decisions.filter((d) => d.when.getTime() >= from && d.when.getTime() < until);
-          // Keyed by view so switching plays the swap motion instead of jumping.
-          return view === "behind"
-            ? <div key={`b-${g.root.runId ?? i}`} className="bts-swap"><BehindScenes group={g} /></div>
-            : <div key={`s-${g.root.runId ?? i}`} className="bts-swap"><RunCard group={g} decisions={decisions} latest={i === 0} /></div>;
-        })
-      )}
-      {earlier.length > 0 && (
-        <section aria-labelledby="earlier" className="space-y-2 pt-2">
-          <h2 id="earlier" className="text-sm font-medium text-muted-foreground">Earlier</h2>
-          <ol className="space-y-2">
-            {earlier.map((e) => (
-              <li key={e.id} className="surface flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3.5">
-                <span className="min-w-0 flex-1 basis-56 text-[15px] font-medium">{e.headline}</span>
-                <EventStatusChip s={e.status} />
-                <When d={e.at} now={now} />
-              </li>
-            ))}
-          </ol>
-        </section>
+        <ol aria-label="Activity, newest first" className="space-y-2">
+          {items.map((it) => it.kind === "run"
+            ? <RunCard key={it.key} group={it.group} decisions={j.decisions} until={it.until} needs={newestNeeds && it.group === newest} open={isOpen(it.key)} onToggle={() => toggle(it.key)} now={now} />
+            : <EventCard key={it.key} e={it.e} now={now} open={isOpen(it.key)} onToggle={() => toggle(it.key)} />)}
+        </ol>
       )}
     </div>
   );
@@ -130,15 +108,12 @@ function Runs() {
 
 export function CanCantStrip({ embedded = false }: { embedded?: boolean }) {
   return (
-    <div className="z-30 mt-8 flex flex-col sm:sticky sm:bottom-4 gap-3 rounded-3xl border bg-card/95 px-5 py-4 text-sm shadow-frame backdrop-blur sm:flex-row sm:items-center sm:gap-6">
-      {/* Two aligned rows, label then list, so the eye reads straight down; the change link sits apart as a button. */}
-      <dl className="grid min-w-0 flex-1 grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2">
-        <dt className="inline-flex items-center gap-1.5 font-semibold"><Check className="size-4 text-mark-yes" aria-hidden="true" />Can</dt>
-        <dd className="text-muted-foreground">Read your files, suggest classes, draft emails.</dd>
-        <dt className="inline-flex items-center gap-1.5 font-semibold"><Ban className="size-4 text-mark-no" aria-hidden="true" />Can't</dt>
-        <dd className="text-muted-foreground">Register you, send anything without your OK, change your degree record, see anything you haven't shared.</dd>
+    <div className="mt-6 flex flex-col gap-2 rounded-xl border bg-card px-3 py-2.5 text-[13px] sm:flex-row sm:items-center sm:gap-4 sm:px-4">
+      <dl className="min-w-0 flex-1 space-y-1 sm:space-y-0.5">
+        <div className="flex gap-2"><dt className="inline-flex shrink-0 items-center gap-1 font-semibold"><Check className="size-3.5 text-mark-yes" aria-hidden="true" />Can</dt><dd className="text-muted-foreground">Read your files, suggest classes, draft emails.</dd></div>
+        <div className="flex gap-2"><dt className="inline-flex shrink-0 items-center gap-1 font-semibold"><Ban className="size-3.5 text-mark-no" aria-hidden="true" />Can't</dt><dd className="text-muted-foreground">Register you, send anything without your OK, change your degree record, see anything you haven't shared.</dd></div>
       </dl>
-      <Link to={embedded ? "/agents" : "/permissions"} search={embedded ? { tab: "controls" } : {}} className="inline-flex h-9 shrink-0 items-center self-start rounded-full border bg-background px-4 text-sm font-medium hover:bg-muted sm:self-center">Change what it can do</Link>
+      <Link to={embedded ? "/agents" : "/permissions"} search={embedded ? { tab: "controls" } : {}} className="shrink-0 self-start text-sm font-medium underline underline-offset-4 hover:text-foreground sm:self-center">Change what it can do</Link>
     </div>
   );
 }

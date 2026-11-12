@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { applyRunEvent, checkResult, factPlain, laneLayout, LANE, laterLine, recheckSummary, recordRun, RUN_HISTORY_CAP, runGroups, runTitle, storyLines, toolStates, traceRows, type RunEvent, type TraceRun } from "@/lib/run";
+import { applyRunEvent, checkResult, decisionsByRun, factPlain, groupSummary, recheckSummary, recordRun, RUN_HISTORY_CAP, runGroups, runSentence, runTitle, toolStates, traceRows, type RunEvent, type TraceRun } from "@/lib/run";
 
-const on = { reader: true, planner: true, backup: true, drafter: true };
 type Timed = RunEvent & { at: number };
 const play = (events: Timed[]) => events.reduce<TraceRun | null>((r, e) => applyRunEvent(r, e, new Date(e.at)), null)!;
 
@@ -68,53 +67,42 @@ describe("story lines", () => {
     expect(runTitle({ ...play(FIRST), steps: [] })).toBe("A class you tried to add was full");
   });
 
-  it("gives one line per helper from its own steps, and says why a helper didn't run", () => {
-    const lines = storyLines(play(FIRST), on);
-    expect(lines.map((l) => l.used)).toEqual([true, true, true, false]);
-    expect(lines[1]!.text).toBe("Recommended MATH 13 §02");
-    expect(lines[1]!.sourceIds).toEqual(["artic-math13"]);
-    expect(lines[3]!.text).toMatch(/Drafter is waiting/);
-    const noBackup = play(FIRST.filter((e) => !(e.type === "step" && e.helper === "backup")));
-    expect(storyLines(noBackup, { ...on, backup: false })[2]!.text).toMatch(/Backup finder is off/);
-  });
-
   it("says which helpers redid work in a re-check and which kept their result", () => {
     const s = recheckSummary(play(RECHECK), [play(FIRST)]);
     expect(s.redid).toEqual(["planner", "backup"]);
     expect(s.line).toBe("Planner and Backup finder redid their work. Reader was still valid, so it didn't re-run.");
-    expect(storyLines(play(RECHECK), on, [play(FIRST)])[0]!.text).toMatch(/earlier result was still valid/);
-    expect(laterLine(0, 120000)).toBe("2 min later");
-    expect(laterLine(0, 4000)).toBe("4s later");
   });
 });
 
-describe("helper lanes", () => {
-  const layout = laneLayout(play(FIRST), [play(RECHECK)]);
-
-  it("puts one dot per step on its helper's lane, in time order", () => {
-    const real = layout.dots.filter((d) => !d.kept);
-    expect(real).toHaveLength(6);
-    for (const d of real) expect(d.y).toBe(layout.laneY[d.helper]);
-    const first = real.filter((d) => d.id.startsWith("run_7"));
-    expect(first.map((d) => d.x)).toEqual([...first.map((d) => d.x)].sort((a, b) => a - b));
-    expect(first[0]!.x).toBeGreaterThan(LANE.left);
-    expect(first[0]!.x).toBeLessThan(layout.width - LANE.right);
+describe("activity", () => {
+  it("sums up a run group in one line from what the latest run did", () => {
+    const [g] = runGroups([play(FIRST), play(RECHECK)]);
+    expect(groupSummary(g!, "PSYC 5")).toBe("STAT 2 was full → picked PSYC 5");
+    expect(groupSummary({ root: play(FIRST.slice(0, 3)), rechecks: [] }, null)).toBe("STAT 2 was full → working on it");
+    const waiting = applyRunEvent(play(FIRST.slice(0, 3)), { type: "need", helper: "planner", question: "Mornings OK?", choices: ["Yes", "No"] }, new Date(1000));
+    expect(groupSummary({ root: waiting, rechecks: [] }, null)).toBe("STAT 2 was full → waiting on you");
+    const gaveUp = { ...play(FIRST), result: { optionId: null, why: null, model: null, gaveUp: true } } as TraceRun;
+    expect(groupSummary({ root: gaveUp, rechecks: [] }, null)).toBe("STAT 2 was full → nothing open fits yet");
   });
 
-  it("rings the picks and shortens the wait before a re-check", () => {
-    expect(layout.dots.filter((d) => d.pick).map((d) => d.text)).toEqual(["Recommended MATH 13 §02", "Recommended PSYC 5 §01"]);
-    // Two minutes passed in real time, but the chart only leaves a short gap.
-    expect(layout.width).toBeLessThan(1400);
+  it("says one plain sentence per run", () => {
+    expect(runSentence(play(FIRST))).toBe("STAT 2 was full, so the helpers took 4 steps to find you another class.");
+    expect(runSentence(play(RECHECK), [play(FIRST)])).toBe("MATH 13 just filled. 2 steps ran again and 2 kept their answer.");
   });
 
-  it("draws the change, dashed kept dots, and handoffs between real dots", () => {
-    expect(layout.changes).toHaveLength(1);
-    expect(layout.changes[0]!.label).toBe("MATH 13 just filled");
-    const kept = layout.dots.filter((d) => d.kept);
-    expect(kept.map((d) => d.helper)).toEqual(["reader"]);
-    expect(kept[0]!.x).toBeGreaterThan(layout.changes[0]!.x);
-    expect(layout.links).toHaveLength(2);
-    expect(layout.ticks.map((t) => t.label)).toEqual(["0s", "4s · usable", "+2s"]);
+  it("puts each decision on the run it happened during, and a note on the re-plan it started", () => {
+    const first = play(FIRST);
+    const steer = { ...play(RECHECK), runId: "run_9", trigger: "steer" as const, cause: "No classes before 10 am" };
+    const d = (what: string, at: number) => ({ what, when: new Date(at) });
+    const [a, b] = decisionsByRun([first, steer], [
+      d("before any run", -5),
+      d("Chose MATH 13", 5000),
+      d("Told the helpers: No classes before 10 am", 60000),
+      d("Chose PSYC 5", 125000),
+      d("next group", 200000),
+    ], 200000);
+    expect(a!.map((x) => x.what)).toEqual(["Chose MATH 13"]);
+    expect(b!.map((x) => x.what)).toEqual(["Told the helpers: No classes before 10 am", "Chose PSYC 5"]);
   });
 });
 

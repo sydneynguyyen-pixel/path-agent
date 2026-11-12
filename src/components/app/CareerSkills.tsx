@@ -1,14 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { ArrowRight, CalendarCheck, CheckCheck, ChevronRight, Copy, Download, EyeOff, FileText, FlaskConical, Lightbulb, MessageSquareText, MoreHorizontal, Paperclip, Pencil, Plus, Sparkles, Wrench, X, type LucideIcon } from "lucide-react";
-import { careerRoles, skillCourses, type EventPlatform } from "@/data/scenario";
+import { ArrowRight, Briefcase, CalendarCheck, CheckCheck, Copy, Download, EyeOff, FileText, Hammer, HeartHandshake, Home, MoreHorizontal, Paperclip, Pencil, Plus, Trophy, Users, Wrench, X, type LucideIcon } from "lucide-react";
+import { careerRoles, opportunities, skillCourses, type EventPlatform } from "@/data/scenario";
+import { buildSkillsFor, chosenGoals } from "@/lib/goals";
+import { termDates } from "@/data/map";
 import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
 import { attendance, type Found } from "@/lib/experiences";
 import { linkedinSections } from "@/lib/skills";
-import { chosenGoals } from "@/lib/goals";
-import { kindLabel, WHERE, type Activity } from "@/lib/activities";
-import { calm } from "@/lib/motion";
-import type { PortfolioSkill, SkillSource } from "@/lib/portfolio";
+import { kindLabel, WHERE, type Activity, type ActivityKind } from "@/lib/activities";
+import { byClassProgress, classProgress, type ClassProgress } from "@/lib/classProgress";
+import { groupBySource, type PortfolioSkill, type SourceGroup } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Accounts, PROOF_LINE, Via } from "@/components/app/EventBits";
 import { EventMark } from "@/components/app/ItemMark";
+import { SubjectIcon } from "@/components/app/Brand";
 import { EvidenceIndicator, SkillSources } from "@/components/app/SkillsBits";
 import { AddActivityDialog } from "@/components/app/AddActivity";
 import { usePortfolioSkills } from "@/hooks/use-portfolio-skills";
@@ -27,14 +29,12 @@ import { Link } from "@tanstack/react-router";
 
 const useSkills = usePortfolioSkills;
 
-const SOURCES: { id: SkillSource; label: string }[] = [{ id: "all", label: "All" }, { id: "classes", label: "Classes" }, { id: "events", label: "Events" }, { id: "own", label: "Added by you" }];
-
-const THEME_ICON: Record<string, LucideIcon> = { "Research and data": FlaskConical, "Writing and communication": MessageSquareText, "Analysis and critical thinking": Lightbulb, Tools: Wrench };
 const proofNames = (s: PortfolioSkill) => [...new Set(s.proofs.map((p) => (p.type === "class" ? p.code : p.title)))].slice(0, 3).join(", ");
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 const SETTLE = "cubic-bezier(.22,.8,.2,1)";
-const LEAVE_MS = 280;
+/** A light card: thin border, no shadow. Every source on this tab uses it. */
+const CARD = "rounded-2xl border bg-card p-4 sm:p-5";
 
 /** Past events with no check-in. Stays until each one is answered, or until "Ask me later". */
 function DidYouGo({ found, onConnect, onAdd }: { found: Found[]; onConnect: (p: EventPlatform) => void; onAdd: () => void }) {
@@ -82,65 +82,45 @@ function DidYouGoNotice({ asks, onAdd }: { asks: Found[]; onAdd: () => void }) {
   );
 }
 
-/**
- * Rows that just left a list stay a moment longer so they can fold away instead of vanishing.
- * Tracked during render (not in an effect) so the leaving row keeps its DOM node and can transition.
- * Reduced motion: rows leave at once.
- */
-function useLeaving(items: PortfolioSkill[]) {
-  const ids = items.map((s) => s.key).join("|");
-  const [track, setTrack] = useState<{ ids: string; prev: PortfolioSkill[]; gone: { skill: PortfolioSkill; index: number }[] }>({ ids, prev: items, gone: [] });
-  if (track.ids !== ids) {
-    const now = new Set(items.map((s) => s.key));
-    const left = calm() ? [] : track.prev.flatMap((skill, index) => (now.has(skill.key) ? [] : [{ skill, index }]));
-    setTrack({ ids, prev: items, gone: [...track.gone.filter((g) => !now.has(g.skill.key)), ...left] });
-  }
-  const goneIds = track.gone.map((g) => g.skill.key).join("|");
-  useEffect(() => {
-    if (!goneIds) return;
-    const t = window.setTimeout(() => setTrack((t) => ({ ...t, gone: t.gone.filter((g) => !goneIds.split("|").includes(g.skill.key)) })), LEAVE_MS + 40);
-    return () => window.clearTimeout(t);
-  }, [goneIds]);
-  const rows: { skill: PortfolioSkill; leaving: boolean }[] = items.map((skill) => ({ skill, leaving: false }));
-  for (const g of [...track.gone].sort((a, b) => a.index - b.index)) rows.splice(Math.min(g.index, rows.length), 0, { skill: g.skill, leaving: true });
-  return rows;
+type EditMode = { key: string; mode: "wording" | "work" };
+type RowActions = { onOpen: (s: PortfolioSkill) => void; onEdit: (s: PortfolioSkill, mode: EditMode["mode"]) => void };
+
+type ClassCard = SourceGroup & { code: string; name: string; line: string; start?: string | undefined; progress: ClassProgress };
+
+const fmtDate = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+const domId = (g: SourceGroup) => `src-${g.type}-${g.id.replace(/\W+/g, "-")}`;
+/** A skill's other sources, named, so a row in one card says where else it shows up. */
+const elsewhere = (s: PortfolioSkill, g: SourceGroup) => [...new Set(s.proofs.filter((p) => (p.type === "class" ? p.code : p.id) !== g.id).map((p) => (p.type === "class" ? p.code : p.title)))];
+
+/** One card per class from its real term (in progress, done, then upcoming), using the term's real dates against the scripted clock. */
+function classCards(groups: SourceGroup[]): ClassCard[] {
+  return groups
+    .filter((g) => g.type === "class")
+    .map((g) => {
+      const c = skillCourses.find((x) => x.code === g.id);
+      const dates = c ? termDates[c.termId] : undefined;
+      const progress: ClassProgress = c ? classProgress(dates, c.term, SCRIPT_TODAY) : { state: "unknown", label: "" };
+      return { ...g, name: c ? `${c.code} · ${c.title}` : g.id, line: c ? `${c.school} · ${c.term}` : "", start: dates?.start, progress, code: g.id };
+    })
+    .sort(byClassProgress);
 }
 
-type EditMode = { key: string; mode: "wording" | "work" };
-
-/** Everything she has proof for, on the Career page under her goals. Organized by what she needs to do: review, then what's confirmed. */
+/** Everything she has proof for, one card per place it came from: each class, each event, each thing she added. */
 export function CareerSkills({ found, onConnect, resumeOpen, onResume }: { found: Found[]; onConnect: (p: EventPlatform) => void; resumeOpen: boolean; onResume: (open: boolean) => void }) {
   const j = useJourney();
-  const [source, setSource] = useState<SkillSource>("all");
-  const [showUnsure, setShowUnsure] = useState(false);
   const [adding, setAdding] = useState(false);
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [editing, setEditing] = useState<EditMode | null>(null);
   const skills = useSkills(found);
-  const goal = chosenGoals(careerRoles, j.interestedRoles)[0];
-  const goalNames = new Set(goal ? [...goal.why, ...goal.missing].map((n) => n.toLowerCase()) : []);
-  const forGoal = (s: PortfolioSkill) => (goal && goalNames.has(s.name.toLowerCase()) ? goal.title : undefined);
-  const matches = (s: PortfolioSkill) => source === "all" || s.proofs.some((p) => (source === "classes" ? p.type === "class" : source === "own" ? p.type === "own" : p.type === "event" || p.type === "doing"));
-  const visible = skills.filter((s) => !s.hidden);
-  // Order never changes when she answers, so a row doesn't jump out from under her.
-  const confirmable = visible.filter((s) => !s.unsure && !s.confirmed);
-  const unsure = visible.filter((s) => s.unsure);
-  const confirmed = visible.filter((s) => s.confirmed);
-  const shown = confirmed.filter(matches);
+  const groups = groupBySource(skills);
+  const classes = classCards(groups);
+  const events = groups.filter((g) => g.type === "event" || g.type === "doing").sort((a, b) => (dateOf(b, found) ?? "").localeCompare(dateOf(a, found) ?? ""));
+  const own = groups.filter((g) => g.type === "own");
   const hidden = skills.filter((s) => s.hidden);
-  const themes = [...new Set(shown.map((s) => s.theme))];
-  const reviewRows = useLeaving(confirmable);
   const openSkill = skills.find((s) => s.key === openKey);
   const editSkill = skills.find((s) => s.key === editing?.key);
-
-  // Rows check one after another (and uncheck in reverse on Undo), so she sees each one land.
-  const cascade = useConfirmCascade(j.reviewSkill);
-  const confirmAll = () => {
-    const rows = [...confirmable];
-    cascade(rows, true);
-    toast(`${rows.length} ${rows.length === 1 ? "skill" : "skills"} confirmed`, { description: "They can go on your card and resume now.", action: { label: "Undo", onClick: () => cascade(rows, false) } });
-  };
-  const onEdit = (s: PortfolioSkill, mode: EditMode["mode"]) => setEditing({ key: s.key, mode });
+  const goalFor = useGoalFor();
+  const actions: RowActions = { onOpen: (s) => setOpenKey(s.key), onEdit: (s, mode) => setEditing({ key: s.key, mode }) };
 
   return (
     <div className="space-y-8">
@@ -148,7 +128,7 @@ export function CareerSkills({ found, onConnect, resumeOpen, onResume }: { found
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0 flex-1 basis-72">
             <h2 id="all-skills" className="sr-only">Your skills</h2>
-            <p className="text-sm text-muted-foreground">Sprout finds them in your syllabi and the events you went to, and you can add what it can't see. Nothing counts until you say you really did it.</p>
+            <p className="text-sm text-muted-foreground">Sprout finds them in your syllabi and the events you went to, and you can add what it can't see. Nothing counts until you check it.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => setAdding(true)}><Plus className="size-4" aria-hidden="true" />Add something you did</Button>
@@ -158,53 +138,23 @@ export function CareerSkills({ found, onConnect, resumeOpen, onResume }: { found
         <DidYouGo found={found} onConnect={onConnect} onAdd={() => setAdding(true)} />
       </section>
 
-      <section aria-labelledby="to-review" className="surface p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0 flex-1 basis-56">
-            <h2 id="to-review" className="font-semibold">To review <span className="font-normal text-muted-foreground">({confirmable.length})</span></h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">{confirmable.length + unsure.length > 0 ? "Say yes to what you really did. It moves to your confirmed skills." : "You're all caught up."}</p>
-          </div>
-          {confirmable.length > 0 && <Button size="sm" variant="outline" onClick={confirmAll}><CheckCheck className="size-4" aria-hidden="true" />Confirm all {confirmable.length}</Button>}
-        </div>
-        {reviewRows.length > 0 && <ul className="mt-3 divide-y">{reviewRows.map(({ skill, leaving }) => <ReviewRow key={skill.key} skill={skill} leaving={leaving} forGoal={forGoal(skill)} onEdit={onEdit} />)}</ul>}
-        {confirmable.length === 0 && unsure.length === 0 && (
-          <p className="mt-4 flex items-center gap-3 rounded-2xl bg-success-soft px-4 py-3 text-sm"><GrowCheck on className="size-4 shrink-0" />Every skill Sprout found is confirmed or hidden. New ones land here when you go to an event or add a class.</p>
-        )}
-        {unsure.length > 0 && (
-          <div className="mt-4 rounded-2xl bg-muted/60 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="min-w-0 flex-1 basis-56 text-sm"><span className="font-medium">Sprout isn't sure about {unsure.length === 1 ? "this one" : `these ${unsure.length}`}.</span> <span className="text-muted-foreground">The syllabus only mentions {unsure.length === 1 ? "it" : "them"} in passing, so {unsure.length === 1 ? "it doesn't" : "they don't"} count unless you say you did {unsure.length === 1 ? "it" : "them"}.</span></p>
-              <Button variant="ghost" size="sm" aria-expanded={showUnsure} onClick={() => setShowUnsure((v) => !v)}>{showUnsure ? "Hide" : unsure.length === 1 ? "Take a look" : `Look at all ${unsure.length}`}</Button>
-            </div>
-            {showUnsure && <ul className="mt-2 divide-y">{unsure.map((s) => <ReviewRow key={s.key} skill={s} leaving={false} forGoal={forGoal(s)} onEdit={onEdit} />)}</ul>}
-          </div>
-        )}
-      </section>
+      {classes.length > 0 && (
+        <section aria-labelledby="from-classes" className="space-y-3">
+          <h2 id="from-classes" className="text-sm font-medium text-muted-foreground">From your classes</h2>
+          <div className="stagger grid items-start gap-4 lg:grid-cols-2">{classes.map((c) => <ClassSkillsCard key={c.id} card={c} actions={actions} />)}</div>
+        </section>
+      )}
 
-      <section aria-labelledby="confirmed-skills" className="space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="confirmed-skills" className="font-semibold">Your confirmed skills <span className="font-normal text-muted-foreground">({confirmed.length})</span></h2>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Where the proof comes from">
-            {SOURCES.map((f) => <Button key={f.id} size="sm" variant={f.id === source ? "default" : "outline"} aria-pressed={f.id === source} onClick={() => setSource(f.id)} className="rounded-full">{f.label}</Button>)}
-          </div>
-        </div>
-        <div key={source} className="stagger skill-columns">
-          {themes.map((t) => {
-            const Icon = THEME_ICON[t] ?? Sparkles;
-            const list = shown.filter((s) => s.theme === t);
-            return (
-              <section key={t} className="surface p-5">
-                <h3 className="flex items-center gap-3 font-semibold"><span className="grid size-9 place-items-center rounded-xl bg-muted"><Icon className="size-4" aria-hidden="true" /></span>{t}<span className="ml-auto text-sm font-normal text-muted-foreground">{plural(list.length, "skill")}</span></h3>
-                <ul className="mt-2 -mx-2">{list.map((s) => <ConfirmedSkill key={s.key} skill={s} onOpen={() => setOpenKey(s.key)} />)}</ul>
-              </section>
-            );
-          })}
-          <ToolsCard />
-        </div>
-        {shown.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">{confirmed.length === 0 ? "Confirm a skill above and it lands here." : source === "own" ? "Nothing added by you yet." : `No confirmed skills from ${source} yet.`}</p>}
-      </section>
+      {events.length > 0 && (
+        <section aria-labelledby="from-events" className="space-y-3">
+          <h2 id="from-events" className="text-sm font-medium text-muted-foreground">From events you went to</h2>
+          <div className="stagger grid items-start gap-4 lg:grid-cols-2">{events.map((g) => <EventSkillsCard key={`${g.type}-${g.id}`} group={g} found={found} actions={actions} />)}</div>
+        </section>
+      )}
 
-      <ThingsYouAdded onAdd={() => setAdding(true)} />
+      <ThingsYouAdded groups={own} onAdd={() => setAdding(true)} actions={actions} />
+
+      <ToolsCard />
 
       {hidden.length > 0 && (
         <details className="text-sm text-muted-foreground">
@@ -213,12 +163,12 @@ export function CareerSkills({ found, onConnect, resumeOpen, onResume }: { found
         </details>
       )}
 
-      <SkillDetail skill={openSkill} forGoal={openSkill && forGoal(openSkill)} onClose={() => setOpenKey(null)} onEdit={onEdit} />
+      <SkillDetail skill={openSkill} forGoal={openSkill ? goalFor(openSkill.name) : undefined} onClose={() => setOpenKey(null)} onEdit={actions.onEdit} />
       {editSkill && editing && <EditSkillDialog key={`${editing.key}-${editing.mode}`} skill={editSkill} mode={editing.mode} onClose={() => setEditing(null)} />}
       <AddActivityDialog open={adding} onOpenChange={setAdding} />
       <Dialog open={resumeOpen} onOpenChange={onResume}>
         <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] overflow-y-auto bg-card sm:max-w-5xl">
-          <DialogHeader><DialogTitle>Use on resume or LinkedIn</DialogTitle><DialogDescription>Text made from skills you confirmed. Copy it and edit it to sound like you.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Use on resume or LinkedIn</DialogTitle><DialogDescription>Text made from skills you checked. Copy it and edit it to sound like you.</DialogDescription></DialogHeader>
           <ResumeText found={found} />
         </DialogContent>
       </Dialog>
@@ -226,75 +176,257 @@ export function CareerSkills({ found, onConnect, resumeOpen, onResume }: { found
   );
 }
 
+const dateOf = (g: SourceGroup, found: Found[]) => (g.type === "event" ? found.find((e) => e.id === g.id)?.date : undefined);
+
+/** A thin bar for how far through the class she is. No numbers: the label beside it says the week. */
+function ClassMeter({ progress }: { progress: ClassProgress }) {
+  if (progress.state === "unknown") return null;
+  return (
+    <div aria-hidden="true" className="mt-3 h-1 overflow-hidden rounded-full bg-muted">
+      <div className="glass-on h-full rounded-full motion-reduce:transition-none" style={{ width: `${progress.fraction * 100}%`, transition: `width 340ms ${SETTLE}` }} />
+    </div>
+  );
+}
+
+/** "Check all" for one card: checks one after another, Undo unchecks in reverse. Unsure skills are left for her to check one by one. */
+function useCheckAll(rows: PortfolioSkill[], from: string) {
+  const j = useJourney();
+  const cascade = useConfirmCascade(j.reviewSkill);
+  return () => {
+    cascade(rows, true);
+    toast(`${plural(rows.length, "skill")} from ${from} checked`, { description: "They can go on your card and resume now.", action: { label: "Undo", onClick: () => cascade(rows, false) } });
+  };
+}
+const toCheck = (skills: PortfolioSkill[]) => skills.filter((s) => !s.confirmed && !s.unsure && s.reviewKeys.length > 0);
+
+function CardShell({ id, mark, title, line, side, children }: { id: string; mark: ReactNode; title: string; line?: string; side?: ReactNode; children: ReactNode }) {
+  return (
+    <section aria-labelledby={id} className={CARD}>
+      <div className="flex items-start gap-3">
+        {mark}
+        <div className="min-w-0 flex-1">
+          <h3 id={id} className="font-semibold leading-snug">{title}</h3>
+          {line && <p className="text-sm text-muted-foreground">{line}</p>}
+        </div>
+        {side}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ClassSkillsCard({ card, actions }: { card: ClassCard; actions: RowActions }) {
+  const pending = toCheck(card.skills);
+  const unchecked = card.skills.some((s) => !s.confirmed);
+  const checkAll = useCheckAll(pending, card.id);
+  const p = card.progress;
+  const nudge = !unchecked ? null
+    : p.state === "done" ? "You finished this class. Did you use these skills?"
+    : p.state === "now" ? "Check them as you get there."
+    : p.state === "upcoming" ? "You'll learn these here. Check them once you have."
+    : null;
+  return (
+    <CardShell
+      id={domId(card)}
+      mark={<SubjectIcon course={card.id} className="size-10 shrink-0" />}
+      title={card.name}
+      line={card.line || p.label}
+      side={card.line && p.state !== "unknown" ? <span className="shrink-0 pt-0.5 text-xs text-muted-foreground">{p.label}</span> : undefined}
+    >
+      <ClassMeter progress={p} />
+      {nudge && <p className={`mt-3 text-sm ${p.state === "done" ? "font-medium" : "text-muted-foreground"}`}>{nudge}</p>}
+      <SkillList group={card} actions={actions} />
+      {pending.length > 1 && <Button size="sm" variant="ghost" className="-ml-2 mt-1" onClick={checkAll}><CheckCheck className="size-4" aria-hidden="true" />Check all from this class</Button>}
+    </CardShell>
+  );
+}
+
+function EventSkillsCard({ group: g, found, actions }: { group: SourceGroup; found: Found[]; actions: RowActions }) {
+  const e = g.type === "event" ? found.find((x) => x.id === g.id) : undefined;
+  const o = g.type === "doing" ? opportunities.find((x) => x.id === g.id) : undefined;
+  const photo = e?.photo ?? o?.photo;
+  const line = e ? `${fmtDate(e.date)} · ${e.host}` : o ? `${o.host} · you went` : undefined;
+  const pending = toCheck(g.skills);
+  const checkAll = useCheckAll(pending, e?.title ?? g.title);
+  return (
+    <CardShell id={domId(g)} mark={photo ? <EventMark photo={photo} className="size-10 shrink-0 rounded-xl" /> : undefined} title={e?.title ?? o?.title ?? g.title} {...(line ? { line } : {})}>
+      {pending.length > 0 && <p className="mt-3 text-sm text-muted-foreground">Did you use these there?</p>}
+      <SkillList group={g} actions={actions} />
+      {pending.length > 1 && <Button size="sm" variant="ghost" className="-ml-2 mt-1" onClick={checkAll}><CheckCheck className="size-4" aria-hidden="true" />Check all from this event</Button>}
+    </CardShell>
+  );
+}
+
+function SkillList({ group, actions, extra }: { group: SourceGroup; actions: RowActions; extra?: (s: PortfolioSkill) => ReactNode }) {
+  return <ul className="mt-2 divide-y">{group.skills.map((s) => <SkillCheckRow key={s.key} skill={s} also={elsewhere(s, group)} actions={actions} extra={extra?.(s)} />)}</ul>;
+}
+
 function useReview(s: PortfolioSkill) {
   const j = useJourney();
   return (patch: Parameters<typeof j.reviewSkill>[1]) => s.reviewKeys.forEach((k) => j.reviewSkill(k, patch));
 }
 
-/** The ··· menu every skill had: wording, work, unconfirm, hide. */
-function SkillMenu({ skill: s, onEdit, align = "end" }: { skill: PortfolioSkill; onEdit: (s: PortfolioSkill, mode: EditMode["mode"]) => void; align?: "start" | "end" }) {
-  const review = useReview(s);
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={`More actions for ${s.name}`}><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
-      <DropdownMenuContent align={align}>
-        <DropdownMenuItem onSelect={() => onEdit(s, "wording")}><Pencil />Edit wording</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onEdit(s, "work")}><Paperclip />Attach work</DropdownMenuItem>
-        {s.confirmed && <DropdownMenuItem onSelect={() => review({ confirmed: false })}><X />Unconfirm</DropdownMenuItem>}
-        <DropdownMenuItem onSelect={() => review({ hidden: true })}><EyeOff />I didn't do this, hide it</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+/** Which of her goals asks for a skill, so a row can say "UX researcher skill". */
+function useGoalFor() {
+  const j = useJourney();
+  const goals = chosenGoals(careerRoles, j.interestedRoles);
+  return (name: string) => goals.find((r) => [...r.why, ...buildSkillsFor(r, j.buildSkills)].some((n) => n.toLowerCase() === name.toLowerCase()))?.title;
 }
 
-/** One line per skill waiting on her: name, where it's from, goal tag, and her answer. */
-function ReviewRow({ skill: s, leaving, forGoal, onEdit }: { skill: PortfolioSkill; leaving: boolean; forGoal?: string | undefined; onEdit: (s: PortfolioSkill, mode: EditMode["mode"]) => void }) {
+/** One skill: its name (opens the detail panel), a "Yes, I did this" check, Add to resume once checked, and the ··· menu. */
+function SkillCheckRow({ skill: s, also, actions, extra }: { skill: PortfolioSkill; also: string[]; actions: RowActions; extra?: ReactNode }) {
   const review = useReview(s);
-  const yes = () => { review({ confirmed: true }); toast(`${s.name} confirmed`, { description: "It can go on your card and resume now.", action: { label: "Undo", onClick: () => review({ confirmed: false }) } }); };
-  const no = () => { review({ hidden: true }); toast(`${s.name} hidden`, { description: "It won't count. Find it under Skills you hid.", action: { label: "Undo", onClick: () => review({ hidden: false }) } }); };
+  const goal = useGoalFor()(s.name);
+  // Proof from going to something has nothing to answer: going was the yes.
+  const fixed = s.reviewKeys.length === 0;
+  const note = s.unsure && !s.confirmed ? "Sprout isn't sure. The syllabus only mentions it in passing." : also.length ? `Also from ${also.slice(0, 2).join(", ")}${also.length > 2 ? ` +${also.length - 2}` : ""}` : s.selfReported ? "Added by you" : null;
   return (
-    <li
-      aria-hidden={leaving || undefined}
-      inert={leaving || undefined}
-      style={{ display: "grid", gridTemplateRows: leaving ? "0fr" : "1fr", opacity: leaving ? 0 : 1, transition: `grid-template-rows ${LEAVE_MS}ms ${SETTLE}, opacity 200ms ${SETTLE}` }}
-    >
-      <div className="min-h-0 overflow-hidden">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5">
-          <div className="min-w-0 flex-1 basis-56">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="truncate font-medium">{s.name}</span>
-              {forGoal && <span className="hidden shrink-0 rounded-full aqua-chip px-2 py-0.5 text-[11px] font-medium sm:inline">{forGoal} skill</span>}
-            </div>
-            <p className="truncate text-sm text-muted-foreground"><SkillSources skill={s} short />{forGoal && <span className="sm:hidden"> · {forGoal} skill</span>}</p>
-          </div>
-          <div className="ml-auto flex shrink-0 items-center gap-1">
-            {leaving
-              ? <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-success-soft px-3 text-xs font-medium"><GrowCheck on className="size-3.5" />Confirmed</span>
-              : <>
-                  <Button size="sm" onClick={yes}>Yes, I did this</Button>
-                  <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={no}>Not really</Button>
-                  <SkillMenu skill={s} onEdit={onEdit} />
-                </>}
-          </div>
-        </div>
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5">
+      <div className="min-w-0 flex-1 basis-40">
+        <button type="button" onClick={() => actions.onOpen(s)} aria-haspopup="dialog" className="rounded-sm text-left font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{s.name}</button>
+        {goal && <span className="ml-2 rounded-full aqua-chip px-2 py-0.5 align-middle text-[11px] font-medium">{goal} skill</span>}
+        {(note || s.confirmed) && (
+          <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+            {note && <span>{note}</span>}
+            {s.confirmed && <ResumeToggle name={s.name} />}
+          </p>
+        )}
+      </div>
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        <DidThis on={s.confirmed} disabled={fixed} name={s.name} onChange={(on) => review({ confirmed: on })} />
+        {extra}
+        <SkillMenu skill={s} onEdit={actions.onEdit} />
       </div>
     </li>
   );
 }
 
-/** A confirmed skill, kept small: name, level and a check. The rest is one click away in its panel. */
-function ConfirmedSkill({ skill: s, onOpen }: { skill: PortfolioSkill; onOpen: () => void }) {
+/** The check itself: a box and "Yes, I did this". The check strokes in with GrowCheck. */
+function DidThis({ on, disabled, name, onChange }: { on: boolean; disabled?: boolean; name: string; onChange: (on: boolean) => void }) {
   return (
-    <li>
-      <button type="button" onClick={onOpen} aria-haspopup="dialog" className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        <GrowCheck on={s.confirmed} label="Confirmed" className="size-4 shrink-0 text-mark-yes" />
-        <span className="min-w-0 flex-1">
-          <span className="flex flex-wrap items-baseline gap-x-2"><span className="font-medium">{s.name}</span>{s.selfReported && <span className="text-xs text-muted-foreground">Added by you</span>}</span>
-          <span className="mt-1 block"><EvidenceIndicator level={s.level} /></span>
-        </span>
-        <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-      </button>
-    </li>
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={on}
+      aria-label={`Yes, I did this: ${name}`}
+      disabled={disabled}
+      title={disabled ? "Counts because you went" : undefined}
+      onClick={() => onChange(!on)}
+      className={`inline-flex h-8 items-center gap-2 rounded-full border px-3 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default ${on ? "border-transparent bg-success-soft" : "hover:bg-foreground/5"}`}
+      style={{ transition: `background-color 180ms ${SETTLE}, border-color 180ms ${SETTLE}` }}
+    >
+      <span aria-hidden="true" className={`grid size-4 place-items-center rounded-[5px] border ${on ? "border-mark-yes bg-card" : "border-muted-foreground/50"}`}>
+        <GrowCheck on={on} className="size-3 text-mark-yes" />
+      </span>
+      Yes, I did this
+    </button>
+  );
+}
+
+/** "Add to resume" for a checked skill; shows "On your resume" once it's there. Uses the Resume tab's list. */
+function ResumeToggle({ name }: { name: string }) {
+  const j = useJourney();
+  const on = j.resumeSkills.some((n) => n.toLowerCase() === name.toLowerCase());
+  const toggle = () => {
+    if (on) { j.removeResumeSkill(name); toast(`${name} taken off your resume`, { action: { label: "Undo", onClick: () => j.addResumeSkill(name) } }); }
+    else { j.addResumeSkill(name); toast(`${name} added to your resume`, { action: { label: "Undo", onClick: () => j.removeResumeSkill(name) } }); }
+  };
+  return (
+    <button type="button" aria-label={on ? `${name}: on your resume. Take it off` : `Add ${name} to resume`} onClick={toggle} className="inline-flex items-center gap-1 rounded-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      {on ? <><FileText className="size-3" aria-hidden="true" />On your resume</> : <><Plus className="size-3" aria-hidden="true" />Add to resume</>}
+    </button>
+  );
+}
+
+/** The ··· menu every skill has: wording, work, and "Not really" to hide it. */
+function SkillMenu({ skill: s, onEdit, align = "end" }: { skill: PortfolioSkill; onEdit: (s: PortfolioSkill, mode: EditMode["mode"]) => void; align?: "start" | "end" }) {
+  const review = useReview(s);
+  const hide = () => { review({ hidden: true }); toast(`${s.name} hidden`, { description: "It won't count. Find it under Skills you hid.", action: { label: "Undo", onClick: () => review({ hidden: false }) } }); };
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-8" aria-label={`More actions for ${s.name}`}><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
+      <DropdownMenuContent align={align}>
+        <DropdownMenuItem onSelect={() => onEdit(s, "wording")}><Pencil />Edit wording</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onEdit(s, "work")}><Paperclip />Attach work</DropdownMenuItem>
+        {s.reviewKeys.length > 0 && <DropdownMenuItem onSelect={hide}><EyeOff />Not really, hide it</DropdownMenuItem>}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+const KIND_ICON: Record<ActivityKind, LucideIcon> = { job: Briefcase, volunteering: HeartHandshake, club: Users, caring: Home, sports: Trophy, project: Hammer, other: Pencil };
+const Mark = ({ icon: Icon }: { icon: LucideIcon }) => <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted"><Icon className="size-4" aria-hidden="true" /></span>;
+
+/** What she added herself: always here, so jobs, caregiving, clubs and the rest have an obvious home. Removing one takes its skills with it. */
+function ThingsYouAdded({ groups, onAdd, actions }: { groups: SourceGroup[]; onAdd: () => void; actions: RowActions }) {
+  const j = useJourney();
+  const removeActivity = (a: Activity) => { j.removeActivity(a.id); toast(`${a.title} removed`, { ...(a.skills.length ? { description: `Its ${plural(a.skills.length, "skill")} left Your skills too.` } : {}), action: { label: "Undo", onClick: () => j.addActivity(a) } }); };
+  const removeSkill = (o: (typeof j.ownSkills)[number]) => { j.removeOwnSkill(o.id); toast(`${o.name} removed`, { action: { label: "Undo", onClick: () => j.addOwnSkill(o) } }); };
+  const groupFor = (id: string) => groups.find((g) => g.id === id);
+  const empty = j.activities.length === 0 && j.ownSkills.length === 0;
+  return (
+    <section aria-labelledby="things-added" className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="things-added" className="text-sm font-medium text-muted-foreground">Things you added</h2>
+        {!empty && <Button size="sm" variant="outline" onClick={onAdd}><Plus className="size-4" aria-hidden="true" />Add something you did</Button>}
+      </div>
+      {empty ? (
+        <div className={`${CARD} flex flex-wrap items-center gap-4`}>
+          <Mark icon={Plus} />
+          <div className="min-w-0 flex-1 basis-56">
+            <h3 className="font-semibold">Add what Sprout can't see</h3>
+            <p className="text-sm text-muted-foreground">A job, caring for family, a club, volunteering, a sport or a project of your own. They build real skills too.</p>
+          </div>
+          <Button onClick={onAdd}><Plus className="size-4" aria-hidden="true" />Add something you did</Button>
+        </div>
+      ) : (
+        <div className="stagger grid items-start gap-4 lg:grid-cols-2">
+          {j.activities.map((a) => {
+            const g = groupFor(a.id);
+            return (
+              <CardShell key={a.id} id={`added-${a.id}`} mark={<Mark icon={KIND_ICON[a.kind]} />} title={a.title} line={[kindLabel(a.kind), a.role, a.when, a.often].filter(Boolean).join(" · ")} side={<Button size="sm" variant="ghost" className="shrink-0" onClick={() => removeActivity(a)}>Remove</Button>}>
+                {a.link && <a href={a.link} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm underline underline-offset-4">Proof</a>}
+                {g ? <SkillList group={g} actions={actions} /> : <p className="mt-3 text-sm text-muted-foreground">No skills picked for this one.</p>}
+              </CardShell>
+            );
+          })}
+          {j.ownSkills.length > 0 && (
+            <CardShell id="added-skills" mark={<Mark icon={Pencil} />} title="Skills you added" line="Added by name, on their own">
+              <ul className="mt-2 divide-y">
+                {j.ownSkills.flatMap((o) => {
+                  const g = groupFor(o.id);
+                  const s = g?.skills[0];
+                  if (!g || !s) return [];
+                  const where = [WHERE.find((w) => w.id === o.where)?.label, o.detail].filter(Boolean).join(" · ");
+                  return [<SkillCheckRow key={o.id} skill={s} also={where ? [where] : []} actions={actions} extra={<Button size="sm" variant="ghost" onClick={() => removeSkill(o)}>Remove</Button>} />];
+                })}
+              </ul>
+            </CardShell>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Software she uses or is learning, the same list her card picks from. */
+function ToolsCard() {
+  const using = TOOLS.filter((t) => !t.later);
+  const learning = TOOLS.filter((t) => t.later);
+  return (
+    <section aria-labelledby="tools" className={CARD}>
+      <h2 id="tools" className="flex items-center gap-3 font-semibold"><Mark icon={Wrench} />Software and tools<span className="ml-auto text-sm font-normal text-muted-foreground">{TOOLS.length} tools</span></h2>
+      <ul className="mt-3 grid gap-x-6 divide-y sm:grid-cols-2 sm:divide-y-0">
+        {[...using, ...learning].map((t) => (
+          <li key={t.id} className="flex items-center gap-3 py-3">
+            <span className="pc-tl pc-tl-lg shrink-0" style={{ background: t.bg }}>{t.logo}</span>
+            <div className="min-w-0 flex-1"><div className="font-medium">{t.name}</div><p className="text-sm text-muted-foreground">{t.from}</p></div>
+            {t.later && <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium">Learning</span>}
+          </li>
+        ))}
+      </ul>
+      <Link to="/career" search={{ tab: "card" }} className="mt-2 inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline">Choose which go on your card<ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+    </section>
   );
 }
 
@@ -312,7 +444,7 @@ function SkillDetail({ skill: s, forGoal, onClose, onEdit }: { skill: PortfolioS
 function SkillDetailBody({ skill: s, forGoal, onClose, onEdit }: { skill: PortfolioSkill; forGoal?: string | undefined; onClose: () => void; onEdit: (s: PortfolioSkill, mode: EditMode["mode"]) => void }) {
   const review = useReview(s);
   const lines = s.proofs.flatMap((p) => (p.type === "class" ? [p] : []));
-  const unconfirm = () => { review({ confirmed: false }); onClose(); toast(`${s.name} is back in To review`, { action: { label: "Undo", onClick: () => review({ confirmed: true }) } }); };
+  const unconfirm = () => { review({ confirmed: false }); onClose(); toast(`${s.name} is unchecked`, { action: { label: "Undo", onClick: () => review({ confirmed: true }) } }); };
   const hide = () => { review({ hidden: true }); onClose(); toast(`${s.name} hidden`, { action: { label: "Undo", onClick: () => review({ hidden: false }) } }); };
   return (
     <div className="space-y-6">
@@ -368,63 +500,6 @@ function EditSkillDialog({ skill: s, mode, onClose }: { skill: PortfolioSkill; m
     </Dialog>
   );
 }
-
-/** What she added herself, so she can see it and take it back. Removing one takes its skills with it. */
-function ThingsYouAdded({ onAdd }: { onAdd: () => void }) {
-  const j = useJourney();
-  if (j.activities.length === 0 && j.ownSkills.length === 0) return null;
-  const removeActivity = (a: Activity) => { j.removeActivity(a.id); toast(`${a.title} removed`, { ...(a.skills.length ? { description: `Its ${plural(a.skills.length, "skill")} left Your skills too.` } : {}), action: { label: "Undo", onClick: () => j.addActivity(a) } }); };
-  const removeSkill = (o: (typeof j.ownSkills)[number]) => { j.removeOwnSkill(o.id); toast(`${o.name} removed`, { action: { label: "Undo", onClick: () => j.addOwnSkill(o) } }); };
-  return (
-    <section aria-labelledby="things-added" className="surface p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="things-added" className="flex items-center gap-3 font-semibold"><span className="grid size-9 place-items-center rounded-xl bg-muted"><Pencil className="size-4" aria-hidden="true" /></span>Things you added</h2>
-        <Button size="sm" variant="ghost" onClick={onAdd}><Plus className="size-4" aria-hidden="true" />Add another</Button>
-      </div>
-      <ul className="mt-3 divide-y">
-        {j.activities.map((a) => (
-          <li key={a.id} className="flex items-start gap-3 py-3">
-            <div className="min-w-0 flex-1">
-              <div className="font-medium">{a.title}</div>
-              <p className="text-sm text-muted-foreground">{[kindLabel(a.kind), a.role, a.when, a.often].filter(Boolean).join(" · ")}</p>
-              {a.skills.length > 0 && <p className="mt-1 text-xs text-muted-foreground">Skills: <span className="text-foreground">{a.skills.join(" · ")}</span></p>}
-              {a.link && <a href={a.link} target="_blank" rel="noreferrer" className="text-sm underline underline-offset-4">Proof</a>}
-            </div>
-            <Button size="sm" variant="ghost" onClick={() => removeActivity(a)}>Remove</Button>
-          </li>
-        ))}
-        {j.ownSkills.map((o) => (
-          <li key={o.id} className="flex items-start gap-3 py-3">
-            <div className="min-w-0 flex-1"><div className="font-medium">{o.name}</div><p className="text-sm text-muted-foreground">{["Skill", WHERE.find((w) => w.id === o.where)?.label, o.detail].filter(Boolean).join(" · ")}</p>{o.link && <a href={o.link} target="_blank" rel="noreferrer" className="text-sm underline underline-offset-4">Your work</a>}</div>
-            <Button size="sm" variant="ghost" onClick={() => removeSkill(o)}>Remove</Button>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-/** Software she uses or is learning, the same list her card picks from. */
-function ToolsCard() {
-  const using = TOOLS.filter((t) => !t.later);
-  const learning = TOOLS.filter((t) => t.later);
-  return (
-    <section className="surface p-6">
-      <h3 className="flex items-center gap-3 font-semibold"><span className="grid size-9 place-items-center rounded-xl bg-muted"><Wrench className="size-4" aria-hidden="true" /></span>Software and tools<span className="ml-auto text-sm font-normal text-muted-foreground">{TOOLS.length} tools</span></h3>
-      <ul className="mt-3 divide-y">
-        {[...using, ...learning].map((t) => (
-          <li key={t.id} className="flex items-center gap-3 py-3">
-            <span className="pc-tl pc-tl-lg shrink-0" style={{ background: t.bg }}>{t.logo}</span>
-            <div className="min-w-0 flex-1"><div className="font-medium">{t.name}</div><p className="text-sm text-muted-foreground">{t.from}</p></div>
-            {t.later && <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium">Learning</span>}
-          </li>
-        ))}
-      </ul>
-      <Link to="/career" search={{ tab: "card" }} className="mt-2 inline-flex items-center gap-1 text-sm font-medium underline-offset-4 hover:underline">Choose which go on your card<ArrowRight className="size-3.5" aria-hidden="true" /></Link>
-    </section>
-  );
-}
-
 /** Resume text from the same skills that are on your profile. */
 function resumeLine(s: PortfolioSkill) {
   const n = s.name.charAt(0).toLowerCase() + s.name.slice(1);

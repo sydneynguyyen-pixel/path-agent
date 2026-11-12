@@ -1,18 +1,18 @@
-import { Link } from "@tanstack/react-router";
-import { options, sources, type Option } from "@/data/scenario";
-import { useJourney, fmtStamp, type Decision } from "@/lib/journey";
-import { HELPER_NAME, laterLine, recheckLine, recheckSummary, runHeadline, runTitle, storyLines, usableIn, type RunGroup, type TraceRun } from "@/lib/run";
-import { AgentAvatar } from "@/components/app/Brand";
-import { SafeSource } from "@/components/app/SafeSource";
-import { HelperLanes } from "@/components/app/HelperLanes";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { useState } from "react";
-import type { AgentId } from "@/lib/journey";
+import { Link } from "@tanstack/react-router";
+import { ChevronRight, Code2, MessageCircle } from "lucide-react";
+import { sources } from "@/data/scenario";
+import { useJourney, type Decision } from "@/lib/journey";
+import { decisionsByRun, groupSummary, recheckLine, runSentence, toolStates, type RunGroup, type TraceRun } from "@/lib/run";
+import { ActivityItem, SourcesLine, type ItemStatus } from "@/components/app/ActivityItem";
+import { pickName, SafetyLine, secs, StepPicture, TechDetails, useTech } from "@/components/app/BehindScenes";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import "@/styles/motion-agents.css";
 
 /** One chip per document, at most three, so a step that cited one rulebook five times shows it once. */
-function uniqueSources(ids: string[]) {
+export function uniqueSources(ids: string[]) {
   const seen = new Set<string>();
   return ids.filter((id) => {
     const doc = (sources as Record<string, { doc: string } | undefined>)[id]?.doc;
@@ -22,15 +22,6 @@ function uniqueSources(ids: string[]) {
   }).slice(0, 3);
 }
 
-const optionFor = (run: TraceRun | undefined): Option | undefined => options.find((o) => o.id === run?.result?.optionId);
-const shortCourse = (o: Option) => o.course.replace("BCC ", "");
-const verdictLine: Record<Option["verdict"], string> = {
-  counts: "counts outright",
-  conditional: "counts with a condition",
-  conflict: "your counselor needs to confirm",
-  does_not_count: "doesn't count",
-};
-
 /** Live AI or Ran without AI, with the model or the reason. */
 export function ModePill({ run }: { run: TraceRun }) {
   if (run.mode === "live") return <span className="rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium">Live AI{run.result?.model ? ` · ${run.result.model}` : ""}</span>;
@@ -38,117 +29,124 @@ export function ModePill({ run }: { run: TraceRun }) {
   return <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium">Starting</span>;
 }
 
-/** The latest thing waiting on her, with one button. Nothing shows when nothing is waiting. */
+/** Whether the run waits on her: a helper asked a question, or there's a pick she hasn't chosen yet. */
+export function needsHer(run: TraceRun | null, j: { stage: string; chosenId: string | null }) {
+  if (!run) return false;
+  if (run.status === "waiting" && !!run.need) return true;
+  return j.stage === "failed" && !j.chosenId && run.status === "done" && !!run.result?.optionId;
+}
+
+/** The latest thing waiting on her, as a slim one-line notice with one button. Nothing shows when nothing is waiting. */
 export function NeedsYou({ latest }: { latest: TraceRun | null }) {
   const j = useJourney();
   let text: string | null = null;
   let action: React.ReactNode = null;
   if (latest?.status === "waiting" && latest.need) {
     text = latest.need.question;
-    action = <Button size="sm" onClick={() => j.setPanelOpen(true)}>Answer</Button>;
-  } else if (j.stage === "failed" && !j.chosenId && latest?.status === "done" && latest.result?.optionId) {
-    text = `Pick a class for QR-1 Statistics.${latest.stale ? ` ${recheckLine(latest.stale.facts, true).replace(". I re-checked your options.", ", so I re-checked.")}` : ""}`;
-    action = <Button size="sm" onClick={() => j.setPanelOpen(true)}>See my pick</Button>;
+    action = <Button size="sm" variant="outline" className="shrink-0 rounded-full" onClick={() => j.setPanelOpen(true)}>Answer</Button>;
+  } else if (needsHer(latest, j)) {
+    text = `Pick a class for QR-1 Statistics.${latest!.stale ? ` ${recheckLine(latest!.stale.facts, true).replace(". I re-checked your options.", ", so I re-checked.")}` : ""}`;
+    action = <Button size="sm" variant="outline" className="shrink-0 rounded-full" onClick={() => j.setPanelOpen(true)}>See my pick</Button>;
   } else if (j.draft && !j.emailSent) {
     text = "Drafter wrote your counselor an email. It waits for you to review it.";
-    action = <Button size="sm" asChild><Link to="/counselor">Review the draft</Link></Button>;
+    action = <Button size="sm" variant="outline" className="shrink-0 rounded-full" asChild><Link to="/counselor">Review the draft</Link></Button>;
   }
   if (!text) return null;
   return (
-    <div key={text} role="status" className="surface run-settle flex flex-wrap items-center gap-3 p-4">
-      <span className="rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-medium text-warning">Needs you</span>
-      <p className="min-w-0 flex-1 basis-56 text-[15px] font-medium">{text}</p>
+    <div key={text} role="status" className="notice run-settle flex items-center gap-3 py-2 pr-2 pl-3">
+      <span className="size-2 shrink-0 rounded-full bg-warning" aria-hidden="true" />
+      <p className="min-w-0 flex-1 text-sm"><span className="sr-only">Needs you: </span><span className="font-medium">{text}</span></p>
       {action}
     </div>
   );
 }
 
-function Story({ run, earlier, lit, onLit }: { run: TraceRun; earlier: TraceRun[]; lit: AgentId | null; onLit: (h: AgentId | null) => void }) {
+const TOLD = "Told the helpers: ";
+const TRIGGER_LABEL = { error: "First run", recheck: "Re-check", steer: "Re-plan" } as const;
+
+/**
+ * One run group (the first run and its re-checks) as a light activity card. Closed: one line.
+ * Open: which run you're looking at, one sentence, the five steps, the safety line, what she decided,
+ * where it looked, and a way back to the chat.
+ */
+export function RunCard({ group, decisions, until, needs, open, onToggle, now }: {
+  group: RunGroup;
+  decisions: Decision[];
+  /** When the next (newer) group started, so its decisions stay off this card. */
+  until: number;
+  needs: boolean;
+  open: boolean;
+  onToggle: () => void;
+  now: number | null;
+}) {
   const j = useJourney();
+  const runs = [group.root, ...group.rechecks];
+  const last = runs.at(-1)!;
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const [tech, setTech] = useTech();
+  const [hoverTool, setHoverTool] = useState<string | null>(null);
+  const found = runs.findIndex((r) => r.runId === pickedId);
+  const sel = found >= 0 ? found : runs.length - 1;
+  const run = runs[sel]!;
+  const earlier = runs.slice(0, sel);
+  const pick = pickName(run);
+  const byRun = decisionsByRun(runs, decisions, until);
+  const mine = byRun[sel] ?? [];
+  const status: ItemStatus = needs ? "needs" : last.status === "running" ? "running" : "done";
+  const summary = groupSummary(group, pickName(last) ?? null);
+  const ids = uniqueSources(run.steps.flatMap((s) => s.sourceIds));
+
   return (
-    <ul className="space-y-3">
-      {storyLines(run, j.agentOn, earlier).map((l) => (
-        <li key={l.helper} onMouseEnter={() => onLit(l.helper)} onMouseLeave={() => onLit(null)} className={cn("run-line -mx-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-2 py-1", !l.used && "opacity-50", lit === l.helper && "run-lit")}>
-          <AgentAvatar agent={l.helper} className="size-8" />
-          <p className="min-w-0 flex-1 basis-56 text-[15px] leading-snug"><b className="font-semibold">{HELPER_NAME[l.helper]}</b> {l.used ? l.text.charAt(0).toLowerCase() + l.text.slice(1) : l.text.replace(`${HELPER_NAME[l.helper]} `, "").replace(`${HELPER_NAME[l.helper]}'s `, "'s ")}{l.used && !/[.!?]$/.test(l.text) ? "." : ""}</p>
-          {l.sourceIds.length > 0 && <span className="flex flex-wrap gap-1 pl-11 sm:justify-end sm:pl-0">{uniqueSources(l.sourceIds).map((id) => <SafeSource key={id} id={id} />)}</span>}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function CurrentPick({ run }: { run: TraceRun }) {
-  const j = useJourney();
-  const o = optionFor(run);
-  if (!o) return <p className="rounded-2xl bg-secondary px-4 py-3 text-sm">{run.result?.gaveUp ? "Nothing open fits yet. I'll check again if a seat opens." : "No pick this time."}</p>;
-  const chosen = j.chosenId === o.id;
-  return (
-    <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-success-soft px-4 py-3.5">
-      <p className="min-w-0 flex-1 basis-60 text-[15px] font-medium">My pick now: {shortCourse(o)} §{o.section} · {o.sectionTime} · {verdictLine[o.verdict]}</p>
-      {chosen ? <span className="text-sm font-medium">You chose {shortCourse(o)}</span> : (
-        <>
-          <Button size="sm" variant="outline" onClick={() => j.setPanelOpen(true)}>See all options</Button>
-          <Button size="sm" onClick={() => j.choose(o.id)}>Choose {shortCourse(o)}</Button>
-        </>
-      )}
-    </div>
-  );
-}
-
-/** One run as a card: what happened in plain words, any re-checks nested inside, then how it ran. */
-export function RunCard({ group, decisions, latest }: { group: RunGroup; decisions: Decision[]; latest: boolean }) {
-  const { root, rechecks } = group;
-  const last = rechecks.at(-1) ?? root;
-  const firstPick = optionFor(root);
-  const replaced = rechecks.length > 0 && firstPick && optionFor(last)?.id !== firstPick.id;
-  const filled = rechecks[0]?.stale?.facts.some((f) => f.startsWith("seats."));
-  const t0 = root.startedAt?.getTime() ?? 0;
-  const ttv = usableIn(root.ttvMs);
-  // One highlight shared by the story, the sources and the lanes, so any claim traces to its step.
-  const [lit, setLit] = useState<AgentId | null>(null);
-  return (
-    <article className="surface space-y-4 p-5 sm:p-7" aria-label={runTitle(root)}>
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <h3 className="text-xl font-semibold">{runTitle(root)}</h3>
-        <ModePill run={root} />
-        <span className="ml-auto text-xs text-muted-foreground">{[ttv, root.startedAt && fmtStamp(root.startedAt), root.status === "running" && "running now"].filter(Boolean).join(" · ")}</span>
-      </header>
-
-      <Story run={root} earlier={[]} lit={lit} onLit={setLit} />
-
-      {replaced && firstPick && (
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-secondary px-4 py-3 text-sm">
-          <span className="run-strike text-muted-foreground">First pick: {shortCourse(firstPick)} §{firstPick.section} · {verdictLine[firstPick.verdict]}</span>
-          <span className="run-drop text-xs font-medium text-alert">{filled ? "filled" : "replaced"} {laterLine(t0, rechecks[0]!.startedAt?.getTime() ?? t0)}</span>
-        </p>
+    <ActivityItem helper={last.steps.at(-1)?.helper ?? "reader"} label={summary} at={last.startedAt ?? group.root.startedAt} now={now} status={status} open={open} onToggle={onToggle}
+      summary={<>{summary}{group.rechecks.length > 0 && <span className="ml-1.5 font-normal text-muted-foreground max-sm:hidden">· {group.rechecks.length} {group.rechecks.length === 1 ? "re-check" : "re-checks"}</span>}</>}>
+      {runs.length > 1 && (
+        <div role="group" aria-label="Which run" className="flex flex-wrap items-center gap-1">
+          {runs.map((r, i) => (
+            <span key={r.runId ?? i} className="contents">
+              {i > 0 && <ChevronRight className="size-3 text-muted-foreground" aria-hidden="true" />}
+              <button type="button" aria-pressed={i === sel} onClick={() => setPickedId(r.runId)} title={r.startedAt ? r.startedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : undefined}
+                className={cn("inline-flex h-7 items-center rounded-full px-2.5 text-xs", i === sel ? "glass-active font-medium" : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground")}>
+                {TRIGGER_LABEL[r.trigger]}
+              </button>
+            </span>
+          ))}
+        </div>
       )}
 
-      {rechecks.map((r, i) => {
-        const earlier = [root, ...rechecks.slice(0, i)];
-        const s = recheckSummary(r, earlier);
-        return (
-          <section key={r.runId ?? i} aria-label={runHeadline(r)} className="space-y-2.5 border-l-2 border-alert pl-4 sm:pl-5">
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-              <h4 className="text-[17px] font-semibold">{runHeadline(r)}</h4>
-              <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium">{s.redid.length} {s.redid.length === 1 ? "helper" : "helpers"} redid work</span>
-              {r.ttvMs !== null && <span className="text-xs text-muted-foreground">+{Math.round(r.ttvMs / 1000)}s</span>}
-            </div>
-            <p className="text-sm text-muted-foreground">{s.line}</p>
-            {i === rechecks.length - 1 && r.status === "done" && latest && <CurrentPick run={r} />}
-          </section>
-        );
-      })}
+      <p key={`s-${sel}`} className="bts-swap text-sm leading-relaxed text-pretty">
+        {runSentence(run, earlier)}
+        {pick && run.ttvMs !== null && <> New pick: <b className="font-semibold">{pick}</b>, ready in {secs(run.ttvMs)}.</>}
+      </p>
 
-      {rechecks.length === 0 && root.status === "done" && latest && <CurrentPick run={root} />}
+      {run.steps.length > 0 && <StepPicture run={run} states={toolStates(run, earlier)} recheck={sel > 0} tech={tech} hoverTool={hoverTool} onHover={setHoverTool} />}
 
-      {decisions.length > 0 && (
-        <ul className="space-y-1.5 border-t pt-3 text-sm">
-          {decisions.map((d) => <li key={d.id} className="flex flex-wrap gap-x-2"><span className="text-muted-foreground">{fmtStamp(d.when)}</span><span><b className="font-medium">You decided:</b> {d.what}</span>{d.next && <span className="text-muted-foreground">· {d.next}</span>}</li>)}
+      <SafetyLine run={run} pick={pick} tech={tech} />
+
+      {mine.length > 0 && (
+        <ul className="space-y-1 text-[13px]">
+          {mine.map((d) => (
+            <li key={d.id} className="text-pretty">
+              {d.what.startsWith(TOLD)
+                ? <><b className="font-medium">You told the helpers:</b> “{d.what.slice(TOLD.length)}”</>
+                : <><b className="font-medium">You decided:</b> {d.what}</>}
+              {d.next && <span className="text-muted-foreground"> · {d.next}</span>}
+            </li>
+          ))}
         </ul>
       )}
 
-      {root.steps.length > 0 && <HelperLanes root={root} rechecks={rechecks} lit={lit} onLit={setLit} />}
-    </article>
+      <SourcesLine ids={ids} />
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t pt-3">
+        <Button size="sm" variant="outline" className="rounded-full" onClick={() => j.setPanelOpen(true)}><MessageCircle className="size-3.5" aria-hidden="true" />Open in chat</Button>
+        {tech && <ModePill run={run} />}
+        <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
+          <Code2 className="size-3.5" aria-hidden="true" />Show technical details
+          <Switch checked={tech} onCheckedChange={setTech} aria-label="Show technical details" />
+        </label>
+      </div>
+
+      {tech && <TechDetails run={run} earlier={earlier} hoverTool={hoverTool} onHover={setHoverTool} />}
+    </ActivityItem>
   );
 }

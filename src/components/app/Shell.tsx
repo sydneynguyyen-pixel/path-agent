@@ -132,8 +132,9 @@ function useSubPages(navPath: string): Sub[] {
     const main = j.interestedRoles[0];
     return [
       { label: "Goals", to: "/career", search: {}, on: (_, q) => !q["tab"] && !q["plan"] && !q["resume"] },
-      { label: "Skills", to: "/career", search: { tab: "skills" }, on: (_, q) => q["tab"] === "skills" || !!q["resume"] },
-      { label: "Card", to: "/career", search: { tab: "card" }, on: (_, q) => q["tab"] === "card" },
+      { label: "Skills", to: "/career", search: { tab: "skills" }, on: (_, q) => q["tab"] === "skills" && !q["resume"] },
+      { label: "Card", to: "/career", search: { tab: "card" }, on: (_, q) => q["tab"] === "card" && !q["resume"] },
+      { label: "Resume", to: "/career", search: { tab: "resume" }, on: (_, q) => q["tab"] === "resume" || !!q["resume"] },
       ...(main ? [{ label: "Plan", to: "/career" as const, search: { plan: main }, on: (_: string, q: Record<string, unknown>) => !!q["plan"] }] : []),
     ];
   }
@@ -142,8 +143,8 @@ function useSubPages(navPath: string): Sub[] {
     { label: "People", to: "/explore", search: { view: "people" }, on: (_, q) => q["view"] === "people" },
   ];
   if (navPath === "/agents") return [
-    { label: "Activity", to: "/agents", search: {}, on: (p, q) => (p === "/agents" && !q["tab"]) || q["tab"] === "timeline" || (p === "/activity" && q["tab"] !== "decisions") },
-    { label: "Your decisions", to: "/agents", search: { tab: "decisions" }, on: (p, q) => q["tab"] === "decisions" || p === "/decisions" },
+    // Activity includes her decisions now, so old decisions links light it too.
+    { label: "Activity", to: "/agents", search: {}, on: (p, q) => (p === "/agents" && !q["tab"]) || q["tab"] === "timeline" || q["tab"] === "decisions" || p === "/activity" || p === "/decisions" },
     { label: "Agent controls", to: "/agents", search: { tab: "controls" }, on: (p, q) => q["tab"] === "controls" || p === "/permissions" },
   ];
   return [];

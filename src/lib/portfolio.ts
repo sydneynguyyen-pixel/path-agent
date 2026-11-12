@@ -89,3 +89,25 @@ export function portfolioSkills(ledger: Skill[], events: EventSkill[], doing: { 
       return { ...r, name: wording ?? r.name, work, confirmed, hidden: r.reviewKeys.length > 0 && seen.some((x) => x?.hidden), unsure: r.unsure && !r.reviewKeys.some(isConfirmed), selfReported: r.proofs.every((p) => p.type === "own") };
     });
 }
+
+export type SourceGroup = { type: SkillProof["type"]; id: string; title: string; skills: PortfolioSkill[] };
+
+/**
+ * One group per place a skill came from (each class, event, thing she went to, thing she added), in first-seen order.
+ * A skill with proof from two places shows in both, so confirming it in one shows in the other.
+ * Hidden skills are left out; they live under "Skills you hid".
+ */
+export function groupBySource(skills: PortfolioSkill[]): SourceGroup[] {
+  const groups = new Map<string, SourceGroup>();
+  for (const s of skills) {
+    if (s.hidden) continue;
+    for (const p of s.proofs) {
+      const id = p.type === "class" ? p.code : p.id;
+      const key = `${p.type}:${id}`;
+      const g = groups.get(key) ?? { type: p.type, id, title: p.type === "class" ? p.code : p.title, skills: [] };
+      if (!g.skills.includes(s)) g.skills.push(s);
+      groups.set(key, g);
+    }
+  }
+  return [...groups.values()];
+}

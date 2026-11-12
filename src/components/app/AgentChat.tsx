@@ -8,7 +8,7 @@ import { daysUntil, dueThisWeek } from "@/lib/home";
 import { barState, byRecent, OPTIONS_THREAD, placeholderFor, briefingStamp, shouldOpenBriefing, suggestionsFor, TODAY_THREAD, type ChatMsg, type Thread } from "@/lib/chat";
 import { useLiquidGlass } from "@/hooks/use-liquid-glass";
 import { AgentFace } from "./Brand";
-import { AgentPanel } from "./AgentPanel";
+import { RunChat } from "./RunChat";
 import { NoteReply, Reply } from "./HomeWidgets";
 import { RememberedNotes } from "./RunTrace";
 import { BriefingEarlier, BriefingMessage, useBriefing } from "./Briefing";
@@ -369,7 +369,7 @@ function AgentShell() {
                   <button type="button" className="agent-collapse" onClick={collapse}><Minimize2 className="size-4" aria-hidden="true" />Collapse</button>
                 </header>
                 <div ref={logRef} className="agent-log" aria-live="polite">
-                  {onOptions ? <AgentPanel inChat /> : onToday ? <TodayLog /> : thread ? <Messages thread={thread} typing={j.typingIn === thread.id} /> : (
+                  {onOptions ? <RunChat /> : onToday ? <TodayLog /> : thread ? <Messages thread={thread} typing={j.typingIn === thread.id} /> : (
                     <div className="agent-in m-auto flex max-w-md flex-col items-center gap-4 text-center">
                       <AgentFace className="!size-14" />
                       <p className="text-lg font-semibold">What do you want to know?</p>

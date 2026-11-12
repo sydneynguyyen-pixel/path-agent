@@ -19,6 +19,7 @@ import { symposiumEvent } from "@/data/event";
 import { people } from "@/data/people";
 import { addGoal, goalsFor, makeMain, MAX_GOALS, removeGoal } from "@/lib/goals";
 import { activityId, type Activity, type SingleSkill } from "@/lib/activities";
+import { addName, dropName, removeDoc, saveDoc, type ResumeDoc } from "@/lib/resume";
 import { callName, eventAccountsFor, eventPlanFor, filledEventPlan, followUp, pathBuiltFor, inviteDraft, type DeckChoice, type DemoFill, type EventPlan } from "@/lib/event";
 
 export type Stage = "idle" | "failed" | "chosen";
@@ -86,6 +87,18 @@ type State = {
   /** Skills she chose to build for each goal. A goal with no entry uses what the role asks for that she doesn't have yet. */
   buildSkills: Record<string, string[]>;
   careerInterests: string[];
+  /** Resume, CV and cover letter drafts she edited or made (Career → Resume). Defaults come from her goals. Never sent anywhere. */
+  resumes: ResumeDoc[];
+  /** Skill names on her resume. Confirmed skills join here (auto-add) or when she adds them. */
+  resumeSkills: string[];
+  /** Skills added for her since she last looked, shown with a "New" mark and an Undo. */
+  resumeNew: string[];
+  /** Skills she took off her resume, so auto-add doesn't put them back. */
+  resumeDismissed: string[];
+  /** The skills she had confirmed before first opening Resume went on quietly. */
+  resumeSeeded: boolean;
+  /** New confirmed skills go on her resume by themselves. A preference, so Reset demo keeps it. */
+  autoAddSkills: boolean;
   event: EventPlan;
   agentOn: Record<AgentId, boolean>;
   access: Record<AccessKey, boolean>;
@@ -163,6 +176,12 @@ const initial: State = {
   dismissedRoles: [],
   buildSkills: {},
   careerInterests: [],
+  resumes: [],
+  resumeSkills: [],
+  resumeNew: [],
+  resumeDismissed: [],
+  resumeSeeded: false,
+  autoAddSkills: true,
   event: filledEventPlan,
   agentOn: { reader: true, planner: true, backup: true, drafter: true },
   access: { registration: true, canvas: true, sis: true, audit: true, articulation: true, handshake: true, email: true },
@@ -247,6 +266,19 @@ type Ctx = State & {
   setGoals: (ids: string[]) => void;
   setBuildSkills: (roleId: string, skills: string[]) => void;
   dismissRole: (id: string, dismissed: boolean) => void;
+  /** Puts a skill on her resume (by name). Used by Resume and by Your skills' "Add to resume". */
+  addResumeSkill: (name: string) => void;
+  /** Takes a skill off her resume; auto-add won't put it back. */
+  removeResumeSkill: (name: string) => void;
+  /** Clears the "New" mark on skills added for her. */
+  seenResumeSkills: (names?: string[]) => void;
+  /** First-visit and auto-add sync from src/lib/resume.ts (syncResumeSkills). */
+  syncResumeSkills: (next: { resumeSkills: string[]; resumeNew: string[]; seeded: boolean }) => void;
+  setAutoAddSkills: (on: boolean) => void;
+  /** Saves a draft (insert or replace by id). */
+  saveResume: (doc: ResumeDoc) => void;
+  /** Removes a saved draft. A default document goes back to its template. */
+  removeResume: (id: string) => void;
   /** Whether the demo opens with Maya's built path or as a new student. */
   demoFill: DemoFill;
   setDemoFill: (fill: DemoFill) => void;
@@ -410,7 +442,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
   const restart = useCallback((fill: DemoFill) => {
     clockRef.startedAt = Date.now();
     runControl.current?.abort();
-    set((p) => ({ ...initial, event: eventPlanFor(fill), eventAccounts: eventAccountsFor(fill), interestedRoles: goalsFor(fill), startedAt: clockRef.startedAt, agentOn: p.agentOn, access: p.access, notify: p.notify, watchingRegistration: p.watchingRegistration }));
+    set((p) => ({ ...initial, event: eventPlanFor(fill), eventAccounts: eventAccountsFor(fill), interestedRoles: goalsFor(fill), startedAt: clockRef.startedAt, agentOn: p.agentOn, access: p.access, notify: p.notify, autoAddSkills: p.autoAddSkills, watchingRegistration: p.watchingRegistration }));
   }, []);
   const applyFill = useCallback((fill: DemoFill) => {
     window.localStorage.setItem("pa-demo-fill", fill);
@@ -650,6 +682,13 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       setGoals: (ids) => set(p => ({ ...p, interestedRoles: ids.slice(0, MAX_GOALS) })),
       setBuildSkills: (roleId, skills) => set(p => ({ ...p, buildSkills: { ...p.buildSkills, [roleId]: skills } })),
       dismissRole: (id, dismissed) => set(p => ({ ...p, dismissedRoles: dismissed ? [...new Set([...p.dismissedRoles, id])] : p.dismissedRoles.filter(i => i !== id) })),
+      addResumeSkill: (name) => set((p) => ({ ...p, resumeSkills: addName(p.resumeSkills, name), resumeDismissed: dropName(p.resumeDismissed, name) })),
+      removeResumeSkill: (name) => set((p) => ({ ...p, resumeSkills: dropName(p.resumeSkills, name), resumeNew: dropName(p.resumeNew, name), resumeDismissed: addName(p.resumeDismissed, name) })),
+      seenResumeSkills: (names) => set((p) => ({ ...p, resumeNew: names ? names.reduce(dropName, p.resumeNew) : [] })),
+      syncResumeSkills: (next) => set((p) => (p.resumeSkills === next.resumeSkills && p.resumeNew === next.resumeNew && p.resumeSeeded === next.seeded ? p : { ...p, resumeSkills: next.resumeSkills, resumeNew: next.resumeNew, resumeSeeded: next.seeded })),
+      setAutoAddSkills: (on) => set((p) => ({ ...p, autoAddSkills: on })),
+      saveResume: (doc) => set((p) => ({ ...p, resumes: saveDoc(p.resumes, doc) })),
+      removeResume: (id) => set((p) => ({ ...p, resumes: removeDoc(p.resumes, id) })),
       demoFill,
       setDemoFill: applyFill,
       setEventGoal: (goal) => set((p) => ({ ...p, event: { ...p.event, goal } })),

@@ -144,16 +144,7 @@ export function AgentPanel({ docked = false, inChat = false }: { docked?: boolea
   const run = j.agentRun;
   const scanning = run?.status === "running";
   const pick = options.find((o) => o.id === run?.result?.optionId);
-  const helpersOff = (["reader", "planner", "backup"] as const).filter((h) => !j.agentOn[h]);
-  const chosen = options.find((o) => o.id === j.chosenId);
-  const path = chosen ? recoveryPath(chosen) : null;
-  // A section a re-check found filled drops to the bottom, like any full section.
-  const ranked = rankOptions(options.map((o) => (j.justFilled.includes(o.id) ? { ...o, seatsOpen: 0 } : o))).filter((o) => ["math13", "psyc5", "bus21"].includes(o.id))
-    // The helpers' pick leads, so the card that says "My pick" is the first one she reads.
-    .sort((a, b) => Number(b.id === pick?.id) - Number(a.id === pick?.id));
-  const ruledOut = options.filter((o) => ["math10", "stat2-02"].includes(o.id));
   const plannerOff = !j.agentOn.reader || !j.agentOn.planner;
-  const drafterOff = !j.agentOn.drafter;
 
   const header = (
     <div className="agent-panel px-4 pt-4 pb-2">
@@ -182,12 +173,42 @@ export function AgentPanel({ docked = false, inChat = false }: { docked?: boolea
               Read records or Check your degree is off in <Link to="/agents" search={{ tab: "controls" }} className="underline" onClick={() => j.setPanelOpen(false)}>Controls</Link>, so I can't suggest options.
             </div>
           )}
-          {!plannerOff && !scanning && j.stage === "failed" && (
+          {!plannerOff && !scanning && j.stage === "failed" && <OptionsList />}
+
+          <NextSteps />
+        </div>
+  );
+  if (inChat) return content;
+  if (docked) return <div>{header}{content}</div>;
+  return (
+    <Sheet open={j.panelOpen} onOpenChange={j.setPanelOpen}>
+      <SheetContent side="right" className="brand-app agent-panel w-full overflow-y-auto sm:max-w-xl">
+        <SheetHeader>
+          <SheetDescription>Sprout</SheetDescription>
+          <SheetTitle className="font-serif text-2xl">Seats go fast. Here's what to do now.</SheetTitle>
+        </SheetHeader>
+        {content}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/** Every option with open seats, the helpers' pick first, and what was ruled out. */
+export function OptionsList({ showTitle = true }: { showTitle?: boolean }) {
+  const j = useJourney();
+  const run = j.agentRun;
+  const pick = options.find((o) => o.id === run?.result?.optionId);
+  const helpersOff = (["reader", "planner", "backup"] as const).filter((h) => !j.agentOn[h]);
+  const ranked = rankOptions(options.map((o) => (j.justFilled.includes(o.id) ? { ...o, seatsOpen: 0 } : o))).filter((o) => ["math13", "psyc5", "bus21"].includes(o.id))
+    .sort((a, b) => Number(b.id === pick?.id) - Number(a.id === pick?.id));
+  const ruledOut = options.filter((o) => ["math10", "stat2-02"].includes(o.id));
+  return (
+
             <section className="deal space-y-3">
               {!pick && run?.result?.gaveUp && helpersOff.length === 0 && (
                 <p className="text-sm text-muted-foreground">I couldn't settle on one recommendation, so here's every option.</p>
               )}
-              <h3 className="text-lg font-semibold">Options with open seats</h3>
+              {showTitle && <h3 className="text-lg font-semibold">Options with open seats</h3>}
               <div className="rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground xl:hidden">For the side-by-side portal and recovery view, open on desktop.</div>
               {ranked.map((o, idx) => {
                 const p = recoveryPath(o);
@@ -255,8 +276,18 @@ export function AgentPanel({ docked = false, inChat = false }: { docked?: boolea
                 </details>
               )}
             </section>
-          )}
+          
+  );
+}
 
+/** What happens after she chooses: register steps, the counselor email for her OK, and the waitlist. */
+export function NextSteps() {
+  const j = useJourney();
+  const chosen = options.find((o) => o.id === j.chosenId);
+  const path = chosen ? recoveryPath(chosen) : null;
+  const drafterOff = !j.agentOn.drafter;
+  return (
+    <>
           {chosen && path === "now" && (
             <section className="swap-enter surface space-y-3 p-5">
               <div className="flex items-center gap-2 text-lg font-semibold"><Zap className="size-5 text-primary" /> Do this now</div>
@@ -311,26 +342,13 @@ export function AgentPanel({ docked = false, inChat = false }: { docked?: boolea
               )}
               <div className="flex gap-3">
                 <Link to="/" className="text-primary underline" onClick={() => j.setPanelOpen(false)}>See degree view</Link>
-                <Link to="/activity" search={{ tab: "decisions" }} className="text-primary underline" onClick={() => j.setPanelOpen(false)}>Your decisions</Link>
+                <Link to="/activity" className="text-primary underline" onClick={() => j.setPanelOpen(false)}>See it in Activity</Link>
                 {path === "hold" && j.emailSent && <Link to="/counselor" className="text-primary underline" onClick={() => j.setPanelOpen(false)}>Counselor view</Link>}
               </div>
             </section>
           )}
 
           {chosen && j.seatHeld && <WaitlistAction />}
-        </div>
-  );
-  if (inChat) return content;
-  if (docked) return <div>{header}{content}</div>;
-  return (
-    <Sheet open={j.panelOpen} onOpenChange={j.setPanelOpen}>
-      <SheetContent side="right" className="brand-app agent-panel w-full overflow-y-auto sm:max-w-xl">
-        <SheetHeader>
-          <SheetDescription>Sprout</SheetDescription>
-          <SheetTitle className="font-serif text-2xl">Seats go fast. Here's what to do now.</SheetTitle>
-        </SheetHeader>
-        {content}
-      </SheetContent>
-    </Sheet>
+    </>
   );
 }

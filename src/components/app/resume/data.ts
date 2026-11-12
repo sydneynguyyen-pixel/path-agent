@@ -3,14 +3,14 @@ import { opportunities, progress, schools, setupDirectory, terms } from "@/data/
 import { SCRIPT_TODAY, useJourney } from "@/lib/journey";
 import { kindLabel } from "@/lib/activities";
 import { attendance, wentTo, type Found } from "@/lib/experiences";
-import { bulletsFromEvent, bulletsFromWords, experiencePhrase, KIND_LABEL, type ResumeDoc } from "@/lib/resume";
+import { bulletsFromEvent, bulletsFromWords, experiencePhrase, KIND_LABEL, type EntrySection, type ResumeDoc } from "@/lib/resume";
+import type { EntryRecord } from "@/lib/resumeSuggest";
 import { TOOLS } from "@/components/app/PathCard";
 
 export const MAJOR = setupDirectory.major[0]!.name.replace(/ B\.[AS]\.$/, "");
 export const DEGREE_SHORT = setupDirectory.major[0]!.name.match(/B\.[AS]\./)?.[0] ?? "";
 
-/** Where an experience entry sits on the page. Things she did and events where she took part go under Experience. */
-export type EntrySection = "experience" | "training" | "projects";
+export type { EntrySection } from "@/lib/resume";
 
 /** One thing she did or went to, with suggested bullets from her own words or the event's record. */
 export type ResumeEntry = {
@@ -27,6 +27,8 @@ export type ResumeEntry = {
   selfReported: boolean;
   /** One plain sentence for the cover letter template ("I competed in Civic Hack Weekend"). */
   phrase: string;
+  /** What the record holds (the event or her own words), for Sprout's ideas. */
+  record?: EntryRecord | undefined;
 };
 
 const DID: Record<string, (title: string, host: string) => string> = {
@@ -58,6 +60,7 @@ export function useResumeEntries(found: Found[]): ResumeEntry[] {
       source: "Added by you",
       selfReported: true,
       phrase: experiencePhrase(a),
+      record: { type: "activity" as const, title: a.title, did: a.did },
     }));
     const went = found.filter((e) => wentTo(attendance(e, SCRIPT_TODAY, j.eventChecks)));
     const events: ResumeEntry[] = went.map((e) => {
@@ -73,6 +76,7 @@ export function useResumeEntries(found: Found[]): ResumeEntry[] {
         source: "From the event's record",
         selfReported: false,
         phrase: DID[e.role]?.(e.title, e.host) ?? `I went to ${e.title}`,
+        record: { type: "event" as const, title: e.title, host: e.host, kind: e.kind, outcome: e.outcome, skills: e.skills.map((s) => ({ name: s.name, level: s.level })) },
       };
     });
     const titles = new Set(went.map((e) => e.title.toLowerCase()));

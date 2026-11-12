@@ -2,14 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Copy, Download, FileDown, MoreHorizontal, RotateCcw, Trash2 } from "lucide-react";
-import { careerRoles, student } from "@/data/scenario";
+import { careerRoles, gapSkills, ledgerSkills, student } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import { buildSkillsFor, chosenGoals } from "@/lib/goals";
 import {
-  appsIn, blankDoc, contactLine, coverTemplate, docFileName, docLook, docsIn, entryBullets, folderList, folderOf, hasName, jobFolder, jobFolderDocs,
-  KIND_LABEL, libraryDocs, newVersion, resumeText, roleAsks, skillLines, skillsForDoc, suggestedHeadline, suggestedSummary, syncResumeSkills,
+  appsIn, blankDoc, contactLine, coverTemplate, docFileName, docLook, docsIn, entryBullets, entrySection, folderList, folderOf, hasName, jobFolder, jobFolderDocs,
+  KIND_LABEL, libraryDocs, newVersion, resumeText, roleAsks, sectionHidden, skillLines, skillsForDoc, suggestedHeadline, suggestedSummary, syncResumeSkills,
   type PageEntry, type ResumeDoc, type ResumePage,
 } from "@/lib/resume";
+import { applyIdea, dismissIdea, ideasFor, type Idea } from "@/lib/resumeSuggest";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useFound } from "@/components/app/EventBits";
@@ -20,7 +21,7 @@ import { FolderBar, FolderRail, NewJobFolder } from "@/components/app/resume/Fol
 import { JobPanel } from "@/components/app/resume/JobPanel";
 import { FittedPaper, PaperContent } from "@/components/app/resume/ResumePaper";
 import { StylePanel } from "@/components/app/resume/StylePanel";
-import { MAJOR, RESUME_TOOLS, educationFor, suggestedCourses, useResumeEntries } from "@/components/app/resume/data";
+import { MAJOR, RESUME_TOOLS, educationFor, suggestedCourses, transcriptCourses, useResumeEntries } from "@/components/app/resume/data";
 import "@/styles/resume.css";
 
 const school = (s: string) => s.replace(/\s*\(.*\)$/, "");
@@ -99,24 +100,66 @@ export function ResumeTab() {
   const summary = doc.summary ?? suggestedSummary({ major: MAJOR, roleTitle: role?.title ?? null, skills: docSkills });
   const letter = doc.letter ?? coverTemplate({ name: student.name, roleTitle: folder.job?.title ?? role?.title ?? null, school: school(student.from), major: MAJOR, skills: docSkills, experience: shown.map((e) => e.phrase) });
 
-  const toEntry = (e: (typeof entries)[number]): PageEntry => ({ id: e.id, role: e.role, org: e.org, when: e.when, bullets: entryBullets(doc, e.id, e.suggested) });
+  // An event she moved under Projects reads as the project itself: its name, then who ran it.
+  const toEntry = (e: (typeof entries)[number]): PageEntry => {
+    const asProject = entrySection(doc, e) === "projects" && e.section !== "projects" && e.record?.type === "event";
+    return { id: e.id, role: asProject ? e.record!.title : e.role, org: asProject && e.record?.type === "event" ? e.record.host : e.org, when: e.when, bullets: entryBullets(doc, e.id, e.suggested) };
+  };
+  const inSection = (s: "experience" | "training" | "projects") => shown.filter((e) => entrySection(doc, e) === s).map(toEntry);
   const page: ResumePage = {
     kind: doc.kind,
     name: student.name,
     headline,
     contact: contactLine(student.email, school(student.from), j.resumeContact),
-    summary,
+    summary: sectionHidden(doc, "summary") ? "" : summary,
     letter,
     education: educationFor(courses),
-    experience: shown.filter((e) => e.section === "experience").map(toEntry),
-    projects: [
-      ...shown.filter((e) => e.section === "projects").map(toEntry),
+    experience: inSection("experience"),
+    projects: sectionHidden(doc, "projects") ? [] : [
+      ...inSection("projects"),
       ...(doc.showProjects ? doc.projects.filter((p) => p.title.trim()).map((p) => ({ id: `proj-${p.id}`, role: p.title, org: "", when: "", bullets: p.text.split("\n").map((l) => l.trim()).filter(Boolean) })) : []),
     ],
-    training: shown.filter((e) => e.section === "training").map(toEntry),
+    training: sectionHidden(doc, "training") ? [] : inSection("training"),
     skills: skillLines(docSkills, (n) => byName.get(n.toLowerCase())?.theme, tools),
   };
   const look = docLook(doc);
+
+  // Sprout's ideas: only from her records (skills and where they came from, events, her words, her transcript).
+  const ideas: Idea[] = doc.kind === "cover" ? [] : ideasFor({
+    major: MAJOR,
+    role,
+    building: role ? buildSkillsFor(role, j.buildSkills, confirmed) : [],
+    skills: all,
+    onDoc: [...docSkills, ...tools],
+    summary: page.summary,
+    entries: entries.map((e) => ({ id: e.id, section: entrySection(doc, e), role: e.role, bullets: entryBullets(doc, e.id, e.suggested), hidden: doc.hiddenExperience.includes(e.id), record: e.record })),
+    courses: transcriptCourses,
+    onCourses: courses,
+    courseSkills: [...ledgerSkills, ...gapSkills].map((x) => ({ course: x.course, name: x.name })),
+  }, doc);
+  const takeIdea = (idea: Idea) => {
+    if (!idea.apply) return;
+    const before = doc;
+    const wasSaved = j.resumes.some((d) => d.id === doc.id);
+    const skillsBefore = { resumeSkills: j.resumeSkills, resumeNew: j.resumeNew };
+    const { patch, addSkill, block } = applyIdea(doc, idea.apply);
+    const changesDoc = Object.keys(patch).length > 0;
+    const wasOn = !!addSkill && hasName(j.resumeSkills, addSkill);
+    const wasDismissed = !!addSkill && hasName(j.resumeDismissed, addSkill);
+    if (changesDoc) save(patch);
+    if (addSkill && !wasOn) j.addResumeSkill(addSkill);
+    ping(block);
+    toast(`Used Sprout's idea: ${idea.title}`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          if (changesDoc) { if (wasSaved) j.saveResume(before); else j.removeResume(before.id); }
+          if (addSkill && !wasOn) { if (wasDismissed) j.removeResumeSkill(addSkill); else j.syncResumeSkills({ ...skillsBefore, seeded: true }); }
+        },
+      },
+    });
+  };
+  const skipIdea = (idea: Idea) => save({ dismissedIdeas: dismissIdea(doc, idea.id) });
   const text = resumeText(page);
 
   const copy = async () => {
@@ -225,8 +268,8 @@ export function ResumeTab() {
           </div>
           <div className="pc-panel-body" role="tabpanel" aria-label={PANELS.find((t) => t.id === panel)!.label}>
             {panel === "content" && (
-              <ContentPanel doc={doc} save={save} ping={ping} fieldFlash={fieldFlash} jump={jump} headline={headline} summary={summary} letter={letter} entries={entries} courses={courses}
-                skills={{ split, byName, all, roleTitle: role?.title ?? null }} />
+              <ContentPanel key={doc.id} doc={doc} save={save} ping={ping} fieldFlash={fieldFlash} jump={jump} onJumpDone={() => setJump(null)} headline={headline} summary={summary} letter={letter} entries={entries} courses={courses}
+                skills={{ split, byName, all, roleTitle: role?.title ?? null }} page={page} ideas={ideas} onUseIdea={takeIdea} onSkipIdea={skipIdea} />
             )}
             {panel === "style" && <StylePanel doc={doc} save={save} pages={pages} />}
             {panel === "job" && (

@@ -87,6 +87,38 @@
 .rs-field[data-flash] { box-shadow: 0 0 0 3px color-mix(in oklab, var(--aqua-ring-start) 70%, transparent); }
 .rs-stage .pc-tabs { grid-template-columns: repeat(4, 1fr); }
 
+/* Content tab: a stack of light cards, one per part of the page. A closed card is one line; one opens at a time. */
+.rs-stage .pc-panel-body:has(> .rs-cards) { gap: 0; }
+.rs-cards { display: grid; gap: 8px; min-width: 0; }
+.rs-field.rs-card { border: 1px solid var(--border); border-radius: 14px; background: var(--card); min-width: 0; transition: box-shadow 260ms cubic-bezier(.22,.8,.2,1), border-color 260ms cubic-bezier(.22,.8,.2,1); }
+.rs-card { border: 1px solid var(--border); border-radius: 14px; background: var(--card); min-width: 0; }
+.rs-card[data-open] { border-color: color-mix(in oklab, var(--foreground) 16%, transparent); box-shadow: 0 1px 2px rgb(15 23 42 / .04), 0 10px 24px -20px rgb(15 23 42 / .4); }
+.rs-field.rs-card[data-flash] { box-shadow: 0 0 0 3px color-mix(in oklab, var(--aqua-ring-start) 70%, transparent); }
+.rs-card[data-dim] .rs-card-btn > svg:first-child { opacity: .5; }
+.rs-card-head { display: flex; align-items: center; gap: 2px; padding-right: 6px; min-width: 0; }
+.rs-card-btn { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; gap: 10px; padding: 11px 10px 11px 12px; text-align: left; }
+.rs-card-btn:hover { background: color-mix(in oklab, var(--foreground) 3%, transparent); }
+.rs-chev { transition: transform 260ms cubic-bezier(.22,.8,.2,1); }
+.rs-card[data-open] > .rs-card-head .rs-chev { transform: rotate(180deg); }
+.rs-eye { display: grid; flex: none; place-items: center; width: 32px; height: 32px; color: var(--muted-foreground); }
+.rs-eye:hover { color: var(--foreground); background: var(--muted); }
+.rs-eye[aria-pressed="false"] { color: color-mix(in oklab, var(--muted-foreground) 70%, transparent); }
+.rs-card-body { display: grid; gap: 16px; min-width: 0; padding: 4px 14px 16px; }
+.rs-idea-badge { flex: none; border-radius: 9999px; background: var(--aqua-gradient); padding: 2px 8px; font-size: 11px; font-weight: 600; white-space: nowrap; color: var(--foreground); }
+.rs-ideas { background: color-mix(in oklab, var(--aqua-ring-start) 5%, var(--card)); }
+
+/* Rows inside a card: an entry or project that opens to its bullets, and Sprout's ideas. */
+.rs-field.rs-sub { border: 1px solid var(--border); border-radius: 12px; background: var(--card); min-width: 0; }
+.rs-sub[data-open] { background: color-mix(in oklab, var(--foreground) 1.5%, var(--card)); }
+.rs-idea { border-radius: 12px; background: var(--muted); padding: 10px 12px; min-width: 0; overflow-wrap: anywhere; }
+
+/* Opening and closing: height and fade, never a loop. */
+.rs-collapse { display: grid; grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows 260ms cubic-bezier(.22,.8,.2,1), opacity 220ms cubic-bezier(.22,.8,.2,1); }
+@starting-style { .rs-collapse { grid-template-rows: 0fr; opacity: 0; } }
+.rs-collapse[data-closing] { grid-template-rows: 0fr; opacity: 0; }
+/* Room for focus rings, without the space showing when closed. */
+.rs-collapse-inner { min-height: 0; min-width: 0; overflow: hidden; padding: 3px; margin: -3px; }
+
 /* Folders above the board. */
 .rs-folders { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); }
 .rs-folder { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; border-radius: 18px; padding: 12px 14px 12px 12px; text-align: left; background: var(--card); box-shadow: 0 1px 2px rgb(15 23 42 / .05), 0 6px 16px -12px rgb(15 23 42 / .3); transition: box-shadow 200ms cubic-bezier(.22,.8,.2,1), background-color 200ms cubic-bezier(.22,.8,.2,1); }
@@ -105,7 +137,7 @@
 .rs-status[data-s="closed"] { background: var(--muted); color: var(--muted-foreground); }
 
 @media (prefers-reduced-motion: reduce) {
-  .rs-block, .rs-field, .rs-folder { transition: none; }
+  .rs-block, .rs-field, .rs-folder, .rs-field.rs-card, .rs-collapse, .rs-chev { transition: none; }
 }
 
 /* Download as PDF prints only the page. */

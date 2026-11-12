@@ -3,6 +3,7 @@ import {
   addName, appsIn, blankApplication, blankDoc, bulletsFromEvent, bulletsFromWords, comparePosting, contactLine, coverTemplate, docId, docLook, docsIn, dropName, experiencePhrase,
   folderCounts, folderList, folderOf, groupDocs, jobFolder, jobFolderDocs, libraryDocs, moveItem, newVersion, outcomeBullet, pageCount, pendingSkills, removeApplication,
   resumeText, roleAsks, saveApplication, saveDoc, skillLines, skillsForDoc, startsWithAction, syncResumeSkills, type ResumePage,
+  entrySection, sectionHidden, toggleSection, verbLed,
 } from "@/lib/resume";
 import { experiences } from "@/data/scenario";
 
@@ -202,5 +203,37 @@ describe("applications", () => {
 describe("job posting against a resume", () => {
   it("splits the posting's skills into on this resume, hers to add, and not yet", () => {
     expect(comparePosting(["Interviewing", "SQL", "Research writing", "interviewing"], ["interviewing"], ["Research writing", "Interviewing"])).toEqual({ on: ["Interviewing"], canAdd: ["Research writing"], missing: ["SQL"] });
+  });
+});
+
+describe("verb-led bullets and page sections", () => {
+  it("rewords a bullet to lead with a verb without adding anything", () => {
+    expect(verbLed("Making drinks for the morning rush")).toBe("Made drinks for the morning rush");
+    expect(verbLed("I tutored two kids in math.")).toBe("Tutored two kids in math");
+    expect(verbLed("Organizing the spring food drive")).toBe("Organized the spring food drive");
+    expect(verbLed("Studying how people use the library")).toBe("Studied how people use the library");
+    expect(verbLed("Responsible for opening the store")).toBe("Opened the store");
+    expect(verbLed("Responsible for the cash drawer")).toBe("Handled the cash drawer");
+    expect(verbLed("Poster: how students choose study spaces")).toBe("Presented a poster on how students choose study spaces");
+  });
+  it("leaves bullets alone when they already lead with a verb or there's no honest rewording", () => {
+    expect(verbLed("Led a team of four")).toBeNull();
+    expect(verbLed("Great with people")).toBeNull();
+    expect(verbLed("Morning shifts on weekends")).toBeNull();
+    expect(verbLed("")).toBeNull();
+  });
+  it("sections hide per document and entries can move between them", () => {
+    const doc = blankDoc("resume", "ux");
+    expect(sectionHidden(doc, "summary")).toBe(false);
+    const hidden = { ...doc, hiddenSections: toggleSection(doc, "summary") };
+    expect(sectionHidden(hidden, "summary")).toBe(true);
+    expect(toggleSection(hidden, "summary")).toEqual([]);
+    expect(entrySection(doc, { id: "event-civic-hack", section: "experience" })).toBe("experience");
+    expect(entrySection({ entrySections: { "event-civic-hack": "projects" } }, { id: "event-civic-hack", section: "experience" })).toBe("projects");
+    // A new version keeps her choices without sharing them.
+    const moved = { ...hidden, entrySections: { a: "projects" as const }, dismissedIdeas: ["x"] };
+    const v = newVersion(moved, "ux", "UX researcher", [], 1);
+    expect(v).toMatchObject({ hiddenSections: ["summary"], entrySections: { a: "projects" }, dismissedIdeas: ["x"] });
+    expect(v.entrySections).not.toBe(moved.entrySections);
   });
 });

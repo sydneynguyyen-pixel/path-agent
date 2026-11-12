@@ -40,7 +40,24 @@ export type ResumeDoc = {
   posting?: string | undefined;
   /** A folder she made for one specific job. Missing means the folder for its career (or General). */
   folder?: string | undefined;
+  /** Sections she hid on this page with the eye toggle. Missing means all show. */
+  hiddenSections?: HideableSection[] | undefined;
+  /** Entries she moved to another section (like a hackathon under Projects), by entry id. */
+  entrySections?: Record<string, EntrySection> | undefined;
+  /** Sprout's ideas she said "Not now" to on this document. */
+  dismissedIdeas?: string[] | undefined;
 };
+
+/** Where an experience entry sits on the page. Things she did and events where she took part go under Experience. */
+export type EntrySection = "experience" | "training" | "projects";
+/** Sections with a show/hide toggle. Header, Education and Skills always show. */
+export type HideableSection = "summary" | "projects" | "training";
+
+export const sectionHidden = (doc: Pick<ResumeDoc, "hiddenSections">, s: HideableSection) => !!doc.hiddenSections?.includes(s);
+export const toggleSection = (doc: Pick<ResumeDoc, "hiddenSections">, s: HideableSection): HideableSection[] =>
+  sectionHidden(doc, s) ? (doc.hiddenSections ?? []).filter((x) => x !== s) : [...(doc.hiddenSections ?? []), s];
+/** The section an entry shows under on this document: where she moved it, or where it belongs. */
+export const entrySection = (doc: Pick<ResumeDoc, "entrySections">, e: { id: string; section: EntrySection }): EntrySection => doc.entrySections?.[e.id] ?? e.section;
 
 export const docId = (kind: DocKind, roleId: string | null) => `${kind}-${roleId ?? "general"}`;
 
@@ -114,6 +131,9 @@ export function newVersion(doc: ResumeDoc, roleId: string | null, roleTitle: str
     projects: doc.projects.map((p) => ({ ...p })),
     bullets: doc.bullets ? Object.fromEntries(Object.entries(doc.bullets).map(([k, v]) => [k, [...v]])) : undefined,
     courses: doc.courses ? [...doc.courses] : doc.courses,
+    hiddenSections: doc.hiddenSections ? [...doc.hiddenSections] : undefined,
+    entrySections: doc.entrySections ? { ...doc.entrySections } : undefined,
+    dismissedIdeas: doc.dismissedIdeas ? [...doc.dismissedIdeas] : undefined,
     // A version for another career leaves the job folder it came from.
     folder: roleId === doc.roleId ? doc.folder : undefined,
     copiedFrom: doc.id,
@@ -293,6 +313,45 @@ export function bulletsFromEvent(e: { outcome?: string | undefined; skills: { na
 /** Strong resume bullets start with an action verb. A gentle check for the form, not a rule. */
 const VERBS = /^(led|built|ran|made|wrote|taught|helped|managed|organized|organised|planned|designed|created|developed|presented|interviewed|analyzed|analysed|researched|tutored|trained|coordinated|supported|served|cared|handled|greeted|answered|sorted|packed|placed|earned|applied|practiced|practised|learned|launched|started|founded|edited|translated|tracked|mentored|volunteered|competed|collected|conducted|drafted|mapped|prototyped|tested|observed|recorded|summarized|surveyed|scheduled|balanced|raised|grew|cut|improved|reduced|increased|won|completed|co-led|facilitated|hosted|guided|cooked|cleaned|drove|opened|closed)\b/i;
 export const startsWithAction = (b: string) => VERBS.test(b.trim()) || /^[A-Za-z]+ed\b/.test(b.trim());
+
+const IRREGULAR: Record<string, string> = {
+  making: "Made", leading: "Led", running: "Ran", writing: "Wrote", teaching: "Taught", building: "Built", taking: "Took", giving: "Gave", keeping: "Kept",
+  bringing: "Brought", doing: "Did", having: "Had", getting: "Got", selling: "Sold", speaking: "Spoke", finding: "Found", meeting: "Met", telling: "Told",
+  driving: "Drove", coming: "Came", seeing: "Saw", holding: "Held", sitting: "Sat", standing: "Stood", thinking: "Thought", buying: "Bought", paying: "Paid",
+  winning: "Won", feeding: "Fed", reading: "Read", setting: "Set", putting: "Put", cutting: "Cut", leaving: "Left", sending: "Sent", spending: "Spent", choosing: "Chose",
+};
+const NOT_VERB = /^(being|during|morning|evening|nothing|something|anything|everything|bring|spring|string|thing|king|ring|sing|wing|sibling|ceiling|wedding)$/i;
+
+/**
+ * The same bullet, led by a verb, when that can be done without adding anything: "I made…" → "Made…",
+ * "Making drinks…" → "Made drinks…", "Responsible for…" → "Handled…", recorded outcomes reworded.
+ * Null when it already starts with one, or when there's no honest rewording.
+ */
+export function verbLed(bullet: string): string | null {
+  const b = bullet.trim().replace(/[.;]+$/, "");
+  if (!b || startsWithAction(b)) return null;
+  let m = b.match(/^i\s+(?:also\s+)?(\w+)\s+(.+)$/i);
+  if (m && startsWithAction(m[1]!)) return `${cap(m[1]!.toLowerCase())} ${m[2]}`;
+  m = b.match(/^(?:was\s+)?responsible\s+for\s+(.+)$/i);
+  if (m) {
+    const rest = verbLed(m[1]!);
+    return rest ?? `Handled ${m[1]}`;
+  }
+  m = b.match(/^(\w+ing)\b\s*(.*)$/i);
+  if (m && !NOT_VERB.test(m[1]!)) {
+    const w = m[1]!.toLowerCase();
+    let past = IRREGULAR[w];
+    if (!past) {
+      const stem = w.slice(0, -3);
+      if (stem.length < 2) return null;
+      past = cap(/[^aeiou]y$/.test(stem) ? `${stem.slice(0, -1)}ied` : `${stem}ed`);
+    }
+    const out = `${past}${m[2] ? ` ${m[2]}` : ""}`;
+    return startsWithAction(out) ? out : null;
+  }
+  const o = outcomeBullet(b);
+  return o !== cap(b) && startsWithAction(o) ? o : null;
+}
 
 /** The bullets showing for an entry: hers once she edits them, the suggestion before that. */
 export const entryBullets = (doc: Pick<ResumeDoc, "bullets">, id: string, suggested: string[]) => doc.bullets?.[id] ?? suggested;

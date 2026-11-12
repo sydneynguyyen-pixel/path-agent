@@ -1,115 +1,319 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, ChevronDown, Plus, RotateCcw, Sparkles, Undo2, X } from "lucide-react";
-import { student } from "@/data/scenario";
+import {
+  AlignLeft, ArrowDown, ArrowRight, ArrowUp, BadgeCheck, Briefcase, CalendarCheck, ChevronDown, Eye, EyeOff, FileText, GraduationCap, IdCard, Lightbulb, Plus, RotateCcw, Sparkles, Undo2, X,
+} from "lucide-react";
+import { schools, student } from "@/data/scenario";
 import { useJourney } from "@/lib/journey";
 import type { PortfolioSkill } from "@/lib/portfolio";
-import { entryBullets, hasName, moveItem, pendingSkills, startsWithAction, type ResumeContact, type ResumeDoc, type ResumeProject } from "@/lib/resume";
+import {
+  entryBullets, entrySection, hasName, moveItem, pendingSkills, sectionHidden, startsWithAction, toggleSection,
+  type HideableSection, type ResumeContact, type ResumeDoc, type ResumePage, type ResumeProject,
+} from "@/lib/resume";
+import { groupIdeas, IDEA_SECTION_LABEL, type Idea, type IdeaSection } from "@/lib/resumeSuggest";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { FieldLabel, Section } from "./bits";
+import { AgentFace } from "@/components/app/Brand";
+import { FieldLabel } from "./bits";
 import { RESUME_TOOLS, fieldId, transcriptCourses, type EntrySection, type ResumeEntry } from "./data";
 
 export type SkillsBundle = { split: { asked: string[]; other: string[] }; byName: Map<string, PortfolioSkill>; all: PortfolioSkill[]; roleTitle: string | null };
 
+type Save = (p: Partial<ResumeDoc>) => void;
+type Ping = (block: string) => void;
+
 type Props = {
   doc: ResumeDoc;
-  save: (p: Partial<ResumeDoc>) => void;
+  save: Save;
   /** Rings the matching block on the page. */
-  ping: (block: string) => void;
+  ping: Ping;
   /** The field a click on the page landed on, ringed for a moment. */
   fieldFlash: string | null;
   jump: { block: string; n: number } | null;
+  /** Called once a page click has opened its card, so it isn't replayed. */
+  onJumpDone: () => void;
   headline: string;
   summary: string;
   letter: string;
   entries: ResumeEntry[];
   courses: string[];
   skills: SkillsBundle;
+  /** The page as it shows now, for the one-line previews. */
+  page: ResumePage;
+  ideas: Idea[];
+  onUseIdea: (idea: Idea) => void;
+  onSkipIdea: (idea: Idea) => void;
 };
 
-const SECTION_TITLE: Record<EntrySection, string> = { experience: "Experience", projects: "Projects", training: "Training & events" };
+type CardId = "header" | "summary" | "education" | "experience" | "training" | "projects" | "skills" | "letter";
 
-/** Content tab: every part of the page as a form, in page order. */
+const plural = (n: number, w: string) => `${n} ${n === 1 ? w : w.endsWith("y") ? `${w.slice(0, -1)}ies` : `${w}s`}`;
+const ENTRY_CARDS: { id: EntrySection; title: string; icon: ComponentType<{ className?: string }> }[] = [
+  { id: "experience", title: "Experience", icon: Briefcase },
+  { id: "training", title: "Training & events", icon: CalendarCheck },
+  { id: "projects", title: "Projects", icon: Lightbulb },
+];
+
+/**
+ * Content tab: one collapsible card per part of the page, in page order. A closed card is one line with what's
+ * on the page; opening one closes the others. Sprout's ideas sit at the top and inside the card they belong to.
+ */
 export function ContentPanel(p: Props) {
-  const { doc, save, ping, fieldFlash, jump } = p;
-  const [open, setOpen] = useState<string | null>(null);
+  const { doc, save, ping, fieldFlash, jump, onJumpDone } = p;
+  const j = useJourney();
+  const [open, setOpen] = useState<CardId | null>(doc.kind === "cover" ? "letter" : null);
+  const [openEntry, setOpenEntry] = useState<string | null>(null);
+  const focusTimer = useRef<number | undefined>(undefined);
+  const toggle = (id: CardId) => setOpen((o) => (o === id ? null : id));
+  const sectionOf = (e: ResumeEntry) => entrySection(doc, e);
 
-  // A click on the page opens that part of the form and puts the cursor in it.
+  // A click on the page opens that card (and entry) and puts the cursor in its first field.
   useEffect(() => {
     if (!jump) return;
-    if (jump.block.startsWith("entry:")) setOpen(jump.block.slice(6));
-    const t = window.setTimeout(() => {
-      const el = document.getElementById(fieldId(jump.block));
+    const b = jump.block;
+    if (b.startsWith("entry:")) {
+      const id = b.slice(6);
+      const e = p.entries.find((x) => x.id === id);
+      setOpen(id.startsWith("proj-") ? "projects" : e ? sectionOf(e) : "experience");
+      setOpenEntry(id);
+    } else if (["header", "summary", "education", "skills", "letter"].includes(b)) setOpen(b as CardId);
+    onJumpDone();
+    window.clearTimeout(focusTimer.current);
+    focusTimer.current = window.setTimeout(() => {
+      const el = document.getElementById(fieldId(b));
       if (!el) return;
       const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-      el.scrollIntoView?.({ block: "start", behavior: reduce ? "auto" : "smooth" });
+      el.scrollIntoView?.({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
       el.querySelector<HTMLElement>("input:not([type=checkbox]):not([readonly]), textarea")?.focus({ preventScroll: true });
-    }, 30);
-    return () => window.clearTimeout(t);
+    }, 40);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jump]);
+  useEffect(() => () => window.clearTimeout(focusTimer.current), []);
+
+  const ideasIn = (s: IdeaSection) => p.ideas.filter((x) => x.section === s);
+  const card = (id: CardId) => ({ open: open === id, onToggle: () => toggle(id), flash: fieldFlash === id });
+  const eye = (s: HideableSection, label: string) => ({
+    hidden: sectionHidden(doc, s),
+    label,
+    onToggle: () => { save({ hiddenSections: toggleSection(doc, s) }); if (sectionHidden(doc, s)) ping(s); },
+  });
+  const ideaProps = { onUse: p.onUseIdea, onSkip: p.onSkipIdea };
+
+  const header = (
+    <Card id="header" block="header" icon={IdCard} title="Header" preview={`${p.headline.trim() || student.name} · ${plural(p.page.contact.length, "contact detail")}`} {...card("header")}>
+      <HeaderFields headline={p.headline} save={save} ping={ping} />
+    </Card>
+  );
 
   if (doc.kind === "cover") {
     return (
-      <>
-        <HeaderFields headline={p.headline} save={save} ping={ping} flash={fieldFlash === "header"} />
-        <Section block="letter" title="Letter" flash={fieldFlash === "letter"} hint="A starting point from your real skills. Fill in the [brackets] and make it sound like you.">
-          <Textarea value={p.letter} onFocus={() => ping("letter")} onChange={(e) => { save({ letter: e.target.value }); ping("letter"); }} rows={18} className="leading-relaxed" aria-label="Cover letter" />
-          {doc.letter !== null && <Button variant="ghost" size="sm" className="mt-1 -ml-3" onClick={() => save({ letter: null })}><RotateCcw className="size-3.5" aria-hidden="true" />Back to the template</Button>}
-        </Section>
-      </>
+      <div className="rs-cards">
+        {header}
+        <Card id="letter" block="letter" icon={FileText} title="Letter" preview={doc.letter === null ? "From the template · fill in the [brackets]" : "Your words"} {...card("letter")}>
+          <p className="text-xs text-muted-foreground">A starting point from your real skills. Fill in the [brackets] and make it sound like you.</p>
+          <div>
+            <Textarea value={p.letter} onFocus={() => ping("letter")} onChange={(e) => { save({ letter: e.target.value }); ping("letter"); }} rows={18} className="leading-relaxed" aria-label="Cover letter" />
+            {doc.letter !== null && <Button variant="ghost" size="sm" className="mt-1 -ml-3" onClick={() => save({ letter: null })}><RotateCcw className="size-3.5" aria-hidden="true" />Back to the template</Button>}
+          </div>
+        </Card>
+      </div>
     );
   }
 
-  const bySection = (s: EntrySection) => p.entries.filter((e) => e.section === s);
+  const bySection = (s: EntrySection) => p.entries.filter((e) => sectionOf(e) === s);
+  const shownIn = (s: EntrySection) => bySection(s).filter((e) => !doc.hiddenExperience.includes(e.id));
+  const pageList = (s: EntrySection) => (s === "experience" ? p.page.experience : s === "training" ? p.page.training : p.page.projects);
+  const entryPreview = (s: EntrySection) => {
+    if (s !== "experience" && sectionHidden(doc, s)) return "Hidden on the page";
+    const list = pageList(s);
+    if (!list.length) return bySection(s).length ? "All unticked for this version" : s === "projects" ? "Nothing yet · add one" : "Nothing yet";
+    return `${plural(list.length, "entry")} · ${plural(list.reduce((n, e) => n + e.bullets.filter((b) => b.trim()).length, 0), "bullet")}`;
+  };
+  const skillNames = p.page.skills.filter((l) => l.label !== "Tools").flatMap((l) => l.names);
+  const toolCount = p.page.skills.find((l) => l.label === "Tools")?.names.length ?? 0;
+  const skillsPreview = skillNames.length || toolCount
+    ? [skillNames[0], skillNames.length > 1 ? `+${skillNames.length - 1} more` : "", toolCount ? `${skillNames.length ? "· " : ""}${plural(toolCount, "tool")}` : ""].filter(Boolean).join(" ")
+    : "No confirmed skills yet";
+  const freshSkills = j.resumeNew.filter((n) => hasName(skillNames, n));
+
   return (
-    <>
-      <HeaderFields headline={p.headline} save={save} ping={ping} flash={fieldFlash === "header"} />
+    <div className="rs-cards">
+      {p.ideas.length > 0 && <IdeasOverview ideas={p.ideas} kind={doc.kind} onOpen={(s) => setOpen(s)} {...ideaProps} />}
+      {header}
 
-      <Section block="summary" title="Summary" flash={fieldFlash === "summary"} hint={doc.summary === null ? "Suggested from your skills. Edit it and it's yours. Leave it empty to drop it." : "Two lines is plenty. Leave it empty to drop it."}>
-        <Textarea value={p.summary} onFocus={() => ping("summary")} onChange={(e) => { save({ summary: e.target.value }); ping("summary"); }} rows={3} aria-label="Summary" />
-        {doc.summary !== null && <Button variant="ghost" size="sm" className="mt-1 -ml-3" onClick={() => save({ summary: null })}><RotateCcw className="size-3.5" aria-hidden="true" />Use the suggestion</Button>}
-      </Section>
-
-      <Section block="education" title="Education" flash={fieldFlash === "education"} hint="From your school records. Pick the courses for the coursework line.">
-        <div className="flex flex-wrap gap-1.5">
-          {transcriptCourses.map((c) => {
-            const on = p.courses.includes(c.code);
-            return (
-              <button key={c.code} type="button" aria-pressed={on} onClick={() => { save({ courses: on ? p.courses.filter((x) => x !== c.code) : [...p.courses, c.code] }); ping("education"); }}
-                className={cn("rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 motion-reduce:transition-none", on ? "glass-active" : "bg-muted text-muted-foreground hover:text-foreground")}>
-                {c.title}{c.inProgress && <span className="text-muted-foreground"> · now</span>}
-              </button>
-            );
-          })}
+      <Card id="summary" block="summary" icon={AlignLeft} title="Summary" ideas={ideasIn("summary").length} eye={eye("summary", "Summary")}
+        preview={sectionHidden(doc, "summary") ? "Hidden on the page" : p.summary.trim() || "Empty · leave it out or write two lines"} {...card("summary")}>
+        <IdeaList ideas={ideasIn("summary")} {...ideaProps} />
+        <div>
+          <p className="mb-2 text-xs text-muted-foreground">{doc.summary === null ? "Suggested from your skills. Edit it and it's yours." : "Two lines is plenty."}</p>
+          <Textarea value={p.summary} onFocus={() => ping("summary")} onChange={(e) => { save({ summary: e.target.value }); ping("summary"); }} rows={3} aria-label="Summary" />
+          {doc.summary !== null && <Button variant="ghost" size="sm" className="mt-1 -ml-3" onClick={() => save({ summary: null })}><RotateCcw className="size-3.5" aria-hidden="true" />Use the suggestion</Button>}
         </div>
-        {doc.courses != null && <Button variant="ghost" size="sm" className="mt-1 -ml-3" onClick={() => save({ courses: null })}><RotateCcw className="size-3.5" aria-hidden="true" />Use the suggested courses</Button>}
-      </Section>
+      </Card>
 
-      {p.entries.length === 0 ? (
-        <Section title="Experience">
-          <p className="text-sm text-muted-foreground">Nothing yet. <Link to="/career" search={{ tab: "skills" }} className="underline underline-offset-4">Add things you did</Link>, like a job, caring for family or a club. They all count.</p>
-        </Section>
-      ) : (
-        (["experience", "projects", "training"] as const).map((s) => bySection(s).length > 0 && (
-          <Section key={s} title={SECTION_TITLE[s]} aside={s === "experience" ? "Click a line on the page to jump here" : undefined}>
-            <ul className="grid gap-2">
-              {bySection(s).map((e) => <EntryEditor key={e.id} entry={e} doc={doc} save={save} ping={ping} open={open === e.id} onOpen={(on) => setOpen(on ? e.id : null)} flash={fieldFlash === `entry:${e.id}`} />)}
+      <Card id="education" block="education" icon={GraduationCap} title="Education" ideas={ideasIn("education").length}
+        preview={`${schools.northgate.short} · ${schools.bayview.short} · ${plural(p.courses.length, "course")}`} {...card("education")}>
+        <IdeaList ideas={ideasIn("education")} {...ideaProps} />
+        <EducationEditor doc={doc} courses={p.courses} save={save} ping={ping} page={p.page} />
+      </Card>
+
+      {ENTRY_CARDS.map(({ id, title, icon }) => (
+        <Card key={id} id={id} icon={icon} title={title} ideas={ideasIn(id).length} preview={entryPreview(id)} {...card(id)}
+          eye={id === "experience" ? undefined : eye(id, title)}>
+          <IdeaList ideas={ideasIn(id)} {...ideaProps} />
+          {bySection(id).length === 0 && id !== "projects" && (
+            id === "experience"
+              ? <p className="text-sm text-muted-foreground">Nothing yet. <Link to="/career" search={{ tab: "skills" }} className="underline underline-offset-4">Add things you did</Link>, like a job, caring for family or a club. They all count.</p>
+              : <p className="text-sm text-muted-foreground">Events you went to show here once you've said you went.</p>
+          )}
+          {bySection(id).length > 0 && (
+            <ul className="grid gap-1.5" aria-label={`${title} entries`}>
+              {bySection(id).map((e) => (
+                <EntryEditor key={e.id} entry={e} doc={doc} save={save} ping={ping} open={openEntry === e.id} onOpen={(on) => setOpenEntry(on ? e.id : null)} flash={fieldFlash === `entry:${e.id}`}
+                  moved={doc.entrySections?.[e.id] !== undefined && doc.entrySections[e.id] !== e.section} />
+              ))}
             </ul>
-          </Section>
-        ))
-      )}
+          )}
+          {id === "projects" && <OwnProjects doc={doc} save={save} ping={ping} fieldFlash={fieldFlash} openEntry={openEntry} setOpenEntry={setOpenEntry} />}
+          {id !== "projects" && shownIn(id).length > 0 && <p className="text-xs text-muted-foreground">Untick one to leave it off this version. Click a line on the page to jump to it.</p>}
+        </Card>
+      ))}
 
-      <ProjectsEditor doc={doc} save={save} ping={ping} fieldFlash={fieldFlash} />
-      <SkillsEditor doc={doc} save={save} ping={ping} flash={fieldFlash === "skills"} {...p.skills} />
-    </>
+      <Card id="skills" block="skills" icon={BadgeCheck} title="Skills" ideas={ideasIn("skills").length} preview={skillsPreview} {...card("skills")}
+        badge={freshSkills.length > 0 ? <span className="aqua-chip shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold">New</span> : undefined}>
+        <IdeaList ideas={ideasIn("skills")} {...ideaProps} />
+        <SkillsEditor doc={doc} save={save} ping={ping} {...p.skills} />
+      </Card>
+    </div>
   );
 }
+
+/** Height and fade in and out, cubic-bezier(.22,.8,.2,1). Closed content leaves the page once it has faded. */
+function Collapse({ open, id, children }: { open: boolean; id: string; children: ReactNode }) {
+  const [closing, setClosing] = useState(false);
+  const was = useRef(open);
+  useEffect(() => {
+    if (was.current && !open) {
+      was.current = open;
+      const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      if (reduce) return undefined;
+      setClosing(true);
+      const t = window.setTimeout(() => setClosing(false), 280);
+      return () => window.clearTimeout(t);
+    }
+    was.current = open;
+    setClosing(false);
+    return undefined;
+  }, [open]);
+  if (!open && !closing) return null;
+  return (
+    <div id={id} className="rs-collapse" data-closing={open ? undefined : ""} aria-hidden={open ? undefined : true} inert={!open}>
+      <div className="rs-collapse-inner">{children}</div>
+    </div>
+  );
+}
+
+type EyeProps = { hidden: boolean; label: string; onToggle: () => void };
+
+/** One part of the page: a single line when closed (icon, name, what's on the page, ideas), the editor when open. */
+function Card({ id, block, icon: Icon, title, preview, ideas = 0, badge, eye, open, onToggle, flash, children }: {
+  id: CardId; block?: string; icon: ComponentType<{ className?: string }>; title: string; preview: string; ideas?: number; badge?: ReactNode; eye?: EyeProps | undefined;
+  open: boolean; onToggle: () => void; flash: boolean; children: ReactNode;
+}) {
+  const bodyId = `rs-card-${id}`;
+  return (
+    <section id={block ? fieldId(block) : `rs-card-wrap-${id}`} data-flash={flash ? "" : undefined} data-open={open ? "" : undefined} data-dim={eye?.hidden ? "" : undefined} className="rs-field rs-card" aria-label={title}>
+      <div className="rs-card-head">
+        <button type="button" aria-expanded={open} aria-controls={bodyId} onClick={onToggle} className="rs-card-btn !rounded-[14px]">
+          <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span className="flex min-w-0 flex-1 items-baseline gap-2">
+            <span className="shrink-0 text-sm font-semibold">{title}</span>
+            <span className="min-w-0 truncate text-xs text-muted-foreground">{preview}</span>
+          </span>
+          {badge}
+          {ideas > 0 && <span className="rs-idea-badge">{plural(ideas, "idea")}</span>}
+          <ChevronDown className="rs-chev size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        </button>
+        {eye && (
+          <button type="button" onClick={eye.onToggle} aria-pressed={!eye.hidden} aria-label={`${eye.hidden ? "Show" : "Hide"} ${eye.label} on the page`} title={eye.hidden ? "Hidden on the page. Click to show it" : "Showing on the page. Click to hide it"} className="rs-eye">
+            {eye.hidden ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+          </button>
+        )}
+      </div>
+      <Collapse open={open} id={bodyId}><div className="rs-card-body">{children}</div></Collapse>
+    </section>
+  );
+}
+
+// ---------- Sprout's ideas ----------
+
+const SPROUT_NOTE = "Suggested from your records; no AI is connected here.";
+
+function IdeaRow({ idea, onUse, onSkip }: { idea: Idea; onUse: (i: Idea) => void; onSkip: (i: Idea) => void }) {
+  return (
+    <li role="group" aria-label={idea.title} className="rs-idea">
+      <p className="text-[13px] font-medium">{idea.title}</p>
+      {idea.detail && <p className="mt-1 text-[13px] text-foreground/90">"{idea.detail}"</p>}
+      <p className="mt-1 text-xs text-muted-foreground">{idea.why}.</p>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {idea.apply && <Button size="sm" className="h-7" onClick={() => onUse(idea)}>Use it</Button>}
+        {idea.link?.to === "skills" && <Button asChild size="sm" variant="outline" className="h-7 bg-card"><Link to="/career" search={{ tab: "skills" }}>{idea.link.label}<ArrowRight className="size-3.5" aria-hidden="true" /></Link></Button>}
+        {idea.link?.to === "plan" && <Button asChild size="sm" variant="outline" className="h-7 bg-card"><Link to="/career" search={{ plan: idea.link.roleId }}>{idea.link.label}<ArrowRight className="size-3.5" aria-hidden="true" /></Link></Button>}
+        <Button size="sm" variant="ghost" className="h-7" onClick={() => onSkip(idea)}>Not now</Button>
+      </div>
+    </li>
+  );
+}
+
+/** A card's own ideas, as compact rows above its editor. */
+function IdeaList({ ideas, onUse, onSkip }: { ideas: Idea[]; onUse: (i: Idea) => void; onSkip: (i: Idea) => void }) {
+  if (!ideas.length) return null;
+  return (
+    <div>
+      <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium"><Sparkles className="size-3.5" aria-hidden="true" />Sprout's ideas</p>
+      <ul className="grid gap-1.5">{ideas.map((x) => <IdeaRow key={x.id} idea={x} onUse={onUse} onSkip={onSkip} />)}</ul>
+    </div>
+  );
+}
+
+/** "Sprout has N ideas for this resume": opens into every idea, grouped by section. */
+function IdeasOverview({ ideas, kind, onUse, onSkip, onOpen }: { ideas: Idea[]; kind: ResumeDoc["kind"]; onUse: (i: Idea) => void; onSkip: (i: Idea) => void; onOpen: (s: CardId) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="rs-card rs-ideas" data-open={open ? "" : undefined} aria-label="Sprout's ideas">
+      <div className="rs-card-head">
+        <button type="button" aria-expanded={open} aria-controls="rs-ideas-body" onClick={() => setOpen((o) => !o)} className="rs-card-btn !rounded-[14px]">
+          <AgentFace className="!size-6 shrink-0" />
+          <span className="min-w-0 flex-1 text-sm font-semibold">Sprout has {plural(ideas.length, "idea")} for this {kind === "cv" ? "CV" : "resume"}</span>
+          <ChevronDown className="rs-chev size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        </button>
+      </div>
+      <Collapse open={open} id="rs-ideas-body">
+        <div className="rs-card-body">
+          <div>
+            <p className="text-xs">Sprout's ideas, from your classes, events and projects.</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">{SPROUT_NOTE}</p>
+          </div>
+          {groupIdeas(ideas).map((g) => (
+            <div key={g.section}>
+              <button type="button" onClick={() => onOpen(g.section)} className="mb-1.5 inline-flex items-center gap-1 text-xs font-semibold underline-offset-4 hover:underline">
+                {IDEA_SECTION_LABEL[g.section]}<span className="sr-only"> (open this section)</span>
+              </button>
+              <ul className="grid gap-1.5">{g.ideas.map((x) => <IdeaRow key={x.id} idea={x} onUse={onUse} onSkip={onSkip} />)}</ul>
+            </div>
+          ))}
+        </div>
+      </Collapse>
+    </section>
+  );
+}
+
+// ---------- Header ----------
 
 const CONTACT_FIELDS: { id: keyof ResumeContact; label: string; placeholder: string; type: string }[] = [
   { id: "phone", label: "Phone", placeholder: "Your number", type: "tel" },
@@ -118,49 +322,106 @@ const CONTACT_FIELDS: { id: keyof ResumeContact; label: string; placeholder: str
   { id: "site", label: "Portfolio or website", placeholder: "Optional", type: "text" },
 ];
 
-function HeaderFields({ headline, save, ping, flash }: { headline: string; save: (p: Partial<ResumeDoc>) => void; ping: (b: string) => void; flash: boolean }) {
+function HeaderFields({ headline, save, ping }: { headline: string; save: Save; ping: Ping }) {
   const j = useJourney();
+  const filled = CONTACT_FIELDS.some((f) => j.resumeContact[f.id].trim());
+  const [more, setMore] = useState(filled);
   return (
-    <Section block="header" title="Header" flash={flash} hint={`${student.name} · ${student.email}, from your school account.`}>
-      <FieldLabel htmlFor="rs-headline">Line under your name</FieldLabel>
-      <Input id="rs-headline" value={headline} onFocus={() => ping("header")} onChange={(e) => { save({ headline: e.target.value }); ping("header"); }} />
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        {CONTACT_FIELDS.map((f) => (
-          <div key={f.id} className="min-w-0">
-            <FieldLabel htmlFor={`rs-c-${f.id}`} note="Optional">{f.label}</FieldLabel>
-            <Input id={`rs-c-${f.id}`} type={f.type} value={j.resumeContact[f.id]} placeholder={f.placeholder} onFocus={() => ping("header")} onChange={(e) => { j.setResumeContact({ [f.id]: e.target.value }); ping("header"); }} />
-          </div>
-        ))}
+    <>
+      <p className="text-xs text-muted-foreground">{student.name} · {student.email}, from your school account.</p>
+      <div>
+        <FieldLabel htmlFor="rs-headline">Line under your name</FieldLabel>
+        <Input id="rs-headline" value={headline} onFocus={() => ping("header")} onChange={(e) => { save({ headline: e.target.value }); ping("header"); }} />
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">Only what you type here shows. These are the same on all your documents.</p>
-    </Section>
+      {more || filled ? (
+        <div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {CONTACT_FIELDS.map((f) => (
+              <div key={f.id} className="min-w-0">
+                <FieldLabel htmlFor={`rs-c-${f.id}`} note="Optional">{f.label}</FieldLabel>
+                <Input id={`rs-c-${f.id}`} type={f.type} value={j.resumeContact[f.id]} placeholder={f.placeholder} onFocus={() => ping("header")} onChange={(e) => { j.setResumeContact({ [f.id]: e.target.value }); ping("header"); }} />
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Only what you type here shows. These are the same on all your documents.</p>
+        </div>
+      ) : (
+        <Button size="sm" variant="outline" className="h-8 justify-self-start" onClick={() => setMore(true)}><Plus className="size-3.5" aria-hidden="true" />Add contact details</Button>
+      )}
+    </>
   );
 }
 
-/** One thing she did: show it on this version or not, and its bullets (add, reorder, delete). */
-function EntryEditor({ entry: e, doc, save, ping, open, onOpen, flash }: { entry: ResumeEntry; doc: ResumeDoc; save: (p: Partial<ResumeDoc>) => void; ping: (b: string) => void; open: boolean; onOpen: (on: boolean) => void; flash: boolean }) {
+// ---------- Education ----------
+
+function EducationEditor({ doc, courses, save, ping, page }: { doc: ResumeDoc; courses: string[]; save: Save; ping: Ping; page: ResumePage }) {
+  const [editing, setEditing] = useState(false);
+  const chosen = transcriptCourses.filter((c) => courses.includes(c.code));
+  return (
+    <>
+      <ul className="grid gap-1.5 text-sm">
+        {page.education.map((e) => <li key={e.id}><span className="font-medium">{e.school}</span><span className="block text-xs text-muted-foreground">{e.degree} · {e.when}</span></li>)}
+      </ul>
+      <div>
+        <p className="mb-1.5 text-xs font-medium">Relevant coursework <span className="font-normal text-muted-foreground">· from your transcript</span></p>
+        {!editing ? (
+          <>
+            {chosen.length ? (
+              <ul className="flex flex-wrap gap-1.5" aria-label="Courses on the page">
+                {chosen.map((c) => <li key={c.code} className="glass-active rounded-full px-3 py-1 text-xs font-medium">{c.title}{c.inProgress && <span className="text-muted-foreground"> · now</span>}</li>)}
+              </ul>
+            ) : <p className="text-sm text-muted-foreground">No courses on the coursework line.</p>}
+            <Button size="sm" variant="outline" className="mt-2 h-7" onClick={() => setEditing(true)}>Edit courses</Button>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Pick courses">
+              {transcriptCourses.map((c) => {
+                const on = courses.includes(c.code);
+                return (
+                  <button key={c.code} type="button" aria-pressed={on} onClick={() => { save({ courses: on ? courses.filter((x) => x !== c.code) : [...courses, c.code] }); ping("education"); }}
+                    className={cn("rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 motion-reduce:transition-none", on ? "glass-active" : "bg-muted text-muted-foreground hover:text-foreground")}>
+                    {c.title}{c.inProgress && <span className="text-muted-foreground"> · now</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <Button size="sm" variant="outline" className="mt-2 h-7" onClick={() => setEditing(false)}>Done</Button>
+          </>
+        )}
+        {doc.courses != null && <Button variant="ghost" size="sm" className="mt-2 ml-1 h-7" onClick={() => save({ courses: null })}><RotateCcw className="size-3.5" aria-hidden="true" />Use the suggested courses</Button>}
+      </div>
+    </>
+  );
+}
+
+// ---------- Entries ----------
+
+/** One thing she did: a single line (title · org · date) that opens to its bullets (add, reorder, delete). */
+function EntryEditor({ entry: e, doc, save, ping, open, onOpen, flash, moved }: { entry: ResumeEntry; doc: ResumeDoc; save: Save; ping: Ping; open: boolean; onOpen: (on: boolean) => void; flash: boolean; moved: boolean }) {
   const shown = !doc.hiddenExperience.includes(e.id);
   const edited = doc.bullets?.[e.id] !== undefined;
   const bullets = entryBullets(doc, e.id, e.suggested);
   const block = `entry:${e.id}`;
   const set = (next: string[]) => { save({ bullets: { ...doc.bullets, [e.id]: next } }); ping(block); };
   const reset = () => { const rest = { ...doc.bullets }; delete rest[e.id]; save({ bullets: rest }); };
+  const moveBack = () => { const rest = { ...doc.entrySections }; delete rest[e.id]; save({ entrySections: rest }); ping(block); };
   const weak = bullets.some((b) => b.trim() && !startsWithAction(b));
   return (
-    <li id={fieldId(block)} data-flash={flash ? "" : undefined} className={cn("rs-field rounded-2xl", open ? "bg-card shadow-soft" : "bg-muted/60")}>
-      <div className="flex items-start gap-3 px-3 py-2.5">
-        <Checkbox className="mt-0.5" checked={shown} aria-label={`Show ${e.role} on this version`} onCheckedChange={(v) => { save({ hiddenExperience: v ? doc.hiddenExperience.filter((x) => x !== e.id) : [...doc.hiddenExperience, e.id] }); ping(block); }} />
-        <button type="button" aria-expanded={open} onClick={() => onOpen(!open)} className="flex min-w-0 flex-1 items-start gap-2 text-left text-sm">
-          <span className="min-w-0 flex-1">
-            <span className={cn("block font-medium", !shown && "text-muted-foreground line-through decoration-1")}>{e.role}</span>
-            <span className="block truncate text-xs text-muted-foreground">{[e.org, e.when].filter(Boolean).join(" · ")}</span>
-            {e.selfReported && <span className="mt-1 inline-block rounded-full bg-card px-2 py-0.5 text-[11px] font-medium shadow-soft">Added by you</span>}
+    <li id={fieldId(block)} data-flash={flash ? "" : undefined} data-open={open ? "" : undefined} className="rs-field rs-sub">
+      <div className="flex items-center gap-2.5 px-2.5 py-2">
+        <Checkbox checked={shown} aria-label={`Show ${e.role} on this version`} onCheckedChange={(v) => { save({ hiddenExperience: v ? doc.hiddenExperience.filter((x) => x !== e.id) : [...doc.hiddenExperience, e.id] }); ping(block); }} />
+        <button type="button" aria-expanded={open} onClick={() => onOpen(!open)} className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm !rounded-[10px]">
+          <span className="min-w-0 flex-1 truncate">
+            <span className={cn("font-medium", !shown && "text-muted-foreground line-through decoration-1")}>{e.role}</span>
+            <span className="text-xs text-muted-foreground">{[e.org, e.when].filter(Boolean).map((x) => ` · ${x}`).join("")}</span>
           </span>
-          <ChevronDown className={cn("mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none", open && "rotate-180")} aria-hidden="true" />
+          {e.selfReported && <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">Added by you</span>}
+          <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none", open && "rotate-180")} aria-hidden="true" />
         </button>
       </div>
-      {open && (
-        <div className="space-y-2 border-t px-3 pt-2.5 pb-3">
+      <Collapse open={open} id={`rs-entry-${e.id}`}>
+        <div className="space-y-2 border-t px-2.5 pt-2.5 pb-3">
           <p className="text-xs text-muted-foreground">
             {edited ? "Your words." : e.suggested.length ? <><span className="aqua-chip mr-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold">Suggestion</span>{e.source === "Added by you" ? "From what you wrote. Edit it and it's yours." : "From the event's record. Say what you did, in your words."}</> : "No bullets yet. Add what you did."}
           </p>
@@ -178,46 +439,61 @@ function EntryEditor({ entry: e, doc, save, ping, open, onOpen, flash }: { entry
           <div className="flex flex-wrap items-center gap-1">
             <Button size="sm" variant="outline" className="h-7" disabled={bullets.length >= 5} onClick={() => set([...bullets, ""])}><Plus className="size-3.5" aria-hidden="true" />Add a bullet</Button>
             {edited && e.suggested.length > 0 && <Button size="sm" variant="ghost" className="h-7" onClick={reset}><RotateCcw className="size-3.5" aria-hidden="true" />Use the suggestion</Button>}
+            {moved && <Button size="sm" variant="ghost" className="h-7" onClick={moveBack}><Undo2 className="size-3.5" aria-hidden="true" />Move back to {e.section === "training" ? "Training & events" : e.section === "projects" ? "Projects" : "Experience"}</Button>}
           </div>
           {weak && <p className="text-xs text-muted-foreground">Tip: start each bullet with an action verb, like Led, Built, Interviewed or Organized. Only claim results you can point to.</p>}
         </div>
-      )}
+      </Collapse>
     </li>
   );
 }
 
-function ProjectsEditor({ doc, save, ping, fieldFlash }: { doc: ResumeDoc; save: (p: Partial<ResumeDoc>) => void; ping: (b: string) => void; fieldFlash: string | null }) {
-  const set = (projects: ResumeProject[], id?: string) => { save({ projects }); if (id) ping(`entry:proj-${id}`); };
-  const add = () => [...doc.projects, { id: `p-${Date.now().toString(36)}`, title: "", text: "" }];
+/** Projects she writes herself (a class project she's proud of), each its own line that opens to edit. */
+function OwnProjects({ doc, save, ping, fieldFlash, openEntry, setOpenEntry }: { doc: ResumeDoc; save: Save; ping: Ping; fieldFlash: string | null; openEntry: string | null; setOpenEntry: (id: string | null) => void }) {
+  const set = (projects: ResumeProject[], id?: string) => { save({ projects, showProjects: true }); if (id) ping(`entry:proj-${id}`); };
+  const add = () => {
+    const id = `p-${Date.now().toString(36)}`;
+    set([...doc.projects, { id, title: "", text: "" }]);
+    setOpenEntry(`proj-${id}`);
+  };
+  const list = doc.showProjects ? doc.projects : [];
   return (
-    <Section title="Your projects" hint="Optional. Something you made or studied on your own, like a class project you're proud of.">
-      <label className="flex items-center justify-between gap-3 text-sm">
-        <span>Show your projects</span>
-        <Switch checked={doc.showProjects} onCheckedChange={(on) => save({ showProjects: on, projects: on && doc.projects.length === 0 ? add() : doc.projects })} />
-      </label>
-      {doc.showProjects && (
-        <div className="mt-3 space-y-2">
-          {doc.projects.map((x) => (
-            <div key={x.id} id={fieldId(`entry:proj-${x.id}`)} data-flash={fieldFlash === `entry:proj-${x.id}` ? "" : undefined} className="rs-field space-y-2 rounded-2xl bg-muted p-3">
-              <div className="flex items-center gap-2">
-                <Input value={x.title} placeholder="Project name" aria-label="Project name" onChange={(e) => set(doc.projects.map((y) => (y.id === x.id ? { ...y, title: e.target.value } : y)), x.id)} />
-                <Button size="icon" variant="ghost" className="size-8 shrink-0 rounded-full" aria-label="Remove project" onClick={() => set(doc.projects.filter((y) => y.id !== x.id))}><X className="size-4" /></Button>
-              </div>
-              <Textarea value={x.text} placeholder={"What you did, one bullet per line.\nStart each with a verb: Designed, Interviewed, Wrote…"} aria-label="What you did" rows={3} onChange={(e) => set(doc.projects.map((y) => (y.id === x.id ? { ...y, text: e.target.value } : y)), x.id)} />
+    <div className="grid gap-1.5">
+      {list.length > 0 && <p className="text-xs font-medium">Your own projects</p>}
+      {list.map((x) => {
+        const key = `proj-${x.id}`;
+        const open = openEntry === key;
+        return (
+          <div key={x.id} id={fieldId(`entry:${key}`)} data-flash={fieldFlash === `entry:${key}` ? "" : undefined} data-open={open ? "" : undefined} className="rs-field rs-sub">
+            <div className="flex items-center gap-2 px-2.5 py-2">
+              <button type="button" aria-expanded={open} onClick={() => setOpenEntry(open ? null : key)} className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm !rounded-[10px]">
+                <span className="min-w-0 flex-1 truncate font-medium">{x.title.trim() || "Untitled project"}<span className="text-xs font-normal text-muted-foreground"> · {plural(x.text.split("\n").filter((l) => l.trim()).length, "bullet")}</span></span>
+                <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none", open && "rotate-180")} aria-hidden="true" />
+              </button>
+              <Button size="icon" variant="ghost" className="size-7 shrink-0 rounded-full" aria-label="Remove project" onClick={() => set(doc.projects.filter((y) => y.id !== x.id))}><X className="size-3.5" /></Button>
             </div>
-          ))}
-          <Button size="sm" variant="outline" onClick={() => set(add())}><Plus className="size-3.5" aria-hidden="true" />Add a project</Button>
-        </div>
-      )}
-    </Section>
+            <Collapse open={open} id={`rs-entry-${key}`}>
+              <div className="space-y-2 border-t px-2.5 pt-2.5 pb-3">
+                <Input value={x.title} placeholder="Project name" aria-label="Project name" onChange={(e) => set(doc.projects.map((y) => (y.id === x.id ? { ...y, title: e.target.value } : y)), x.id)} />
+                <Textarea value={x.text} placeholder={"What you did, one bullet per line.\nStart each with a verb: Designed, Interviewed, Wrote…"} aria-label="What you did" rows={3} onChange={(e) => set(doc.projects.map((y) => (y.id === x.id ? { ...y, text: e.target.value } : y)), x.id)} />
+              </div>
+            </Collapse>
+          </div>
+        );
+      })}
+      <Button size="sm" variant="outline" className="h-8 justify-self-start" onClick={add}><Plus className="size-3.5" aria-hidden="true" />Add a project</Button>
+      <p className="text-xs text-muted-foreground">Something you made or studied on your own, like a class project you're proud of.</p>
+    </div>
   );
 }
+
+// ---------- Skills ----------
 
 const sourceOf = (s: PortfolioSkill | undefined) =>
   !s ? "" : s.selfReported ? "Added by you" : s.proofs.map((p) => (p.type === "class" ? p.code : p.title)).slice(0, 2).join(" · ");
 
 /** Skills on her resume, with new ones marked and undoable, a switch for adding them by hand instead, and her tools. */
-function SkillsEditor({ doc, save, ping, flash, split, byName, all, roleTitle }: { doc: ResumeDoc; save: (p: Partial<ResumeDoc>) => void; ping: (b: string) => void; flash: boolean } & SkillsBundle) {
+function SkillsEditor({ doc, save, ping, split, byName, all, roleTitle }: { doc: ResumeDoc; save: Save; ping: Ping } & SkillsBundle) {
   const j = useJourney();
   const onResume = j.resumeSkills.flatMap((n) => byName.get(n.toLowerCase()) ?? []).map((s) => s.name);
   const ordered = [...split.asked, ...split.other, ...onResume.filter((n) => hasName(doc.hiddenSkills, n))];
@@ -230,8 +506,9 @@ function SkillsEditor({ doc, save, ping, flash, split, byName, all, roleTitle }:
     toast(`Took ${name} off your resume`, { action: { label: "Undo", onClick: () => j.addResumeSkill(name) } });
   };
   return (
-    <Section block="skills" title="Skills" flash={flash} hint={roleTitle ? `Skills ${roleTitle} roles ask for come first. Untick one to leave it off this version.` : "Only skills you confirmed. Untick one to leave it off this version."}>
-      <label className="flex items-center justify-between gap-3 rounded-2xl bg-muted px-4 py-2.5 text-sm">
+    <div>
+      <p className="mb-2 text-xs text-muted-foreground">{roleTitle ? `Skills ${roleTitle} roles ask for come first. Untick one to leave it off this version.` : "Only skills you confirmed. Untick one to leave it off this version."}</p>
+      <label className="flex items-center justify-between gap-3 rounded-[12px] bg-muted px-3.5 py-2.5 text-sm">
         <span><span className="font-medium">Add new skills automatically</span><span className="block text-xs text-muted-foreground">When you confirm a skill, it joins your resume. You can undo it.</span></span>
         <Switch checked={j.autoAddSkills} onCheckedChange={j.setAutoAddSkills} />
       </label>
@@ -297,6 +574,6 @@ function SkillsEditor({ doc, save, ping, flash, split, byName, all, roleTitle }:
           })}
         </div>
       </div>
-    </Section>
+    </div>
   );
 }
